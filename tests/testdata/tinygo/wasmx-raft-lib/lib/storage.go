@@ -87,16 +87,6 @@ func GetLastLogIndex() (int64, error) {
 
 func SetLastLogIndex(val int64) error { sSet(LOGS_LAST_INDEX, i64ToStr(val)); return nil }
 
-func GetCommitIndex() (int64, error) {
-	v := sGet(COMMIT_INDEX)
-	if v == "" {
-		return LOG_START, nil
-	}
-	return parseI64(v, LOG_START), nil
-}
-
-func SetCommitIndex(val int64) error { sSet(COMMIT_INDEX, i64ToStr(val)); return nil }
-
 func GetTermId() (int32, error) {
 	v := sGet(TERM_ID)
 	if v == "" {

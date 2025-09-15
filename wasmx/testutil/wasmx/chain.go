@@ -684,12 +684,13 @@ func (chain TestChain) CommitBlock() (*abci.ResponseFinalizeBlock, error) {
 	if prevBlock >= lastBlock {
 		// in case a test just changed consensus to RAFT, we help the test move faster through all the protocols delays that happen when choosing the Leader
 		if strings.Contains(currentState, "RAFT") && !strings.Contains(currentState, "Leader") {
-			if strings.Contains(currentState, "initialized.prestart") {
-				// this state waits 500ms and then goes to "initialized.Follower"
+			if strings.Contains(currentState, "prestart") {
+				// this state waits 500ms and then goes to "initialized.started.Node"
 				time.Sleep(time.Second * 10)
+				// and then it should immediately go to Follower
 			}
 			currentState := chain.GetCurrentState(chain.GetContext())
-			if strings.Contains(currentState, "initialized.Follower") {
+			if strings.Contains(currentState, "Follower") {
 				// we need to get the node to Leader state faster
 				chain.raftToLeader()
 			}
@@ -793,7 +794,7 @@ func (chain TestChain) GetBlock(ctx sdk.Context, height int64) (*abci.ResponseFi
 func (chain TestChain) raftToLeader() {
 	currentState := chain.GetCurrentState(chain.GetContext())
 	// get consensus version
-	if strings.Contains(currentState, "#RAFT") && strings.Contains(currentState, "initialized.Follower") {
+	if strings.Contains(currentState, "#RAFT") && strings.Contains(currentState, "Follower") {
 		lastInterval := chain.GetLastIntervalIdByStateKey(chain.GetContext(), currentState, "electionTimeout")
 		msg1 := []byte(fmt.Sprintf(`{"delay":"electionTimeout","state":"%s","intervalId":%s}`, currentState, lastInterval))
 		_, err := chain.App.NetworkKeeper.ExecuteEntryPointInternal(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{

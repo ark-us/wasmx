@@ -290,7 +290,7 @@ func setFinalizedBlock(blockData string, hash string, txhashes [][]byte, indexed
 	return nil
 }
 
-func getLastBlockIndex() (int64, error) {
+func GetLastBlockIndex() (int64, error) {
 	calld := blocks.CallData{GetLastBlockIndex: &blocks.CallDataGetLastBlockIndex{}}
 	bz, err := json.Marshal(&calld)
 	if err != nil {
@@ -351,7 +351,7 @@ func setConsensusParams(height int64, value *typestnd.ConsensusParams) error {
 	return nil
 }
 
-func getConsensusParams(height int64) (*typestnd.ConsensusParams, error) {
+func GetConsensusParams(height int64) (*typestnd.ConsensusParams, error) {
 	calld := blocks.CallData{GetConsensusParams: &blocks.CallDataGetConsensusParams{Height: height}}
 	bz, err := json.Marshal(&calld)
 	if err != nil {
@@ -386,7 +386,7 @@ func updateConsensusParams(height int64, updates *typestnd.ConsensusParams) erro
 	if updates == nil {
 		return setConsensusParams(height+1, nil)
 	}
-	params, err := getConsensusParams(height)
+	params, err := GetConsensusParams(height)
 	if err != nil {
 		return err
 	}
@@ -504,7 +504,7 @@ func verifyBlockProposal(data blocks.BlockEntry, processReq typestnd.RequestProc
 		return fmt.Errorf("header data_hash mismatch: expected %s, got %s", dataHashHex, header.DataHash)
 	}
 
-	cparams, err := getConsensusParams(0)
+	cparams, err := GetConsensusParams(0)
 	if err != nil {
 		return fmt.Errorf("failed to get consensus params: %v", err)
 	}
@@ -544,8 +544,8 @@ func hexEqual(hexStr wasmx.HexString, bz []byte) bool {
 	return strings.EqualFold(string(hexStr), enc)
 }
 
-// decodeTx decodes Cosmos tx from bytes to SignedTransaction using host
-func decodeTx(tx []byte) (wasmx.SignedTransaction, error) {
+// DecodeTx decodes Cosmos tx from bytes to SignedTransaction using host
+func DecodeTx(tx []byte) (wasmx.SignedTransaction, error) {
 	res := wasmx.DecodeCosmosTxFromBytes(tx)
 	return res, nil
 }
@@ -873,7 +873,7 @@ func prepareAppendEntry(nodeIps []p2p.NodeInfo, nextIndex int64, lastIndex int64
 		return AppendEntry{}, fmt.Errorf("failed to get previous log entry at index %d: %v", nextIndex-1, err)
 	}
 
-	lastCommitIndex, err := GetCommitIndex()
+	lastCommitIndex, err := GetLastBlockIndex()
 	if err != nil {
 		return AppendEntry{}, fmt.Errorf("failed to get commit index: %v", err)
 	}

@@ -30,6 +30,10 @@ func Wasmx_env_core_i64_1() {}
 //export wasmx_crosschain_json_i64_1
 func Wasmx_crosschain_json_i64_1() {}
 
+//go:wasm-module multichain
+//export wasmx_multichain_json_i64_1
+func Wasmx_multichain_json_i64_1() {}
+
 //go:wasm-module p2p
 //export wasmx_p2p_json_i64_1
 func Wasmx_p2p_json_i64_1() {}
@@ -75,6 +79,24 @@ func main() {
 		res := raft.WrapGuard(ok)
 		wasmx.Finish(res)
 		return
+	case "ifNodeIsValidator":
+		ok, err := lib.IfNodeIsValidator(calld.Params, calld.Event)
+		if err != nil {
+			lib.Revert(err.Error())
+			return
+		}
+		res := raft.WrapGuard(ok)
+		wasmx.Finish(res)
+		return
+	case "ifNewTransaction":
+		ok, err := lib.IfNewTransaction(calld.Params, calld.Event)
+		if err != nil {
+			lib.Revert(err.Error())
+			return
+		}
+		res := raft.WrapGuard(ok)
+		wasmx.Finish(res)
+		return
 	case "setupNode":
 		if err := lib.SetupNode(calld.Params, calld.Event); err != nil {
 			lib.Revert(err.Error())
@@ -95,8 +117,28 @@ func main() {
 			lib.Revert(err.Error())
 			return
 		}
-	case "requestNetworkSync":
-		if err := lib.RequestNetworkSync(); err != nil {
+	case "connectRooms":
+		if err := lib.ConnectRooms(); err != nil {
+			lib.Revert(err.Error())
+			return
+		}
+	case "connectNodeRoom":
+		if err := lib.ConnectNodeRoom(); err != nil {
+			lib.Revert(err.Error())
+			return
+		}
+	case "disconnectNodeRoom":
+		if err := lib.DisconnectNodeRoom(); err != nil {
+			lib.Revert(err.Error())
+			return
+		}
+	case "forwardMsgToChat":
+		if err := lib.ForwardMsgToChat(calld.Params, calld.Event); err != nil {
+			lib.Revert(err.Error())
+			return
+		}
+	case "requestBlockSync":
+		if err := lib.RequestBlockSync(); err != nil {
 			lib.Revert(err.Error())
 			return
 		}
@@ -172,6 +214,11 @@ func main() {
 			lib.Revert(err.Error())
 			return
 		}
+	case "receiveCommit":
+		if err := raft.ReceiveCommit(calld.Params, calld.Event); err != nil {
+			lib.Revert(err.Error())
+			return
+		}
 	case "sendAppendEntries":
 		if err := lib.SendAppendEntries(); err != nil {
 			lib.Revert(err.Error())
@@ -183,7 +230,7 @@ func main() {
 			return
 		}
 	case "addToMempool":
-		if err := raft.AddToMempool(calld.Params, calld.Event); err != nil {
+		if err := lib.AddToMempool(calld.Params, calld.Event); err != nil {
 			lib.Revert(err.Error())
 			return
 		}
@@ -224,6 +271,11 @@ func main() {
 		}
 	case "updateNodeAndReturn":
 		if err := lib.UpdateNodeAndReturn(calld.Params, calld.Event); err != nil {
+			lib.Revert(err.Error())
+			return
+		}
+	case "registerValidatorWithNetwork":
+		if err := lib.RegisterValidatorWithNetwork(nil, fsm.EventObject{}); err != nil {
 			lib.Revert(err.Error())
 			return
 		}

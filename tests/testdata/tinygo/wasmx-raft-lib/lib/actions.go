@@ -77,9 +77,6 @@ func SetupNode(_ []fsm.ActionParam, event fsm.EventObject) error {
 	}
 
 	// Reset commit/applied
-	if err := SetCommitIndex(LOG_START); err != nil {
-		return err
-	}
 	if err := SetLastApplied(LOG_START); err != nil {
 		return err
 	}
@@ -110,6 +107,110 @@ func SetupNode(_ []fsm.ActionParam, event fsm.EventObject) error {
 	// Initialize Next/Match index arrays
 	return InitializeIndexArrays(len(peers))
 }
+
+// this is for Nodes, not validators
+// TODO signature
+func ReceiveCommit(_ []fsm.ActionParam, event fsm.EventObject) error {
+	// Extract entry and signature
+	entryB64 := ""
+	// sig := ""
+	for _, p := range event.Params {
+		if p.Key == "entry" {
+			entryB64 = p.Value
+		}
+		// if p.Key == "signature" {
+		// 	sig = p.Value
+		// }
+	}
+	if entryB64 == "" {
+		return errors.New("update node: empty entry")
+	}
+	// if sig == "" {
+	// 	return errors.New("update node: empty signature")
+	// }
+	entryBytes, err := base64.StdEncoding.DecodeString(entryB64)
+	if err != nil {
+		return err
+	}
+	LoggerDebugExtended("received new entry", []string{"AppendEntry", string(entryBytes)})
+
+	var appendEntry LogEntryAggregate
+	if err := json.Unmarshal(entryBytes, &appendEntry); err != nil {
+		return err
+	}
+	// // verify signature from leader
+	// ok, err := verifyMessage(appendEntry.LeaderID, sig, string(entryBytes))
+	// if err != nil {
+	// 	return err
+	// }
+	// if !ok {
+	// 	LoggerError("signature verification failed for ReceiveCommit", []string{"leaderId", Int32ToString(appendEntry.LeaderID), "termId", Int32ToString(appendEntry.TermID)})
+	// 	return nil
+	// }
+
+	LoggerInfo("received new entry", []string{
+		"leaderId", Int32ToString(appendEntry.LeaderID),
+		"termId", Int32ToString(appendEntry.TermID),
+		"height", Int32ToString(int32(appendEntry.Index)),
+	})
+
+	// Get current state to check if we should process this commit
+	lastIndex, err := GetLastBlockIndex()
+	if err != nil {
+		return err
+	}
+	// Skip if we already have this block or newer
+	if lastIndex >= appendEntry.Index {
+		LoggerDebug("commit already processed", []string{"lastIndex", Int64ToString(lastIndex), "entryIndex", Int64ToString(appendEntry.Index)})
+		return nil
+	}
+
+	// Store the block - make sure to overwrite any existing block because this is a trusted commit
+	st, err := GetCurrentState()
+	if err != nil {
+		return err
+	}
+	if appendEntry.Index == st.NextHeight {
+		// Process as current block
+		if err := ProcessAppendEntry(appendEntry); err != nil {
+			return err
+		}
+	} else {
+		// Store out of order block
+		SetLogEntryAggregate(appendEntry)
+		SetLastLogIndex(appendEntry.Index)
+	}
+
+	// Try to finalize blocks from last finalized index to this commit height (AS parity)
+	lastFinalizedIndex, err := GetLastBlockIndex()
+	if err != nil {
+		return err
+	}
+	for i := lastFinalizedIndex + 1; i <= appendEntry.Index; i++ {
+		// Check if we have the block at this height
+		entry, err := GetLogEntryAggregate(i)
+		if err != nil {
+			break
+		}
+		if entry == nil || entry.Index == 0 {
+			// Empty block, stop finalization
+			LoggerDebug("empty block found, stopping finalization", []string{"height", Int64ToString(entry.Index)})
+			break
+		}
+		// StartBlockFinalizationFollower
+		// Finalize this block
+		LoggerDebug("finalizing block from commit", []string{"height", Int64ToString(entry.Index)})
+		bz, _ := json.Marshal(entry.Data)
+		LoggerDebugExtended("start block finalization", []string{"height", Int64ToString(entry.Index), "leaderId", Int32ToString(entry.LeaderID), "termId", Int32ToString(entry.TermID), "data", string(bz)})
+		if _, err := StartBlockFinalizationInternal(entry, false); err != nil {
+			LoggerError("failed to finalize block from commit", []string{"height", Int64ToString(i), "error", err.Error()})
+			return err
+		}
+	}
+
+	return nil
+}
+
 func ProcessAppendEntries(_ []fsm.ActionParam, event fsm.EventObject) error {
 	// here we receive new entries/logs/blocks
 	// we need to run ProcessProposal on each block
@@ -153,6 +254,15 @@ func ProcessAppendEntries(_ []fsm.ActionParam, event fsm.EventObject) error {
 		return nil
 	}
 
+	lastCommitIndex, err := GetLastBlockIndex()
+	if err != nil {
+		return err
+	}
+	lastLogIndex, err := GetLastLogIndex()
+	if err != nil {
+		return err
+	}
+
 	LoggerInfo("received new entries", []string{
 		"leaderId", Int32ToString(appendEntry.LeaderID),
 		"termId", Int32ToString(appendEntry.TermID),
@@ -161,7 +271,16 @@ func ProcessAppendEntries(_ []fsm.ActionParam, event fsm.EventObject) error {
 		"prevLogTerm", Int32ToString(appendEntry.PrevLogTerm),
 		"count", Int32ToString(int32(len(appendEntry.Entries))),
 		"nodeIps", Int32ToString(int32(len(appendEntry.NodeIPs))),
+		"our_last_commit_index", Int64ToString(lastCommitIndex),
+		"our_last_log_index", Int64ToString(lastLogIndex),
 	})
+
+	// return if this is an outdated batch; batch is ordered ASC on block height
+	if len(appendEntry.Entries) > 0 {
+		if lastCommitIndex >= appendEntry.Entries[len(appendEntry.Entries)-1].Index {
+			return nil
+		}
+	}
 
 	// update our nodeips
 	ips, err := GetNodeIPs()
@@ -201,14 +320,6 @@ func ProcessAppendEntries(_ []fsm.ActionParam, event fsm.EventObject) error {
 	// we make sure to commit the last block before running ProcessProposal on the new block
 	// TODO
 	// entry.leaderId ?
-	lastCommitIndex, err := GetCommitIndex()
-	if err != nil {
-		return err
-	}
-	lastLogIndex, err := GetLastLogIndex()
-	if err != nil {
-		return err
-	}
 	minVal := lastLogIndex
 	if appendEntry.LeaderCommit < lastLogIndex {
 		minVal = appendEntry.LeaderCommit
@@ -218,19 +329,22 @@ func ProcessAppendEntries(_ []fsm.ActionParam, event fsm.EventObject) error {
 		if _, err := StartBlockFinalizationFollower(i); err != nil {
 			return err
 		}
-		if err := SetCommitIndex(i); err != nil {
-			return err
-		}
 		if err := SetLastApplied(i); err != nil {
 			return err
 		}
 	}
 
+	lastCommitIndex, _ = GetLastBlockIndex()
+
 	// now we check the new block
 	for _, e := range appendEntry.Entries {
+		if lastCommitIndex >= e.Index {
+			continue
+		}
 		if err := ProcessAppendEntry(e); err != nil {
 			return err
 		}
+		lastCommitIndex = e.Index
 	}
 	LoggerDebug("new entries processing finished", []string{
 		"leaderId", Int32ToString(appendEntry.LeaderID),
@@ -394,8 +508,8 @@ func AddToMempool(_ []fsm.ActionParam, event fsm.EventObject) error {
 }
 
 func AddTransactionToMempool(txBytes []byte) error {
-	// Stateless validation (CheckTx) similar to AS
-	// If not OK, treat as invalid and surface error text
+	// AS parity with TinyGo semantics: keep []byte and surface errors.
+	// 1) compute hash and mark seen
 	txhash := base64.StdEncoding.EncodeToString(wasmx.Sha256(txBytes))
 	LoggerDebug("new transaction received", []string{"transaction", base64.StdEncoding.EncodeToString(txBytes), "hash", txhash})
 	mp, err := GetMempool()
@@ -409,17 +523,8 @@ func AddTransactionToMempool(txBytes []byte) error {
 	mp.Seen(txhash)
 	SetMempool(mp)
 
-	req := typestnd.RequestCheckTx{Tx: txBytes, Type: typestnd.CheckTxTypeNew}
-	resp, err := consensuswrap.CheckTx(req)
-	if err != nil {
-		return err
-	}
-	if resp.Code != uint32(typestnd.CodeTypeOk) {
-		return fmt.Errorf("%s; code %d; %s", ERROR_INVALID_TX, resp.Code, resp.Log)
-	}
-
-	// Decode the Cosmos tx for gas and atomic extension handling
-	txDecoded, err := decodeTx(txBytes)
+	// 2) decode tx, compute gas and atomic info BEFORE CheckTx (AS runs CheckTx last)
+	txDecoded, err := DecodeTx(txBytes)
 	if err != nil {
 		return errors.New(ERROR_INVALID_TX)
 	}
@@ -429,13 +534,14 @@ func AddTransactionToMempool(txBytes []byte) error {
 		txGas = txDecoded.AuthInfo.Fee.GasLimit.Uint64()
 	}
 	// Enforce consensus max gas if configured
-	if cparams, err := getConsensusParams(0); err == nil && cparams != nil {
+	if cparams, err := GetConsensusParams(0); err == nil && cparams != nil {
 		if cparams.Block.MaxGas > -1 && uint64(cparams.Block.MaxGas) < txGas {
 			return fmt.Errorf("out of gas: %d; max %d", txGas, cparams.Block.MaxGas)
 		}
 	}
-	// Atomic extension parsing: determine leader and ensure our chain participates if provided
+
 	leaderChain := ""
+	atomicChains := []string{}
 	if len(txDecoded.Body.ExtensionOptions) > 0 {
 		for _, any := range txDecoded.Body.ExtensionOptions {
 			if any.TypeURL == typestnd.TypeUrl_ExtensionOptionAtomicMultiChainTx {
@@ -444,6 +550,13 @@ func AddTransactionToMempool(txBytes []byte) error {
 					return err
 				}
 				ourchain := wasmx.GetChainId()
+				// verify leader correctness
+				computed := multichain.GetLeaderChain(ext.ChainIDs)
+				if ext.LeaderChainID != computed {
+					return fmt.Errorf("atomic transaction wrong leader: expected %s, got %s", computed, ext.LeaderChainID)
+				}
+
+				// this tx is not for our chain -> skip adding (AS returns hash; we just skip without error)
 				found := false
 				for _, cid := range ext.ChainIDs {
 					if cid == ourchain {
@@ -452,23 +565,59 @@ func AddTransactionToMempool(txBytes []byte) error {
 					}
 				}
 				if !found {
-					// not for us; do not add to local mempool
 					return nil
 				}
-				computed := multichain.GetLeaderChain(ext.ChainIDs)
-				if ext.LeaderChainID != computed {
-					return fmt.Errorf("atomic transaction wrong leader: expected %s, got %s", computed, ext.LeaderChainID)
+
+				// don't propose atomic transactions if we do not have all subchains
+				subchains, err := multichain.GetSubChainIds()
+				if err == nil {
+					weCanInclude := true
+					atomicChains = ext.ChainIDs
+					for _, cid := range ext.ChainIDs {
+						present := false
+						for _, sc := range subchains {
+							if sc == cid {
+								present = true
+								break
+							}
+						}
+						if !present {
+							weCanInclude = false
+							break
+						}
+					}
+					if !weCanInclude {
+						LoggerInfo("atomic transaction not added to mempool, node cannot be proposer", []string{"txhash", txhash, "subchains", strings.Join(ext.ChainIDs, ",")})
+						return nil
+					}
 				}
+
 				leaderChain = ext.LeaderChainID
 				break
 			}
 		}
 	}
+
+	// 3) CheckTx last; if invalid, surface error
+	req := typestnd.RequestCheckTx{Tx: txBytes, Type: typestnd.CheckTxTypeNew}
+	resp, err := consensuswrap.CheckTx(req)
+	if err != nil {
+		return err
+	}
+	if resp.Code != uint32(typestnd.CodeTypeOk) {
+		return fmt.Errorf("%s; code %d; %s", ERROR_INVALID_TX, resp.Code, resp.Log)
+	}
+
+	// 4) add to mempool
 	mp.Add(txhash, txBytes, txGas, leaderChain)
 	if err := SetMempool(mp); err != nil {
 		return err
 	}
-	LoggerDebug("new transaction received", []string{"txhash", txhash})
+	if leaderChain != "" {
+		LoggerInfo("new transaction added to mempool", []string{"txhash", txhash, "atomic_crosschain_tx_leader", leaderChain, "subchains", strings.Join(atomicChains, ",")})
+	} else {
+		LoggerInfo("new transaction added to mempool", []string{"txhash", txhash})
+	}
 	return nil
 }
 
@@ -564,6 +713,46 @@ func InitializeMatchIndex(_ []fsm.ActionParam, _ fsm.EventObject) error {
 		arr[i] = 0
 	}
 	return SetMatchIndexArray(arr)
+}
+
+func AddNodeNextIndexInternal(arr []int64, index int64) []int64 {
+	if int(index) < len(arr) {
+		return arr
+	}
+	for i := len(arr); i <= int(index); i++ {
+		arr = append(arr, 0)
+	}
+	return arr
+}
+
+func AddNodeNextIndex(index int64) error {
+	arr, err := GetNextIndexArray()
+	if err != nil {
+		return err
+	}
+	arr = AddNodeNextIndexInternal(arr, index)
+	SetNextIndexArray(arr)
+	return nil
+}
+
+func AddNodeMatchIndexInternal(arr []int64, index int64) []int64 {
+	if int(index) < len(arr) {
+		return arr
+	}
+	for i := len(arr); i <= int(index); i++ {
+		arr = append(arr, 0)
+	}
+	return arr
+}
+
+func AddNodeMatchIndex(index int64) error {
+	arr, err := GetMatchIndexArray()
+	if err != nil {
+		return err
+	}
+	arr = AddNodeMatchIndexInternal(arr, index)
+	SetMatchIndexArray(arr)
+	return nil
 }
 
 // PrepareAppendEntry exports the internal helper for reuse (AS parity)
@@ -815,7 +1004,7 @@ func ProposeBlock(_ []fsm.ActionParam, _ fsm.EventObject) error {
 	if err != nil {
 		return err
 	}
-	lastCommit, err := GetCommitIndex()
+	lastCommit, err := GetLastBlockIndex()
 	if err != nil {
 		return err
 	}
@@ -831,7 +1020,7 @@ func ProposeBlock(_ []fsm.ActionParam, _ fsm.EventObject) error {
 	// Load consensus params to enforce gas/bytes limits
 	var maxGas int64 = -1
 	var maxBytes int64 = 0
-	if cparams, err2 := getConsensusParams(0); err2 == nil && cparams != nil {
+	if cparams, err2 := GetConsensusParams(0); err2 == nil && cparams != nil {
 		maxGas = cparams.Block.MaxGas
 		maxBytes = cparams.Block.MaxBytes
 	}
@@ -919,7 +1108,7 @@ func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 	}
 	evidence := typestnd.Evidence{}
 	consHash := []byte{}
-	if params, err := getConsensusParams(height); err == nil && params != nil {
+	if params, err := GetConsensusParams(height); err == nil && params != nil {
 		if h, err2 := consutils.GetConsensusParamsHash(*params); err2 == nil {
 			consHash = h
 		}
@@ -974,6 +1163,11 @@ func startBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 			metainfo = oe.Metainfo
 		}
 	}
+
+	st, _ = GetCurrentState()
+	st.NextHash = hhash
+	SetCurrentState(st)
+
 	return appendLogInternalVerified(processReq, header, lastBlockCommit, optimisticExecution, metainfo, validatorSet)
 }
 func Setup(params []fsm.ActionParam, event fsm.EventObject) error {
@@ -1072,15 +1266,12 @@ func Setup(params []fsm.ActionParam, event fsm.EventObject) error {
 		}
 	}
 	// last block index from storage contract
-	lastIndex, err := getLastBlockIndex()
+	lastIndex, err := GetLastBlockIndex()
 	if err != nil {
 		return err
 	}
 	LoggerInfo("setting up last log index", []string{"index", Int64ToString(lastIndex)})
 	if err := SetLastLogIndex(lastIndex); err != nil {
-		return err
-	}
-	if err := SetCommitIndex(lastIndex); err != nil {
 		return err
 	}
 	// after we set last log index
@@ -1407,7 +1598,7 @@ func removeNode(nodes []p2p.NodeInfo, index int) []p2p.NodeInfo {
 
 // checkCommits minimal implementation
 func checkCommits() (bool, error) {
-	lastCommit, err := GetCommitIndex()
+	lastCommit, err := GetLastBlockIndex()
 	if err != nil {
 		return false, err
 	}
@@ -1436,12 +1627,9 @@ func checkCommits() (bool, error) {
 	committing := int64(count) >= GetMajority(ncount)
 	LoggerDebug("committing diseminated block", []string{"height", Int64ToString(nextCommit)})
 	if committing {
-		changed, err2 := startBlockFinalizationLeader(nextCommit)
+		changed, err2 := StartBlockFinalizationLeader(nextCommit)
 		if err2 != nil {
 			return false, err2
-		}
-		if err := SetCommitIndex(nextCommit); err != nil {
-			return false, err
 		}
 		if err := SetLastApplied(nextCommit); err != nil {
 			return false, err
@@ -1647,7 +1835,7 @@ func StartBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 			if int(cv.TxIndex) >= len(processReq.Txs) {
 				continue
 			}
-			decodedTx, _ := decodeTx(processReq.Txs[cv.TxIndex])
+			decodedTx, _ := DecodeTx(processReq.Txs[cv.TxIndex])
 			LoggerInfo("new validator", []string{"height", Int64ToString(entryobj.Index), "address", string(cv.OperatorAddress), "p2p_address", decodedTx.Body.Memo})
 			resp := parseNodeAddress(decodedTx.Body.Memo)
 			if resp.Error == "" && resp.NodeInfo != nil {
@@ -1703,7 +1891,7 @@ func StartBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 	return false, nil
 }
 
-func startBlockFinalizationLeader(index int64) (bool, error) {
+func StartBlockFinalizationLeader(index int64) (bool, error) {
 	LoggerInfo("start block finalization", []string{"height", Int64ToString(index)})
 	entryobj, err := GetLogEntryAggregate(index)
 	if err != nil {
@@ -1820,7 +2008,9 @@ func BootstrapAfterStateSync(params []fsm.ActionParam, event fsm.EventObject) er
 	LoggerInfo("bootstrap after state sync completed", []string{
 		"chain_id", state.ChainID,
 		"last_height", Int64ToString(state.LastBlockHeight),
+		"last_committed", Int64ToString(state.LastBlockHeight),
 		"next_height", Int64ToString(currentState.NextHeight),
+		"app_hash", hex.EncodeToString(currentState.AppHash),
 	})
 
 	return nil

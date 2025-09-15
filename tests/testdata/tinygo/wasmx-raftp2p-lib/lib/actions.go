@@ -3,23 +3,281 @@ package lib
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
 
+	sdkmath "cosmossdk.io/math"
+
 	blocks "github.com/loredanacirstea/wasmx-blocks/lib"
+	consensuswrap "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	typestnd "github.com/loredanacirstea/wasmx-env-consensus/lib"
+	multichain "github.com/loredanacirstea/wasmx-env-multichain/lib"
 	p2p "github.com/loredanacirstea/wasmx-env-p2p/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	fsm "github.com/loredanacirstea/wasmx-fsm/lib"
 	raftlib "github.com/loredanacirstea/wasmx-raft-lib/lib"
+	stakinglib "github.com/loredanacirstea/wasmx-staking/lib"
 )
 
 // Chat room topics (parity with AS config)
 const (
 	CHAT_ROOM_PROTOCOL           = "chat_room_protocol"
 	CHAT_ROOM_CROSSCHAIN_MEMPOOL = "chat_room_crosschain_mempool"
+	// AssemblyScript maps CHAT_ROOM_MEMPOOL to CHAT_ROOM_PROTOCOL
+	CHAT_ROOM_MEMPOOL = CHAT_ROOM_PROTOCOL
+	CHAT_ROOM_NODE    = "chat_room_node"
 )
+
+func IfNewTransaction(params []fsm.ActionParam, event fsm.EventObject) (bool, error) {
+	// Extract base64 transaction
+	txB64 := ""
+	if len(event.Params) > 0 {
+		for _, p := range event.Params {
+			if p.Key == "transaction" {
+				txB64 = p.Value
+				break
+			}
+		}
+	}
+	if txB64 == "" {
+		for _, p := range params {
+			if p.Key == "transaction" {
+				txB64 = p.Value
+				break
+			}
+		}
+	}
+	if txB64 == "" {
+		return false, fmt.Errorf("no transaction found")
+	}
+	// Compute txhash in the same way as mempool add: base64(sha256(txBytes))
+	txBytes, err := base64.StdEncoding.DecodeString(txB64)
+	if err != nil {
+		return false, err
+	}
+	txhash := base64.StdEncoding.EncodeToString(wasmx.Sha256(txBytes))
+	mp, err := raftlib.GetMempool()
+	if err != nil {
+		return false, err
+	}
+	existent := mp.HasSeen(txhash)
+	if existent {
+		LoggerDebug("mempool: transaction already added or seen", []string{"txhash", txhash})
+	}
+	return !existent, nil
+}
+
+// Guard: ifNodeIsValidator (AS parity)
+// Returns true if current node is among current validators.
+func IfNodeIsValidator(_ []fsm.ActionParam, _ fsm.EventObject) (bool, error) {
+	validators, err := raftlib.GetAllValidators()
+	if err != nil {
+		return false, err
+	}
+	nodes, err := raftlib.GetNodeIPs()
+	if err != nil {
+		return false, err
+	}
+	idx, err := raftlib.GetCurrentNodeId()
+	if err != nil {
+		return false, err
+	}
+	return ifNodeIsValidatorInternal(validators, nodes, idx), nil
+}
+
+func ifNodeIsValidatorInternal(validators []stakinglib.Validator, nodes []p2p.NodeInfo, nodeId int32) bool {
+	if len(validators) == 1 && len(nodes) == 1 && nodeId == 0 {
+		return true
+	}
+	if len(validators) == 1 && len(nodes) > 1 {
+		return false
+	}
+	if int(nodeId) < 0 || int(nodeId) >= len(nodes) {
+		return false
+	}
+	node := nodes[nodeId]
+	for i := range validators {
+		if validators[i].OperatorAddress == node.Address {
+			return true
+		}
+	}
+	return false
+}
+
+// forwardMsgToChat: forwards a new transaction to the mempool chat room (AS parity)
+func ForwardMsgToChat(params []fsm.ActionParam, event fsm.EventObject) error {
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	if !raftlib.WeAreNotAlone(st) {
+		return nil
+	}
+	// Extract base64 transaction
+	txB64 := ""
+	if len(event.Params) > 0 {
+		for _, p := range event.Params {
+			if p.Key == "transaction" {
+				txB64 = p.Value
+				break
+			}
+		}
+	}
+	if txB64 == "" {
+		for _, p := range params {
+			if p.Key == "transaction" {
+				txB64 = p.Value
+				break
+			}
+		}
+	}
+	if txB64 == "" {
+		return fmt.Errorf("no transaction found")
+	}
+	// Compute txhash in the same way as mempool add: base64(sha256(txBytes))
+	txBytes, err := base64.StdEncoding.DecodeString(txB64)
+	if err != nil {
+		return err
+	}
+	txhash := base64.StdEncoding.EncodeToString(wasmx.Sha256(txBytes))
+	mp, err := raftlib.GetMempool()
+	if err != nil {
+		return err
+	}
+	if !mp.MustBeSent(txhash) {
+		return nil
+	}
+	if err := raftlib.SetMempool(mp); err != nil {
+		return err
+	}
+
+	// Build chat message
+	payload := struct {
+		Run struct {
+			Event struct {
+				Type   string `json:"type"`
+				Params []struct {
+					Key   string `json:"key"`
+					Value string `json:"value"`
+				} `json:"params"`
+			} `json:"event"`
+		} `json:"run"`
+	}{}
+	payload.Run.Event.Type = "newTransaction"
+	payload.Run.Event.Params = []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	}{{Key: "transaction", Value: txB64}}
+	msg, _ := json.Marshal(&payload)
+
+	contract := wasmx.GetAddress()
+	protocolId := GetProtocolIdFromState(st)
+	topic := getTopic(st, CHAT_ROOM_MEMPOOL)
+	LoggerDebug("forwarding transaction to other nodes", []string{"topic", topic, "protocolId", protocolId, "hash", txhash})
+	_, err = p2p.SendMessageToChatRoom(p2p.SendMessageToChatRoomRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: protocolId, Topic: topic})
+	return err
+}
+
+// registerValidatorWithNetwork: announce our peer address to the protocol chat room (AS parity)
+func RegisterValidatorWithNetwork(_ []fsm.ActionParam, _ fsm.EventObject) error {
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	protocolId := GetProtocolIdFromState(st)
+	// topic := getTopic(st, CHAT_ROOM_PROTOCOL)
+	// return announceValidatorNodeWithNetwork(protocolId, topic)
+	err = RegisteredCheck(protocolId)
+	if err != nil {
+		return err
+	}
+	// also update Leader's commit state for this node
+	updateLeaderIndexes()
+	return nil
+}
+
+func updateLeaderIndexes() error {
+	termId, err := raftlib.GetTermId()
+	if err != nil {
+		return err
+	}
+	lastLogIndex, err := raftlib.GetLastLogIndex()
+	if err != nil {
+		return err
+	}
+	successful := true
+	lastEntry, err := raftlib.GetLogEntryObjIndexLast()
+	if err != nil {
+		return err
+	}
+
+	resp := raftlib.AppendEntryResponse{TermID: termId, Success: successful, LastIndex: lastLogIndex}
+	LoggerDebug("send heartbeat response", []string{"termId", raftlib.Int32ToString(termId), "success", "true", "lastLogIndex", raftlib.Int64ToString(lastLogIndex)})
+	SendHeartbeatResponseMessage(resp, lastEntry.LeaderID)
+	return nil
+}
+
+func announceValidatorNodeWithNetwork(protocolId string, topic string) error {
+	nodes, err := raftlib.GetNodeIPs()
+	if err != nil {
+		return err
+	}
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	if !raftlib.WeAreNotAloneInternal(nodes, st) {
+		return nil
+	}
+	ourId, err := raftlib.GetCurrentNodeId()
+	if err != nil {
+		return err
+	}
+	if int(ourId) < 0 || int(ourId) >= len(nodes) {
+		return nil
+	}
+	// Build UpdateNodeRequest with our peer address
+	req := struct {
+		PeerAddress string `json:"peer_address"`
+	}{PeerAddress: GetP2PAddress(nodes[ourId])}
+	reqBz, err := json.Marshal(&req)
+	if err != nil {
+		return err
+	}
+	sig, err := raftlib.SignMessage(string(reqBz))
+	if err != nil {
+		return err
+	}
+	sender := nodes[ourId].Address
+	// Wrap into receiveUpdateNodeRequest payload
+	payload := struct {
+		Run struct {
+			Event struct {
+				Type   string `json:"type"`
+				Params []struct {
+					Key   string `json:"key"`
+					Value string `json:"value"`
+				} `json:"params"`
+			} `json:"event"`
+		} `json:"run"`
+	}{}
+	payload.Run.Event.Type = "receiveUpdateNodeRequest"
+	payload.Run.Event.Params = []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	}{
+		{Key: "entry", Value: base64.StdEncoding.EncodeToString(reqBz)},
+		{Key: "signature", Value: sig},
+		{Key: "sender", Value: string(sender)},
+	}
+	msg, _ := json.Marshal(&payload)
+	contract := wasmx.GetAddress()
+	LoggerInfo("announce node info to network", []string{"req", string(msg)})
+	_, err = p2p.SendMessageToChatRoom(p2p.SendMessageToChatRoomRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: protocolId, Topic: topic})
+	return err
+}
 
 // NodeInfoResponse mirrors the AS parse result
 type NodeInfoResponse struct {
@@ -96,6 +354,10 @@ func UpdateNodeAndReturn(params []fsm.ActionParam, event fsm.EventObject) error 
 			ips[ndx].Node = entry.Node.Node
 		} else {
 			ips = append(ips, entry.Node)
+			ndx = len(ips) - 1
+			LoggerInfo("updating node indexes", []string{"ip", entry.Node.Node.IP, "index", fmt.Sprint(ndx)})
+			// raftlib.AddNodeNextIndex(int64(ndx))
+			// raftlib.AddNodeMatchIndex(int64(ndx))
 		}
 	case raftlib.NODE_UPDATE_REMOVE:
 		if int(entry.Index) >= 0 && int(entry.Index) < len(ips) {
@@ -190,9 +452,6 @@ func SetupNode(_ []fsm.ActionParam, event fsm.EventObject) error {
 	LoggerDebug("setupNode", []string{"initChainSetup", string(raw)})
 
 	// Reset commit/applied
-	if err := raftlib.SetCommitIndex(raftlib.LOG_START); err != nil {
-		return err
-	}
 	if err := raftlib.SetLastApplied(raftlib.LOG_START); err != nil {
 		return err
 	}
@@ -722,7 +981,7 @@ func voteInternalLocal(termId int32, candidateId int32, lastLogIndex int64, last
 
 // GetProtocolIdFromState returns PROTOCOL_ID + "_" + chainID (AS parity)
 func GetProtocolIdFromState(state raftlib.CurrentState) string {
-	return PROTOCOL_ID + "_" + state.ChainID
+	return getProtocolIdInternal(state.ChainID)
 }
 
 // getTopic returns topic + "_" + chainId + "_" + unique_p2p_id (AS parity)
@@ -733,6 +992,38 @@ func getTopic(state raftlib.CurrentState, topic string) string {
 
 func getTopicInternal(chainID string, topic string) string {
 	return topic + "_" + chainID
+}
+
+// Build protocol id for an arbitrary chain id (AS parity)
+func getProtocolIdInternal(chainID string) string {
+	return PROTOCOL_ID + "_" + chainID
+}
+
+func ConnectNodeRoom() error {
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	protocolId := GetProtocolIdFromState(st)
+	// main protocol room
+	topic := getTopic(st, CHAT_ROOM_NODE)
+	if _, err := p2p.ConnectChatRoom(p2p.ConnectChatRoomRequest{ProtocolId: protocolId, Topic: topic}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func DisconnectNodeRoom() error {
+	state, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	protocolId := GetProtocolIdFromState(state)
+	p2p.DisconnectChatRoom(p2p.DisconnectChatRoomRequest{
+		ProtocolId: protocolId,
+		Topic:      getTopic(state, CHAT_ROOM_NODE),
+	})
+	return nil
 }
 
 // ConnectRooms connects to consensus chat rooms for protocol + crosschain mempool (AS parity)
@@ -752,6 +1043,23 @@ func ConnectRooms() error {
 	if _, err := p2p.ConnectChatRoom(p2p.ConnectChatRoomRequest{ProtocolId: protocolId, Topic: topic2}); err != nil {
 		return err
 	}
+	return nil
+}
+
+func DisconnectRooms() error {
+	state, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	protocolId := GetProtocolIdFromState(state)
+	p2p.DisconnectChatRoom(p2p.DisconnectChatRoomRequest{
+		ProtocolId: protocolId,
+		Topic:      getTopic(state, CHAT_ROOM_PROTOCOL),
+	})
+	p2p.DisconnectChatRoom(p2p.DisconnectChatRoomRequest{
+		ProtocolId: protocolId,
+		Topic:      getTopic(state, CHAT_ROOM_CROSSCHAIN_MEMPOOL),
+	})
 	return nil
 }
 
@@ -795,7 +1103,6 @@ func ReceiveAppendEntryResponse(entry string, signature string, sender wasmx.Bec
 	if err := json.Unmarshal(bz, &resp); err != nil {
 		return err
 	}
-	LoggerDebug("received append entry response", []string{"sender", string(sender), "data", string(bz)})
 	ok, err := verifyMessageByAddr(sender, signature, bz)
 	if err != nil {
 		return err
@@ -816,6 +1123,7 @@ func ReceiveAppendEntryResponse(entry string, signature string, sender wasmx.Bec
 			break
 		}
 	}
+	LoggerDebug("received append entry response", []string{"sender", string(sender), "data", string(bz), "nodeId", fmt.Sprint(nodeId)})
 	if nodeId < 0 {
 		return nil
 	}
@@ -824,9 +1132,11 @@ func ReceiveAppendEntryResponse(entry string, signature string, sender wasmx.Bec
 		if err != nil {
 			return err
 		}
-		if nodeId >= 0 && nodeId < len(arr) {
-			arr[nodeId] = resp.LastIndex + 1
+		if len(arr)-1 < nodeId {
+			arr = raftlib.AddNodeNextIndexInternal(arr, int64(nodeId))
+			raftlib.AddNodeMatchIndex(int64(nodeId))
 		}
+		arr[nodeId] = resp.LastIndex + 1
 		if err := raftlib.SetNextIndexArray(arr); err != nil {
 			return err
 		}
@@ -838,7 +1148,6 @@ func ReceiveAppendEntryResponse(entry string, signature string, sender wasmx.Bec
 	return nil
 }
 
-// sendAppendEntry: we eliminate out of sync nodes until they get back online (AS parity)
 func sendAppendEntry(nodeId int32, node p2p.NodeInfo, nodeIps []p2p.NodeInfo) error {
 	nextIndexPerNode, err := raftlib.GetNextIndexArray()
 	if err != nil {
@@ -866,7 +1175,7 @@ func sendAppendEntry(nodeId int32, node p2p.NodeInfo, nodeIps []p2p.NodeInfo) er
 		return err
 	}
 	// AS also logs a short entry dissemination here
-	LoggerDebug("diseminate entry", []string{"count", fmt.Sprint(len(data.Entries)), "address", string(node.Address)})
+	LoggerDebug("diseminate entry", []string{"count", fmt.Sprint(len(data.Entries)), "address", string(node.Address), "nextIndex", fmt.Sprint(nextIndex), "lastIndex", fmt.Sprint(lastIndex)})
 	msgStr, err := raftlib.PrepareAppendEntryMessage(nodeId, nextIndex, lastIndex, lastIndex, node, data)
 	if err != nil {
 		return err
@@ -913,7 +1222,7 @@ func SendAppendEntries() error {
 // CommitBlocks: run commit checks, and if consensus changed, disseminate via p2p
 func CommitBlocks() error {
 	// AS parity: call raft's checkCommits (no dissemination)
-	changed, err := raftlib.CheckCommits(nil, fsm.EventObject{})
+	changed, err := CheckCommits()
 	if err != nil {
 		return err
 	}
@@ -987,30 +1296,6 @@ func RegisteredCheck(protocolId string) error {
 	return err
 }
 
-// this is executed each time the node is started in Follower or Candidate state if needed
-// and the first time the node is started
-// RequestNetworkSync invokes RegisteredCheck
-// func RequestNetworkSync() error {
-//     st, err := raftlib.GetCurrentState()
-// 		if err != nil {
-// 			Revert(err.Error())
-// 		}
-//     return RegisteredCheck(GetProtocolIdFromState(st))
-// }
-
-// we override with the new protocol, where this must call connectRooms, RequestBlockSync
-func RequestNetworkSync() error {
-	err := ConnectRooms()
-	if err != nil {
-		return err
-	}
-	err = RequestBlockSync()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // ReceiveStateSyncResponse processes incoming state sync batch (AS parity)
 func ReceiveStateSyncResponse(entryB64 string, sender string) error {
 	bz, err := base64.StdEncoding.DecodeString(entryB64)
@@ -1027,6 +1312,18 @@ func ReceiveStateSyncResponse(entryB64 string, sender string) error {
 		return err
 	}
 
+	lastCommitIndex, _ := raftlib.GetLastBlockIndex()
+
+	LoggerDebug("received statesync response", []string{
+		"count", fmt.Sprint(len(resp.Entries)),
+		"from", fmt.Sprint(resp.StartBatchIndex),
+		"to_batch", fmt.Sprint(resp.LastBatchIndex),
+		"to", fmt.Sprint(resp.LastLogIndex),
+		"last_log_index", fmt.Sprint(resp.LastLogIndex),
+		"our_last_log_index", fmt.Sprint(lastIndex),
+		"last_committed_index", fmt.Sprint(lastCommitIndex),
+	})
+
 	count := resp.LastLogIndex - resp.StartBatchIndex + 1
 	if count > maxBlockSyncDelta {
 		LoggerInfo("received statesync response, starting state sync", []string{"from", fmt.Sprint(resp.StartBatchIndex), "to", fmt.Sprint(resp.LastLogIndex)})
@@ -1036,7 +1333,8 @@ func ReceiveStateSyncResponse(entryB64 string, sender string) error {
 		}
 		protocolId := GetProtocolIdFromState(st)
 
-		// TODO: implement disconnectRooms equivalent if needed
+		// disconnect from other chat rooms, so we do not receive additional messages
+		DisconnectRooms()
 
 		// Start state sync as receiver
 		currentNodeid, err := raftlib.GetCurrentNodeId()
@@ -1464,4 +1762,307 @@ func SendStateSyncRequest(protocolId string, nodeId int32) error {
 	LoggerDebug("sending statesync request", []string{"nodeId", fmt.Sprint(nodeId), "address", string(receiver.Address), "data", string(bz), "peer", ourPeer})
 	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{Contract: contract, Sender: contract, Msg: msg, ProtocolId: protocolId, Peers: []string{peer}})
 	return err
+}
+
+func AddToMempool(_ []fsm.ActionParam, event fsm.EventObject) error {
+	txB64 := ""
+	for _, p := range event.Params {
+		if p.Key == "transaction" {
+			txB64 = p.Value
+			break
+		}
+	}
+	if txB64 == "" {
+		return errors.New("no transaction found")
+	}
+	// Decode transaction payload (base64 => []byte)
+	txBytes, err := base64.StdEncoding.DecodeString(txB64)
+	if err != nil {
+		return err
+	}
+	LoggerDebug("new transaction received", []string{"transaction", txB64})
+	return AddTransactionToMempool(txBytes)
+}
+
+func AddTransactionToMempool(txBytes []byte) error {
+	// AS parity with TinyGo semantics: keep []byte and surface errors.
+	// 1) compute hash and mark seen
+	txhash := base64.StdEncoding.EncodeToString(wasmx.Sha256(txBytes))
+	LoggerDebug("new transaction received", []string{"transaction", base64.StdEncoding.EncodeToString(txBytes), "hash", txhash})
+	mp, err := raftlib.GetMempool()
+	if err != nil {
+		return err
+	}
+	if mp.HasSeen(txhash) {
+		LoggerDebug("transaction already processed", []string{"hash", txhash})
+		return nil
+	}
+	mp.Seen(txhash)
+	raftlib.SetMempool(mp)
+
+	// 2) decode tx, compute gas and atomic info BEFORE CheckTx (AS runs CheckTx last)
+	txDecoded, err := raftlib.DecodeTx(txBytes)
+	if err != nil {
+		return errors.New(raftlib.ERROR_INVALID_TX)
+	}
+	// Determine gas from fee if present, default to 1_000_000
+	var txGas uint64 = 1000000
+	if txDecoded.AuthInfo != nil && txDecoded.AuthInfo.Fee != nil && txDecoded.AuthInfo.Fee.GasLimit.GT(sdkmath.NewInt(0)) {
+		txGas = txDecoded.AuthInfo.Fee.GasLimit.Uint64()
+	}
+	// Enforce consensus max gas if configured
+	if cparams, err := raftlib.GetConsensusParams(0); err == nil && cparams != nil {
+		if cparams.Block.MaxGas > -1 && uint64(cparams.Block.MaxGas) < txGas {
+			return fmt.Errorf("out of gas: %d; max %d", txGas, cparams.Block.MaxGas)
+		}
+	}
+
+	leaderChain := ""
+	atomicChains := []string{}
+	if len(txDecoded.Body.ExtensionOptions) > 0 {
+		for _, any := range txDecoded.Body.ExtensionOptions {
+			if any.TypeURL == typestnd.TypeUrl_ExtensionOptionAtomicMultiChainTx {
+				ext, err := typestnd.ExtensionOptionAtomicMultiChainTxFromAnyWrap(any)
+				if err != nil {
+					return err
+				}
+				ourchain := wasmx.GetChainId()
+				// verify leader correctness
+				computed := multichain.GetLeaderChain(ext.ChainIDs)
+				if ext.LeaderChainID != computed {
+					return fmt.Errorf("atomic transaction wrong leader: expected %s, got %s", computed, ext.LeaderChainID)
+				}
+
+				// forward to other chains too (best effort)
+				otherchains := []string{}
+				for _, cid := range ext.ChainIDs {
+					if cid != ourchain {
+						otherchains = append(otherchains, cid)
+					}
+				}
+				if len(otherchains) > 0 {
+					_ = forwardMsgToOtherChains(txBytes, otherchains)
+				}
+
+				// this tx is not for our chain -> skip adding (AS returns hash; we just skip without error)
+				found := false
+				for _, cid := range ext.ChainIDs {
+					if cid == ourchain {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return nil
+				}
+
+				// don't propose atomic transactions if we do not have all subchains
+				subchains, err := multichain.GetSubChainIds()
+				if err == nil {
+					weCanInclude := true
+					atomicChains = ext.ChainIDs
+					for _, cid := range ext.ChainIDs {
+						present := false
+						for _, sc := range subchains {
+							if sc == cid {
+								present = true
+								break
+							}
+						}
+						if !present {
+							weCanInclude = false
+							break
+						}
+					}
+					if !weCanInclude {
+						LoggerInfo("atomic transaction not added to mempool, node cannot be proposer", []string{"txhash", txhash, "subchains", strings.Join(ext.ChainIDs, ",")})
+						return nil
+					}
+				}
+
+				leaderChain = ext.LeaderChainID
+				break
+			}
+		}
+	}
+
+	// 3) CheckTx last; if invalid, surface error
+	req := typestnd.RequestCheckTx{Tx: txBytes, Type: typestnd.CheckTxTypeNew}
+	resp, err := consensuswrap.CheckTx(req)
+	if err != nil {
+		return err
+	}
+	if resp.Code != uint32(typestnd.CodeTypeOk) {
+		return fmt.Errorf("%s; code %d; %s", raftlib.ERROR_INVALID_TX, resp.Code, resp.Log)
+	}
+
+	// 4) add to mempool
+	mp.Add(txhash, txBytes, txGas, leaderChain)
+	if err := raftlib.SetMempool(mp); err != nil {
+		return err
+	}
+	if leaderChain != "" {
+		LoggerInfo("new transaction added to mempool", []string{"txhash", txhash, "atomic_crosschain_tx_leader", leaderChain, "subchains", strings.Join(atomicChains, ",")})
+	} else {
+		LoggerInfo("new transaction added to mempool", []string{"txhash", txhash})
+	}
+	return nil
+}
+
+// forwardMsgToOtherChains forwards tx to crosschain mempool chat rooms for chainIds
+func forwardMsgToOtherChains(tx []byte, chainIds []string) error {
+	st, err := raftlib.GetCurrentState()
+	if err != nil {
+		return err
+	}
+	if !raftlib.WeAreNotAlone(st) {
+		return nil
+	}
+	// Build message with base64 transaction
+	txb64 := base64.StdEncoding.EncodeToString(tx)
+	payload := struct {
+		Run struct {
+			Event struct {
+				Type   string `json:"type"`
+				Params []struct {
+					Key   string `json:"key"`
+					Value string `json:"value"`
+				} `json:"params"`
+			} `json:"event"`
+		} `json:"run"`
+	}{}
+	payload.Run.Event.Type = "newTransaction"
+	payload.Run.Event.Params = []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	}{{Key: "transaction", Value: txb64}}
+	msg, _ := json.Marshal(&payload)
+
+	// Use consensus role for cross-chain
+	contract := wasmx.GetAddressByRole(wasmx.ROLE_CONSENSUS)
+	sender := wasmx.GetAddressByRole(wasmx.ROLE_CONSENSUS)
+
+	for _, chainId := range chainIds {
+		protocolId := getProtocolIdInternal(chainId)
+		topic := getTopicInternal(chainId, CHAT_ROOM_CROSSCHAIN_MEMPOOL)
+		LoggerDebug("forwarding transaction to chain", []string{"chain_id", chainId, "topic", topic, "protocolId", protocolId})
+		if _, err := p2p.SendMessageToChatRoom(p2p.SendMessageToChatRoomRequest{Contract: contract, Sender: sender, Msg: msg, ProtocolId: protocolId, Topic: topic}); err != nil {
+			// best effort; continue forwarding to other chains
+			LoggerError("forwarding to chain failed", []string{"chain_id", chainId, "error", err.Error()})
+		}
+	}
+	return nil
+}
+
+// CheckCommits minimal implementation
+func CheckCommits() (bool, error) {
+	lastCommit, err := raftlib.GetLastBlockIndex()
+	if err != nil {
+		return false, err
+	}
+	lastLog, err := raftlib.GetLastLogIndex()
+	if err != nil {
+		return false, err
+	}
+	nextCommit := lastCommit + 1
+	if lastLog < nextCommit {
+		return false, nil
+	}
+	nextArr, err := raftlib.GetNextIndexArray()
+	if err != nil {
+		return false, err
+	}
+	count := 1 // leader
+	for _, v := range nextArr {
+		if v > nextCommit {
+			count++
+		}
+	}
+	ncount, err := raftlib.GetNodeCount()
+	if err != nil {
+		return false, err
+	}
+	committing := int64(count) >= raftlib.GetMajority(ncount)
+	LoggerDebug("committing diseminated block", []string{"height", raftlib.Int64ToString(nextCommit)})
+	if committing {
+		changed, err2 := StartBlockFinalizationLeader(nextCommit)
+		if err2 != nil {
+			return false, err2
+		}
+		if err := raftlib.SetLastApplied(nextCommit); err != nil {
+			return false, err
+		}
+		return changed, nil
+	}
+	return false, nil
+}
+
+func StartBlockFinalizationLeader(index int64) (bool, error) {
+	LoggerInfo("start block finalization", []string{"height", raftlib.Int64ToString(index)})
+	entryobj, err := raftlib.GetLogEntryAggregate(index)
+	if err != nil {
+		return false, err
+	}
+	if entryobj == nil {
+		LoggerInfo("cannot start block finalization", []string{"height", raftlib.Int64ToString(index), "reason", "block empty"})
+		return false, nil
+	}
+	LoggerDebug("start block finalization", []string{"height", raftlib.Int64ToString(index), "leaderId", raftlib.Int32ToString(entryobj.LeaderID), "termId", raftlib.Int32ToString(entryobj.TermID)})
+	bz, _ := json.Marshal(entryobj.Data)
+	LoggerDebugExtended("start block finalization", []string{"height", raftlib.Int64ToString(index), "leaderId", raftlib.Int32ToString(entryobj.LeaderID), "termId", raftlib.Int32ToString(entryobj.TermID), "data", string(bz)})
+	currentTerm, err := raftlib.GetTermId()
+	if err != nil {
+		return false, err
+	}
+	if currentTerm == entryobj.TermID {
+		retry, err := raftlib.StartBlockFinalizationInternal(entryobj, false)
+		if err != nil {
+			return retry, err
+		}
+
+		// for other nodes to to be non-validator clients and sync
+		st, err := raftlib.GetCurrentState()
+		if err != nil {
+			return false, nil
+		}
+		contract := wasmx.GetAddress()
+		protocolId := GetProtocolIdFromState(st)
+		topic := getTopic(st, CHAT_ROOM_NODE)
+		LoggerDebug("forwarding finalized block to nodes chat room", []string{"topic", topic, "protocolId", protocolId, "height", raftlib.Int64ToString(entryobj.Index)})
+
+		msgbz, _ := json.Marshal(entryobj)
+
+		// Build chat message
+		payload := struct {
+			Run struct {
+				Event struct {
+					Type   string `json:"type"`
+					Params []struct {
+						Key   string `json:"key"`
+						Value string `json:"value"`
+					} `json:"params"`
+				} `json:"event"`
+			} `json:"run"`
+		}{}
+		payload.Run.Event.Type = "receiveCommit"
+		payload.Run.Event.Params = []struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}{{Key: "entry", Value: base64.StdEncoding.EncodeToString(msgbz)}}
+		msg, _ := json.Marshal(&payload)
+
+		p2p.SendMessageToChatRoom(p2p.SendMessageToChatRoomRequest{
+			Contract:   contract,
+			Sender:     contract,
+			Msg:        msg,
+			ProtocolId: protocolId,
+			Topic:      topic,
+		})
+		// we reset it here, so we are sure it is reset
+		st.NextHash = []byte{}
+		raftlib.SetCurrentState(st)
+		return retry, nil
+	}
+	LoggerError("entry has current term mismatch", []string{"nodeType", "Leader", "currentTerm", raftlib.Int32ToString(currentTerm), "entryTermId", raftlib.Int32ToString(entryobj.TermID)})
+	return false, nil
 }
