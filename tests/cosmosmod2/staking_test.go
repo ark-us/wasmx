@@ -282,7 +282,8 @@ func (s *KeeperTestSuite) TestStakingJailValidator() {
 	s.Require().Equal(int64(0), info.IndexOffset)
 	s.Require().Equal(time.Unix(0, 0).UTC(), info.JailedUntil)
 
-	// TODO another transaction with both validators
+	// another transaction with both validators
+	appA.ExecuteContract(sender, contractAddress, internalmsg, nil, nil)
 }
 
 func getBlockBitMap(consAddress string, appA testutil.AppContext) *cosmosmodtypes.MissedBlocksBitMap {

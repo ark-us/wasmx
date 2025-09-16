@@ -35,10 +35,15 @@ func IsVotedLeader(_ []fsm.ActionParam, _ fsm.EventObject) (bool, error) {
 	for _, v := range votes {
 		count += v
 	}
-	ncount, err := GetNodeCount()
+	valid, err := GetAllValidators()
 	if err != nil {
 		return false, err
 	}
+	activeValid, err := consutils.GetActiveValidatorInfo(valid)
+	if err != nil {
+		return false, err
+	}
+	ncount := len(activeValid)
 	majority := GetMajority(ncount)
 	LoggerDebug("check if is voted Leader", []string{"yes", Int32ToString(count), "total_votes", Int32ToString(int32(ncount)), "majority", Int64ToString(majority)})
 	return int64(count) >= majority, nil
@@ -1086,15 +1091,42 @@ func buildBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 		previousValidatorSet = validatorSet
 	}
 
+	signatures := consutils.FilterAndSortCommitSignatures(lastBlockCommit.Signatures, previousValidatorSet.Validators)
+	if len(signatures) != len(previousValidatorSet.Validators) && height > (LOG_START+1) {
+		Revert(fmt.Sprintf(`last block validator set length mismatch with signature list: expected %d, got %d`, len(signatures), len(previousValidatorSet.Validators)))
+	}
+
 	lastCommit := typestnd.CommitInfo{Round: 0, Votes: []typestnd.VoteInfo{}}
 	localLastCommit := typestnd.ExtendedCommitInfo{Round: 0, Votes: []typestnd.ExtendedVoteInfo{}}
+	for i := 0; i < len(signatures); i++ {
+		commitSig := signatures[i]
+		val := previousValidatorSet.Validators[i]
+
+		// TODO VoteInfo should be hex
+		// but then we need a mapping hex => pubkey or hex => operator_address
+		// hex format -> bytes -> base64
+		// commitSig.validator_address
+
+		vaddress := wasmx.AddrCanonicalize(string(val.OperatorAddress))
+		validator := typestnd.Validator{Address: vaddress, Power: val.VotingPower}
+		voteInfo := typestnd.VoteInfo{Validator: validator, BlockIDFlag: commitSig.BlockIDFlag}
+		lastCommit.Votes = append(lastCommit.Votes, voteInfo)
+
+		extendedVoteInfo := typestnd.ExtendedVoteInfo{
+			Validator:          validator,
+			VoteExtension:      []byte{},
+			ExtensionSignature: []byte{},
+			BlockIDFlag:        commitSig.BlockIDFlag,
+		}
+		localLastCommit.Votes = append(localLastCommit.Votes, extendedVoteInfo)
+	}
 
 	nextValsHash, err := consensuswrap.ValidatorsHash(validatorInfos)
 	if err != nil {
 		return err
 	}
 	misbehavior := []typestnd.Misbehavior{}
-	timeISO := time.Now().UTC().Format(time.RFC3339Nano)
+	timeISO := time.Now().UTC().Format(time.RFC3339)
 	prepareReq := typestnd.RequestPrepareProposal{
 		MaxTxBytes:         maxDataBytes,
 		Txs:                txs,
@@ -1633,10 +1665,15 @@ func checkCommits() (bool, error) {
 			count++
 		}
 	}
-	ncount, err := GetNodeCount()
+	valid, err := GetAllValidators()
 	if err != nil {
 		return false, err
 	}
+	activeValid, err := consutils.GetActiveValidatorInfo(valid)
+	if err != nil {
+		return false, err
+	}
+	ncount := len(activeValid)
 	committing := int64(count) >= GetMajority(ncount)
 	LoggerDebug("committing diseminated block", []string{"height", Int64ToString(nextCommit)})
 	if committing {

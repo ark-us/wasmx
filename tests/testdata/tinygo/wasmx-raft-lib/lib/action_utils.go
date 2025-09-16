@@ -21,7 +21,9 @@ import (
 )
 
 // GetMajority: wrapper to storage's majority
-func GetMajority(count int) int64 { return int64(count/2) + 1 }
+func GetMajority(count int) int64 {
+	return int64(count/2) + 1
+}
 
 // GetRandomInRange: deterministic-ish using block timestamp
 func GetRandomInRange(min int64, max int64) (int64, error) {

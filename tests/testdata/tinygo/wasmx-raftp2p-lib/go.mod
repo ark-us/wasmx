@@ -16,7 +16,7 @@ require github.com/loredanacirstea/wasmx-env-crosschain v0.0.0 // indirect
 
 require github.com/loredanacirstea/wasmx-staking v0.0.0
 
-require github.com/loredanacirstea/wasmx-consensus-utils v0.0.0 // indirect
+require github.com/loredanacirstea/wasmx-consensus-utils v0.0.0
 
 require github.com/loredanacirstea/wasmx-blocks v0.0.0
 

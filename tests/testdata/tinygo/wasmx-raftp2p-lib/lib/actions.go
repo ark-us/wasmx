@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	sdkmath "cosmossdk.io/math"
 
 	blocks "github.com/loredanacirstea/wasmx-blocks/lib"
+	consutils "github.com/loredanacirstea/wasmx-consensus-utils/lib"
 	consensuswrap "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	typestnd "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	multichain "github.com/loredanacirstea/wasmx-env-multichain/lib"
@@ -2009,18 +2011,27 @@ func CheckCommits() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	// check if majority has committed the previous block
 	count := 1 // leader
 	for _, v := range nextArr {
+		// next index is the next index to send, so we use >
 		if v > nextCommit {
 			count++
 		}
 	}
-	ncount, err := raftlib.GetNodeCount()
+	valid, err := raftlib.GetAllValidators()
 	if err != nil {
 		return false, err
 	}
-	committing := int64(count) >= raftlib.GetMajority(ncount)
-	LoggerDebug("committing diseminated block", []string{"height", raftlib.Int64ToString(nextCommit)})
+	activeValid, err := consutils.GetActiveValidatorInfo(valid)
+	if err != nil {
+		return false, err
+	}
+	ncount := len(activeValid)
+
+	// if we have Leader & Follower, let the Leader commit blocks if Follower goes down
+	committing := int64(count) >= (raftlib.GetMajority(ncount) - 1)
+	LoggerDebug("committing diseminated block", []string{"height", raftlib.Int64ToString(nextCommit), "committing", strconv.FormatBool(committing), "count", fmt.Sprintf("%d", count), "ncount", fmt.Sprintf("%d", count)})
 	if committing {
 		changed, err2 := StartBlockFinalizationLeader(nextCommit)
 		if err2 != nil {
