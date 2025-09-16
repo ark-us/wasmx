@@ -672,96 +672,6 @@ func getValidatorByHexAddr(addr wasmx.HexString) (stakinglib.Validator, error) {
 	return result.Validator, nil
 }
 
-// getCommitSigsFromLeaderSignature creates a single commit signature for the Leader in RAFT consensus
-// This is the RAFT equivalent of Tendermint's getCommitSigsFromPrecommitArray
-func getCommitSigsFromLeaderSignature(blockCommit typestnd.BlockCommit, validatorInfos []typestnd.TendermintValidator) ([]typestnd.CommitSig, error) {
-	if len(validatorInfos) == 0 {
-		return []typestnd.CommitSig{}, nil
-	}
-
-	// Get current state to access Leader's private key
-	st, err := GetCurrentState()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current state: %v", err)
-	}
-
-	// Get current Leader node ID
-	leaderId, err := GetCurrentNodeId()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current node ID: %v", err)
-	}
-
-	// Find the Leader's validator info
-	var leaderValidatorInfo *typestnd.TendermintValidator
-	leaderValidatorIndex := int(leaderId)
-	if leaderValidatorIndex >= 0 && leaderValidatorIndex < len(validatorInfos) {
-		leaderValidatorInfo = &validatorInfos[leaderValidatorIndex]
-	} else {
-		// Try to find by address if index doesn't work
-		for i := range validatorInfos {
-			if validatorInfos[i].HexAddress == st.ValidatorAddress {
-				leaderValidatorInfo = &validatorInfos[i]
-				break
-			}
-		}
-	}
-
-	if leaderValidatorInfo == nil {
-		return nil, fmt.Errorf("leader validator not found in validator set")
-	}
-	hash, err := hex.DecodeString(string(blockCommit.BlockID.Hash))
-	if err != nil {
-		return nil, fmt.Errorf("cannot decode blockID hash %s", blockCommit.BlockID.Hash)
-	}
-	validAddr, err := hex.DecodeString(string(st.ValidatorAddress))
-	if err != nil {
-		return nil, fmt.Errorf("cannot decode validator address %s", blockCommit.BlockID.Hash)
-	}
-
-	// Create vote data for signing (similar to Tendermint precommit)
-	vote := typestnd.VoteTendermint{
-		Type:             typestnd.SIGNED_MSG_TYPE_PRECOMMIT,
-		Height:           blockCommit.Height,
-		Round:            blockCommit.Round,
-		BlockID:          GetBlockIDProto(hash),
-		Timestamp:        time.Now().UTC().Format(time.RFC3339Nano),
-		ValidatorAddress: validAddr,
-		ValidatorIndex:   int32(leaderValidatorIndex),
-	}
-
-	// Get the canonical vote bytes for signing
-	voteBytes, err := consensuswrap.BlockCommitVoteBytes(vote)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get vote bytes: %v", err)
-	}
-
-	// Sign the vote bytes with Leader's private key
-	signature := wasmx.Ed25519Sign(st.ValidatorPrivkey, voteBytes)
-
-	// Get validator's consensus public key hex
-	validator, err := getValidatorByHexAddr(wasmx.HexString(st.ValidatorAddress))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get validator: %v", err)
-	}
-
-	if validator.ConsensusPubkey == nil {
-		return nil, fmt.Errorf("validator missing consensus public key")
-	}
-
-	consKey := wasmx.Ed25519PubToHex(validator.ConsensusPubkey.GetKey().Key)
-
-	// Create commit signature for the Leader
-	commitSig := typestnd.CommitSig{
-		BlockIDFlag:      typestnd.BlockIDFlagCommit,
-		ValidatorAddress: wasmx.HexString(hex.EncodeToString(consKey)),
-		Timestamp:        time.Now().UTC().Format(time.RFC3339Nano),
-		Signature:        signature,
-	}
-
-	// Return array with single signature (RAFT has only Leader)
-	return []typestnd.CommitSig{commitSig}, nil
-}
-
 // appendLogInternalVerified creates a BlockEntry and LogEntryAggregate, then appends it to the log
 func appendLogInternalVerified(processReq typestnd.RequestProcessProposal, header typestnd.Header, blockCommit typestnd.BlockCommit, optimisticExecution bool, meta map[string][]byte, validatorSet typestnd.TendermintValidators) error {
 	// AS: Create RequestProcessProposalWithMetaInfo with meta as-is (lines 1476-1477)
@@ -1093,17 +1003,41 @@ func getCommitSigsFromPrecommitArray(st CurrentState, height int64, blockhash []
 		return nil, err
 	}
 	validatorInfos := consutils.SortTendermintValidators(activeInfos)
+
+	ips, err := GetNodeIPs()
+	if err != nil {
+		return nil, err
+	}
+
+	// for Raft, we just fill in the validators who have signed for their last received index with the Leader's signature.
+	// later we may create signatures similar to what Tendermint has, but now RAFT can be simplified, the Leader assumes responsibility
+	nextArr, err := GetNextIndexArray()
+	if err != nil {
+		return nil, err
+	}
+
 	// default all as Absent
 	sigs := make([]typestnd.CommitSig, len(validatorInfos))
 	leaderIdx := -1
 	var t time.Time
 	for i := range validatorInfos {
+		nextHeight := int64(0)
+		for j, node := range ips {
+			if node.Address == validatorInfos[i].OperatorAddress {
+				nextHeight = nextArr[j]
+			}
+		}
 		addrHex := validatorInfos[i].HexAddress
 		sigs[i] = typestnd.CommitSig{
 			BlockIDFlag:      typestnd.BlockIDFlagAbsent,
 			ValidatorAddress: addrHex,
 			Timestamp:        t.Format(time.RFC3339),
 			Signature:        []byte{},
+		}
+		// good Follower nodes should have nextHeight == height
+		// we are lax for now, we will see later TODO
+		if height-nextHeight < 2 {
+			sigs[i].BlockIDFlag = typestnd.BlockIDFlagCommit
 		}
 		if strings.EqualFold(string(addrHex), string(st.ValidatorAddress)) {
 			leaderIdx = i
@@ -1128,6 +1062,11 @@ func getCommitSigsFromPrecommitArray(st CurrentState, height int64, blockhash []
 			leaderSig := wasmx.Ed25519Sign(st.ValidatorPrivkey, voteBytes)
 			// Set leader commit signature
 			sigs[leaderIdx] = typestnd.CommitSig{BlockIDFlag: typestnd.BlockIDFlagCommit, ValidatorAddress: st.ValidatorAddress, Timestamp: timestamp, Signature: leaderSig}
+
+			// we just fill in with Leader's signature for now
+			for i := range sigs {
+				sigs[i].Signature = leaderSig
+			}
 		}
 	}
 	return sigs, nil
