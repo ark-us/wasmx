@@ -1767,12 +1767,18 @@ func StartBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 	st.LastCommitHash = lastCommitHash
 	st.LastResultsHash = lastResultsHash
 	st.LastRound = int64(entryobj.TermID)
+	st.LastTime = finReq.Time
 	st.NextHeight = finReq.Height + 1
 	sigs, err := getCommitSigsFromPrecommitArray(st, finReq.Height, processReq.Hash, int64(entryobj.TermID))
 	if err != nil {
 		return false, err
 	}
 	st.LastBlockSigs = sigs
+	// Reset transient consensus fields (AS parity)
+	st.ValidValue = 0
+	st.ValidRound = 0
+	st.LockedValue = 0
+	st.LockedRound = 0
 
 	if err := SetCurrentState(st); err != nil {
 		return false, err
@@ -1870,7 +1876,68 @@ func StartBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 		}
 	}
 
+	// AS: init subchains (lines ~1280-1287)
+	if len(info.InitChainRequests) > 0 {
+		for _, raw := range info.InitChainRequests {
+			var det multichain.InitSubChainDeterministicRequest
+			if err := json.Unmarshal(raw, &det); err != nil {
+				LoggerError("init subchain parse error", []string{"error", err.Error()})
+				continue
+			}
+			// Build init message using current validator identity
+			cur, err := GetCurrentState()
+			if err != nil {
+				LoggerError("init subchain state error", []string{"error", err.Error()})
+				continue
+			}
+			msg := multichain.InitSubChainMsg{
+				InitChainRequest: det.InitChainRequest,
+				ChainConfig:      det.ChainConfig,
+				ValidatorAddress: string(cur.ValidatorAddress),
+				ValidatorPrivkey: cur.ValidatorPrivkey,
+				ValidatorPubkey:  cur.ValidatorPubkey,
+				Peers:            det.Peers,
+				CurrentNodeID:    0,
+				InitialPorts:     multichain.DefaultNodePorts(),
+			}
+			if _, err := multichain.InitSubChain(msg); err != nil {
+				LoggerError("init subchain failed", []string{"error", err.Error()})
+			}
+		}
+	}
+
+	// Before Commit: consensus contract upgrade/setup (AS lines 1288-1362)
+	newContractSetup := false
+	if info.ConsensusContract != "" {
+		// setup next consensus contract with previous address
+		myaddr := string(wasmx.GetAddress())
+		LoggerInfo("setting up next consensus contract", []string{"new contract", info.ConsensusContract, "previous contract", myaddr})
+
+		calldSetup := fmt.Sprintf(`{"run":{"event":{"type":"setup","params":[{"key":"address","value":"%s"}]}}}`, myaddr)
+		if resp, err := callContract(wasmx.Bech32String(info.ConsensusContract), calldSetup, false, MODULE_NAME); err != nil {
+			LoggerError("cannot setup next consensus contract", []string{"new_contract", info.ConsensusContract, "err", err.Error()})
+		} else if resp.Success > 0 {
+			LoggerError("cannot setup next consensus contract", []string{"new_contract", info.ConsensusContract, "err", resp.Data})
+		} else {
+			LoggerInfo("next consensus contract is set", []string{"new_contract", info.ConsensusContract})
+			newContractSetup = true
+
+			// best-effort: stop this contract
+			calldStop := `{"run":{"event":{"type":"stop","params":[]}}}`
+			if resp2, err2 := callContract(wasmx.GetAddress(), calldStop, false, MODULE_NAME); err2 != nil || resp2.Success > 0 {
+				if err2 != nil {
+					LoggerError("cannot stop previous consensus contract", []string{"err", err2.Error(), "data", resp2.Data})
+				} else {
+					LoggerError("cannot stop previous consensus contract", []string{"err", resp2.Data})
+				}
+			} else {
+				LoggerInfo("stopped current consensus contract", nil)
+			}
+		}
+	}
+
 	// AS: Commit (line 1315)
+	// TODO commitResponse.retainHeight
 	if _, err := consensuswrap.Commit(); err != nil {
 		return false, err
 	}
@@ -1897,9 +1964,37 @@ func StartBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 		}
 	}
 
-	// TODO: Add consensus contract transition logic (AS lines 1288-1362)
-	// This is complex logic for handling consensus contract changes that would require
-	// additional helper functions not yet implemented in the Go version
+	// TODO if we cannot start with the new contract we should remove its consensus role
+	// but we are already after Commit(), so restart is not really feasible with this mechanism
+	// we may need another mechanism where nodes can trigger transactions
+
+	// After Commit: start new consensus contract if changed
+	if info.ConsensusContract != "" && newContractSetup {
+		LoggerInfo("starting new consensus contract", []string{"address", info.ConsensusContract})
+		calldPrestart := `{"run":{"event":{"type":"prestart","params":[]}}}`
+		if resp, err := callContract(wasmx.Bech32String(info.ConsensusContract), calldPrestart, false, MODULE_NAME); err != nil || resp.Success > 0 {
+			if err != nil {
+				LoggerError("cannot start next consensus contract", []string{"new_contract", info.ConsensusContract, "err", err.Error()})
+			} else {
+				LoggerError("cannot start next consensus contract", []string{"new_contract", info.ConsensusContract, "err", resp.Data})
+			}
+			// attempt to restart previous contract so chain does not stop
+			myaddr := wasmx.GetAddress()
+			calldRestart := `{"run":{"event":{"type":"restart","params":[]}}}`
+			if resp2, err2 := callContract(myaddr, calldRestart, false, MODULE_NAME); err2 != nil || resp2.Success > 0 {
+				if err2 != nil {
+					LoggerError("cannot restart previous consensus contract", []string{"err", err2.Error()})
+				} else {
+					LoggerError("cannot restart previous consensus contract", []string{"err", resp2.Data})
+				}
+			} else {
+				LoggerInfo("restarted current consensus contract", nil)
+			}
+		} else {
+			LoggerInfo("next consensus contract is started", []string{"new_contract", info.ConsensusContract})
+			return true, nil // consensus changed
+		}
+	}
 
 	return false, nil
 }

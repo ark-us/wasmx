@@ -682,23 +682,23 @@ func (chain TestChain) CommitBlock() (*abci.ResponseFinalizeBlock, error) {
 	}
 	lastBlock := app.LastBlockHeight()
 	if prevBlock >= lastBlock {
+		// a consensus change needs us to wait - both raft and tendermint
+		if strings.Contains(currentState, "prestart") {
+			// this state waits 500ms and then goes to started
+			time.Sleep(time.Second * 5)
+		}
 		// in case a test just changed consensus to RAFT, we help the test move faster through all the protocols delays that happen when choosing the Leader
 		if strings.Contains(currentState, "RAFT") && !strings.Contains(currentState, "Leader") {
-			if strings.Contains(currentState, "prestart") {
-				// this state waits 500ms and then goes to "initialized.started.Node"
-				time.Sleep(time.Second * 10)
-				// and then it should immediately go to Follower
-			}
+			// we should be in Follower state at this point
 			currentState := chain.GetCurrentState(chain.GetContext())
 			if strings.Contains(currentState, "Follower") {
 				// we need to get the node to Leader state faster
 				chain.raftToLeader()
 			}
-			lastBlock := app.LastBlockHeight()
-			if prevBlock >= lastBlock {
-				return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", chain.ChainId, lastBlock, prevBlock+1)
-			}
-		} else {
+		}
+
+		lastBlock := app.LastBlockHeight()
+		if prevBlock >= lastBlock {
 			return nil, fmt.Errorf("chain %s has not advanced: last block %d, expected %d", chain.ChainId, lastBlock, prevBlock+1)
 		}
 	}

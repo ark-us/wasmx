@@ -25,7 +25,7 @@ func (s *KeeperTestSuite) TestStakingCreateValidator() {
 	s.SetCurrentChain(chainId)
 	chain := s.GetChain(chainId)
 	sender := s.GetRandomAccount()
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(100_000_000_000)
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
@@ -87,7 +87,7 @@ func (s *KeeperTestSuite) TestStakingJailValidator() {
 	s.SetCurrentChain(chainId)
 	chain := s.GetChain(chainId)
 	sender := s.GetRandomAccount()
-	initBalance := sdkmath.NewInt(10_000_000_000)
+	initBalance := sdkmath.NewInt(100_000_000_000)
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
