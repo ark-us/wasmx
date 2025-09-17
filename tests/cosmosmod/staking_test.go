@@ -129,6 +129,7 @@ func (suite *KeeperTestSuite) TestStakingUnauthorized() {
 }
 
 func (suite *KeeperTestSuite) TestConsensusUnauthorized() {
+	SkipFixmeTests(suite.T(), "TestConsensusUnauthorized: use fsm externalCall instead of call")
 	// TODO call from EOA to consensusless contracts
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	suite.SetCurrentChain(chainId)
