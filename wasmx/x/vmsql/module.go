@@ -17,6 +17,8 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+
+	mcfg "github.com/loredanacirstea/wasmx/config"
 )
 
 var (
@@ -31,10 +33,11 @@ var (
 // AppModuleBasic implements the AppModuleBasic interface that defines the independent methods a Cosmos SDK module needs to implement.
 type AppModuleBasic struct {
 	goContextParent context.Context
+	app             mcfg.MythosApp
 }
 
-func NewAppModuleBasic(goContextParent context.Context) AppModuleBasic {
-	return AppModuleBasic{goContextParent: goContextParent}
+func NewAppModuleBasic(goContextParent context.Context, app mcfg.MythosApp) AppModuleBasic {
+	return AppModuleBasic{goContextParent: goContextParent, app: app}
 }
 
 // Name returns the name of the module as a string
@@ -81,8 +84,8 @@ type AppModule struct {
 	AppModuleBasic
 }
 
-func NewAppModule(goContextParent context.Context) AppModule {
-	return AppModule{AppModuleBasic: AppModuleBasic{goContextParent: goContextParent}}
+func NewAppModule(goContextParent context.Context, app mcfg.MythosApp) AppModule {
+	return AppModule{AppModuleBasic: AppModuleBasic{goContextParent: goContextParent, app: app}}
 }
 
 // RegisterServices registers a gRPC query service to respond to the module-specific gRPC queries
@@ -156,7 +159,7 @@ func (am AppModule) EndTransaction(ctx context.Context, txmode sdk.ExecMode, gIn
 			}
 		}
 		conn.OpenSavepointTx = nil
-		conn.SavePointMap = make(map[string]bool, 0)
+		conn.resetSavePoints()
 	}
 	return nil
 }
@@ -166,13 +169,14 @@ func (am AppModule) BeginSubCall(ctx context.Context, level uint32, index uint32
 	if err != nil {
 		return err
 	}
+	aeid := am.app.GetActionExecutor().GetCounter()
 	for _, conn := range vctx.DbConnections {
 		if conn.OpenSavepointTx == nil {
 			continue
 		}
-		savepoint := buildSavepoint(level, index)
+		savepoint := buildSavepoint(aeid, level, index)
 		cmd := fmt.Sprintf("SAVEPOINT %s", savepoint)
-		conn.SavePointMap[savepoint] = true
+		conn.setSavePoint(savepoint)
 		_, err := conn.OpenSavepointTx.Exec(cmd)
 		if err != nil {
 			return fmt.Errorf("cannot add savepoint: %s, %s", savepoint, err.Error())
@@ -187,26 +191,28 @@ func (am AppModule) EndSubCall(_ context.Context, level uint32, index uint32, is
 	if err != nil {
 		return err
 	}
+	aeid := am.app.GetActionExecutor().GetCounter()
 	for _, conn := range vctx.DbConnections {
 		if conn.OpenSavepointTx == nil {
 			continue
 		}
-		savepoint := buildSavepoint(level, index)
+		savepoint := buildSavepoint(aeid, level, index)
 		if !conn.hasSavePoint(savepoint) {
 			continue
 		}
-		cmd := fmt.Sprintf("RELEASE sp%d_%d", level, index)
+		cmd := fmt.Sprintf("RELEASE %s", savepoint)
 		if isquery || txerr != nil {
-			cmd = fmt.Sprintf("ROLLBACK TO sp%d_%d", level, index)
+			cmd = fmt.Sprintf("ROLLBACK TO %s", savepoint)
 		}
 		_, err := conn.OpenSavepointTx.Exec(cmd)
 		if err != nil {
 			return fmt.Errorf("db tx command failed: %s, %s", cmd, err.Error())
 		}
+		conn.removeSavePoint(savepoint)
 	}
 	return nil
 }
 
-func buildSavepoint(level, index uint32) string {
-	return fmt.Sprintf("sp%d_%d", level, index)
+func buildSavepoint(aeid int64, level, index uint32) string {
+	return fmt.Sprintf("sp_%d_%d_%d", aeid, level, index)
 }

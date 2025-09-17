@@ -174,15 +174,17 @@ func commitCtx(mythosapp mcfg.MythosApp, sdkCtx sdk.Context, commitCacheCtx func
 }
 
 type ActionExecutor struct {
-	mtx    sync.Mutex
-	app    mcfg.MythosApp
-	logger log.Logger
+	mtx     sync.Mutex
+	app     mcfg.MythosApp
+	logger  log.Logger
+	counter int64 // valid if ActionExecutor is one per app or chain
 }
 
 func NewActionExecutor(app mcfg.MythosApp, logger log.Logger) *ActionExecutor {
 	return &ActionExecutor{
-		app:    app,
-		logger: logger,
+		app:     app,
+		logger:  logger,
+		counter: 0,
 	}
 }
 
@@ -221,6 +223,10 @@ func (r *ActionExecutor) ExecuteWithHeader(goCtx context.Context, header cmtprot
 	return r.ExecuteInternal(goCtx, sdkCtx, commitCacheCtx, ctxcachems, mode, cb)
 }
 
+func (r *ActionExecutor) GetCounter() int64 {
+	return r.counter
+}
+
 func (r *ActionExecutor) ExecuteInternal(
 	goCtx context.Context,
 	sdkCtx sdk.Context,
@@ -229,9 +235,17 @@ func (r *ActionExecutor) ExecuteInternal(
 	mode sdk.ExecMode,
 	cb func(goctx context.Context) (any, error),
 ) (any, error) {
+	// execution is serialized, so each execution has its own unique id
+	r.counter++
+
+	// goCtx is usually the topmost context (parent context)
+	// we should be careful here with global context values because this is shared
+	// between chains/apps
 	if goCtx == nil {
 		goCtx = context.Background()
 	}
+
+	// this should be ok, because this execution is serialized
 	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
 
 	// call app BeginTransaction hook

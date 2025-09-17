@@ -30,7 +30,7 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	}
 
 	response := &SqlConnectionResponse{Error: ""}
-	connId := buildConnectionId(req.Id, ctx)
+	connId := buildConnectionId(ctx.Ctx.ChainID(), req.Id, ctx)
 
 	conn, found := vctx.GetConnection(connId)
 	if found {
@@ -104,7 +104,7 @@ func Close(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 	}
 
 	response := &SqlCloseResponse{Error: ""}
-	connId := buildConnectionId(req.Id, ctx)
+	connId := buildConnectionId(ctx.Ctx.ChainID(), req.Id, ctx)
 	db, found := vctx.GetConnection(connId)
 	if !found {
 		response.Error = "sql connection not found"
@@ -138,7 +138,7 @@ func Ping(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 	}
 
 	response := &SqlPingResponse{Error: ""}
-	connId := buildConnectionId(req.Id, ctx)
+	connId := buildConnectionId(ctx.Ctx.ChainID(), req.Id, ctx)
 	db, found := vctx.GetConnection(connId)
 	if !found {
 		response.Error = "sql connection not found"
@@ -177,7 +177,7 @@ func Execute(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	}
 
 	response := &SqlExecuteResponse{Error: ""}
-	connId := buildConnectionId(req.Id, ctx)
+	connId := buildConnectionId(ctx.Ctx.ChainID(), req.Id, ctx)
 	db, found := vctx.GetConnection(connId)
 	if !found {
 		response.Error = "sql connection not found"
@@ -241,7 +241,7 @@ func BatchAtomic(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	}
 
 	response := &SqlExecuteBatchResponse{Error: "", Responses: make([]SqlExecuteResponse, 0)}
-	connId := buildConnectionId(req.Id, ctx)
+	connId := buildConnectionId(ctx.Ctx.ChainID(), req.Id, ctx)
 	db, found := vctx.GetConnection(connId)
 	if !found {
 		response.Error = "sql connection not found"
@@ -318,7 +318,7 @@ func Query(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 	}
 
 	response := &SqlQueryResponse{Error: ""}
-	connId := buildConnectionId(req.Id, ctx)
+	connId := buildConnectionId(ctx.Ctx.ChainID(), req.Id, ctx)
 	db, found := vctx.GetConnection(connId)
 	if !found {
 		response.Error = "sql connection not found"
@@ -375,7 +375,7 @@ func beginDbTx(db *SqlOpenConnection, ctx *Context) error {
 		return fmt.Errorf("cannot begin atomic db transaction: %v", err)
 	}
 	db.OpenSavepointTx = tx
-	db.SavePointMap["sp0"] = true
+	db.setSavePoint("sp0")
 	_, err = tx.Exec("SAVEPOINT sp0")
 	if err != nil {
 		return fmt.Errorf("cannot add savepoint sp0: %v", err)
@@ -424,6 +424,6 @@ func parseSqlQueryParams(params []SqlQueryParam) []interface{} {
 	return qparams
 }
 
-func buildConnectionId(id string, ctx *Context) string {
-	return fmt.Sprintf("%s_%s", ctx.Env.Contract.Address.String(), id)
+func buildConnectionId(chainId string, id string, ctx *Context) string {
+	return fmt.Sprintf("%s_%s_%s", chainId, ctx.Env.Contract.Address.String(), id)
 }

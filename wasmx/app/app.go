@@ -887,8 +887,8 @@ func NewApp(
 		networkModule,
 		cosmosmodModule,
 		websrvModule,
-		vmsql.NewAppModule(app.goContextParent),
-		vmkv.NewAppModule(app.goContextParent),
+		vmsql.NewAppModule(app.goContextParent, app),
+		vmkv.NewAppModule(app.goContextParent, app),
 
 		// sdk
 		// crisis - always be last to make sure that it checks for all invariants and not only part of them

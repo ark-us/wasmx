@@ -86,9 +86,7 @@ func (k *Keeper) startBackgroundProcessInternalExecution(
 		return err
 	}
 
-	goCtx = context.WithValue(goCtx, sdk.SdkContextKey, sdkCtx)
-	ctx_ := sdk.UnwrapSDKContext(goCtx)
-	_, err = k.wasmxKeeper.Execute(ctx_, contractAddr, senderAddr, msgbz, nil, nil, true)
+	_, err = k.wasmxKeeper.Execute(sdkCtx, contractAddr, senderAddr, msgbz, nil, nil, true)
 	if err != nil {
 		return err
 	}

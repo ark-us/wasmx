@@ -40,13 +40,34 @@ type SqlOpenConnection struct {
 	Connection      string
 	Db              *sql.DB
 	OpenSavepointTx *sql.Tx
-	SavePointMap    map[string]bool
+	mtxSavePointMap sync.Mutex
+	savePointMap    map[string]bool
 	Closed          chan struct{}
 }
 
 func (conn *SqlOpenConnection) hasSavePoint(savepoint string) bool {
-	sv, ok := conn.SavePointMap[savepoint]
+	conn.mtxSavePointMap.Lock()
+	defer conn.mtxSavePointMap.Unlock()
+	sv, ok := conn.savePointMap[savepoint]
 	return ok && sv
+}
+
+func (conn *SqlOpenConnection) setSavePoint(savepoint string) {
+	conn.mtxSavePointMap.Lock()
+	defer conn.mtxSavePointMap.Unlock()
+	conn.savePointMap[savepoint] = true
+}
+
+func (conn *SqlOpenConnection) removeSavePoint(savepoint string) {
+	conn.mtxSavePointMap.Lock()
+	defer conn.mtxSavePointMap.Unlock()
+	delete(conn.savePointMap, savepoint)
+}
+
+func (conn *SqlOpenConnection) resetSavePoints() {
+	conn.mtxSavePointMap.Lock()
+	defer conn.mtxSavePointMap.Unlock()
+	conn.savePointMap = map[string]bool{}
 }
 
 type SqlContext struct {
@@ -68,7 +89,7 @@ func (p *SqlContext) SetConnection(id string, connection string, db *sql.DB, clo
 	if found {
 		return fmt.Errorf("cannot overwrite sql connection: %s", id)
 	}
-	p.DbConnections[id] = &SqlOpenConnection{Db: db, Connection: connection, Closed: closed, SavePointMap: make(map[string]bool, 0)}
+	p.DbConnections[id] = &SqlOpenConnection{Db: db, Connection: connection, Closed: closed, savePointMap: make(map[string]bool, 0)}
 	return nil
 }
 

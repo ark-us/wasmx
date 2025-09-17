@@ -1,5 +1,61 @@
 # Architecture
 
+## Transaction CYCLES
+
+### Deterministic Txs
+```c++
+baseapp.runTx
+-> baseapp.BeginTransaction
+-> tx execution
+-> baseapp.EndTransaction
+-> commitCtx or not
+```
+
+### System Non-Deterministic Txs
+
+* 1 ActionExecutor per App instantiation - this means per chain.
+* ActionExecutor has a lock on executions, to ensure they are serialized. The action executor is for executing contracts outside a deterministic transaction. It is used for core protocol contracts, for reentry mechanisms (timed actions, incoming p2p messages, incoming http requests or emails). It supports the BeginTransaction-EndTransaction hooks for contract executions outside the context of a deterministic transaction, just like the BaseApp.runTx & BaseApp.handleQueryGRPC does for a deterministic transaction.
+
+```c++
+ActionExecutor.ExecuteInternal
+-> baseapp.BeginTransaction
+-> call execution
+-> baseapp.EndTransaction
+-> commitCtx or not
+```
+
+```c++
+StartNode
+-> ActionExecutor.ExecuteInternal
+    -> baseapp.BeginTransaction
+    -> call execution
+        -> call consensus contract "StartNode"
+            -> calls host.StartTimeout
+                -> new goroutine
+                    -> Action.ExecutorInteral
+                        -> contract reentry
+    -> baseapp.EndTransaction
+-> commitCtx or not
+```
+
+```c++
+consensus contract reentry and block finalization
+ActionExecutor.ExecuteInternal
+-> baseapp.BeginTransaction
+-> call execution
+    -> host.FinalizeBlock
+        -> baseapp.runTx deterministic tx execution
+            -> baseapp.BeginTransaction
+            -> tx execution
+            -> baseapp.EndTransaction
+            -> commitCtx or not
+-> baseapp.EndTransaction
+-> commitCtx or not
+```
+
+* all inter-contract calls go through WasmxCall where nested call contexts are created. We track nested calls with level and id numbers.
+
+
 ## Block End
 
 ```c++

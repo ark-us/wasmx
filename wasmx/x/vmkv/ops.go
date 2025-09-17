@@ -30,7 +30,7 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	}
 
 	response := &KvConnectionResponse{Error: ""}
-	connId := buildConnectionId(req.Id, ctx)
+	connId := buildConnectionId(ctx.Ctx.ChainID(), req.Id, ctx)
 	connstr := req.Dir + req.Name
 
 	conn, found := vctx.GetConnection(connId)
@@ -97,7 +97,7 @@ func Close(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) 
 	}
 
 	response := &KvCloseResponse{Error: ""}
-	connId := buildConnectionId(req.Id, ctx)
+	connId := buildConnectionId(ctx.Ctx.ChainID(), req.Id, ctx)
 	db, found := vctx.GetConnection(connId)
 	if !found {
 		response.Error = "kv db connection not found"
@@ -238,8 +238,8 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	return rnh.AllocateWriteMem(responsebz)
 }
 
-func buildConnectionId(id string, ctx *Context) string {
-	return fmt.Sprintf("%s_%s", ctx.Env.Contract.Address.String(), id)
+func buildConnectionId(chainId string, id string, ctx *Context) string {
+	return fmt.Sprintf("%s_%s_%s", chainId, ctx.Env.Contract.Address.String(), id)
 }
 
 func getConnectionFromCtx(ctx *Context, id string) (*KvOpenConnection, error) {
@@ -247,7 +247,7 @@ func getConnectionFromCtx(ctx *Context, id string) (*KvOpenConnection, error) {
 	if err != nil {
 		return nil, err
 	}
-	connId := buildConnectionId(id, ctx)
+	connId := buildConnectionId(ctx.Ctx.ChainID(), id, ctx)
 	conn, found := vctx.GetConnection(connId)
 	if !found {
 		return nil, fmt.Errorf("kv db connection not found")

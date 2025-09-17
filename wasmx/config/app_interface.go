@@ -40,6 +40,7 @@ import (
 )
 
 type ActionExecutor interface {
+	GetCounter() int64
 	Execute(goCtx context.Context, height int64, mode sdk.ExecMode, cb func(goctx context.Context) (any, error)) (any, error)
 	ExecuteWithHeader(goCtx context.Context, header cmtproto.Header, mode sdk.ExecMode, cb func(goctx context.Context) (any, error)) (any, error)
 	ExecuteWithMockHeader(goCtx context.Context, mode sdk.ExecMode, cb func(goctx context.Context) (any, error)) (any, error)

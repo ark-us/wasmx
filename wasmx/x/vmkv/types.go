@@ -37,23 +37,34 @@ type Context struct {
 }
 
 type KvOpenConnection struct {
-	Connection    string
-	Db            dbm.DB
-	Store         storetypes.KVStore
-	TempStoresMap map[string]storetypes.CacheKVStore
-	StoreKeys     []string
-	Closed        chan struct{}
+	Connection       string
+	Db               dbm.DB
+	Store            storetypes.KVStore
+	mtxTempStoresMap sync.Mutex
+	tempStoresMap    map[string]storetypes.CacheKVStore
+	StoreKeys        []string
+	Closed           chan struct{}
 }
 
 func (v *KvOpenConnection) reset() {
 	v.Store = nil
-	v.TempStoresMap = make(map[string]storetypes.CacheKVStore, 0)
+	v.mtxTempStoresMap.Lock()
+	v.tempStoresMap = make(map[string]storetypes.CacheKVStore, 0)
+	v.mtxTempStoresMap.Unlock()
 	v.StoreKeys = []string{}
 }
 
 func (v *KvOpenConnection) getTempStore(id string) (storetypes.CacheKVStore, bool) {
-	store, ok := v.TempStoresMap[id]
+	v.mtxTempStoresMap.Lock()
+	defer v.mtxTempStoresMap.Unlock()
+	store, ok := v.tempStoresMap[id]
 	return store, ok
+}
+
+func (v *KvOpenConnection) removeTempStore(id string) {
+	v.mtxTempStoresMap.Lock()
+	defer v.mtxTempStoresMap.Unlock()
+	delete(v.tempStoresMap, id)
 }
 
 func (v *KvOpenConnection) newTempStore(id string) error {
@@ -68,7 +79,9 @@ func (v *KvOpenConnection) newTempStore(id string) error {
 	if !ok {
 		return fmt.Errorf("CacheWrap interface not CacheKVStore")
 	}
-	v.TempStoresMap[id] = tmpstore
+	v.mtxTempStoresMap.Lock()
+	v.tempStoresMap[id] = tmpstore
+	v.mtxTempStoresMap.Unlock()
 	return nil
 }
 
@@ -105,7 +118,7 @@ func (p *KvDbContext) SetConnection(id string, connection string, db dbm.DB, clo
 	if found {
 		return fmt.Errorf("cannot overwrite kv db connection: %s", id)
 	}
-	p.DbConnections[id] = &KvOpenConnection{Db: db, Connection: connection, Closed: closed, StoreKeys: []string{}, TempStoresMap: map[string]storetypes.CacheKVStore{}}
+	p.DbConnections[id] = &KvOpenConnection{Db: db, Connection: connection, Closed: closed, StoreKeys: []string{}, tempStoresMap: map[string]storetypes.CacheKVStore{}}
 	return nil
 }
 

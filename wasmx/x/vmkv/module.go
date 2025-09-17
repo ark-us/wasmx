@@ -17,6 +17,8 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+
+	mcfg "github.com/loredanacirstea/wasmx/config"
 )
 
 var (
@@ -31,10 +33,11 @@ var (
 // AppModuleBasic implements the AppModuleBasic interface that defines the independent methods a Cosmos SDK module needs to implement.
 type AppModuleBasic struct {
 	goContextParent context.Context
+	app             mcfg.MythosApp
 }
 
-func NewAppModuleBasic(goContextParent context.Context) AppModuleBasic {
-	return AppModuleBasic{goContextParent: goContextParent}
+func NewAppModuleBasic(goContextParent context.Context, app mcfg.MythosApp) AppModuleBasic {
+	return AppModuleBasic{goContextParent: goContextParent, app: app}
 }
 
 // Name returns the name of the module as a string
@@ -81,8 +84,8 @@ type AppModule struct {
 	AppModuleBasic
 }
 
-func NewAppModule(goContextParent context.Context) AppModule {
-	return AppModule{AppModuleBasic: AppModuleBasic{goContextParent: goContextParent}}
+func NewAppModule(goContextParent context.Context, app mcfg.MythosApp) AppModule {
+	return AppModule{AppModuleBasic: AppModuleBasic{goContextParent: goContextParent, app: app}}
 }
 
 // RegisterServices registers a gRPC query service to respond to the module-specific gRPC queries
@@ -142,10 +145,11 @@ func (am AppModule) EndTransaction(ctx context.Context, txmode sdk.ExecMode, gIn
 			if len(conn.StoreKeys) != 1 || conn.StoreKeys[0] != lastkey {
 				return fmt.Errorf("kv: invalid sp0")
 			}
-			store := conn.TempStoresMap[lastkey]
-			if txerr == nil {
+			store, found := conn.getTempStore(lastkey)
+			if txerr == nil && found {
 				store.Write()
 			}
+			conn.removeTempStore(lastkey)
 		}
 		conn.reset()
 	}
@@ -157,11 +161,12 @@ func (am AppModule) BeginSubCall(ctx context.Context, level uint32, index uint32
 	if err != nil {
 		return err
 	}
+	aeid := am.app.GetActionExecutor().GetCounter()
 	for _, conn := range vctx.DbConnections {
 		if conn.Store == nil {
 			continue
 		}
-		savepoint := buildSavepoint(level, index)
+		savepoint := buildSavepoint(aeid, level, index)
 		err := conn.newCurrentTempStore(savepoint)
 		if err != nil {
 			return fmt.Errorf("cannot create subcall kv db: %s, %s", savepoint, err.Error())
@@ -176,12 +181,13 @@ func (am AppModule) EndSubCall(_ context.Context, level uint32, index uint32, is
 	if err != nil {
 		return err
 	}
+	aeid := am.app.GetActionExecutor().GetCounter()
 	for _, conn := range vctx.DbConnections {
 		if conn.Store == nil {
 			continue
 		}
-		savepoint := buildSavepoint(level, index)
-		store, ok := conn.TempStoresMap[savepoint]
+		savepoint := buildSavepoint(aeid, level, index)
+		store, ok := conn.getTempStore(savepoint)
 		if !ok {
 			continue
 		}
@@ -195,13 +201,13 @@ func (am AppModule) EndSubCall(_ context.Context, level uint32, index uint32, is
 		if !isquery && txerr == nil {
 			store.Write()
 		}
-		delete(conn.TempStoresMap, savepoint)
+		conn.removeTempStore(savepoint)
 		// remove the key from the array of in-execution calls
 		conn.StoreKeys = conn.StoreKeys[:lastki]
 	}
 	return nil
 }
 
-func buildSavepoint(level, index uint32) string {
-	return fmt.Sprintf("sp%d_%d", level, index)
+func buildSavepoint(aeid int64, level, index uint32) string {
+	return fmt.Sprintf("sp_%d_%d_%d", aeid, level, index)
 }
