@@ -317,19 +317,19 @@ func (k *WasmxEngine) BuildPathUtf8(codeHash []byte, extension string) string {
 	return k.build_path_utf8(k.SourcesDir, codeHash, extension)
 }
 
-func (k *WasmxEngine) GetPathUtf8(codeInfo types.CodeInfo) string {
-	return k.BuildPathUtf8(codeInfo.CodeHash, GetExtensionFromDeps(codeInfo.Deps))
+func (k *WasmxEngine) GetPathUtf8(hash types.Checksum, deps []string) string {
+	return k.BuildPathUtf8(hash, GetExtensionFromDeps(deps))
 }
 
-func (k *WasmxEngine) GetCodeFilePath(codeInfo types.CodeInfo) string {
+func (k *WasmxEngine) GetCodeFilePath(hash types.Checksum, deps []string, interpreterBytecodeRuntime []byte) string {
 	filepath := ""
-	if types.HasUtf8Dep(codeInfo.Deps) {
-		filepath = k.GetPathUtf8(codeInfo)
+	if types.HasUtf8Dep(deps) {
+		filepath = k.GetPathUtf8(hash, deps)
 	} else {
-		if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
+		if len(interpreterBytecodeRuntime) > 0 {
 			filepath = ""
 		} else {
-			filepath = k.BuildPath(codeInfo.CodeHash)
+			filepath = k.BuildPath(hash)
 		}
 	}
 	return filepath
@@ -341,7 +341,7 @@ func (k *WasmxEngine) GetFilePath(codeInfo types.CodeInfo) string {
 		filepath = k.BuildPathPinned(codeInfo.CodeHash)
 	} else {
 		if types.HasUtf8Dep(codeInfo.Deps) {
-			filepath = k.GetPathUtf8(codeInfo)
+			filepath = k.GetPathUtf8(codeInfo.CodeHash, codeInfo.Deps)
 		} else {
 			if len(codeInfo.InterpretedBytecodeRuntime) > 0 {
 				filepath = ""

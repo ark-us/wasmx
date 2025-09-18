@@ -21,52 +21,57 @@ type PrefixedAddress struct {
 	Prefix string `json:"prefix"`
 }
 
-// Internal call request
-type CallRequest struct {
-	To           sdk.AccAddress `json:"to"`
-	From         sdk.AccAddress `json:"from"`
-	Value        *big.Int       `json:"value"`
-	GasLimit     *big.Int       `json:"gasLimit"`
-	Calldata     []byte         `json:"calldata"`
-	Bytecode     []byte         `json:"bytecode"`
-	CodeHash     []byte         `json:"codeHash"`
-	CodeFilePath string         `json:"codeFilePath"`
-	AotFilePath  string         `json:"aotFilePath"`
-	CodeId       uint64         `json:"codeId"`
-	SystemDeps   []string       `json:"systemDeps"`
-	IsQuery      bool           `json:"isQuery"`
-}
+// // Internal call request
+// type CallRequest struct {
+// 	To           sdk.AccAddress `json:"to"`
+// 	From         sdk.AccAddress `json:"from"`
+// 	Value        *big.Int       `json:"value"`
+// 	GasLimit     *big.Int       `json:"gasLimit"`
+// 	Calldata     []byte         `json:"calldata"`
+// 	Bytecode     []byte         `json:"bytecode"`
+// 	CodeHash     []byte         `json:"codeHash"`
+// 	CodeFilePath string         `json:"codeFilePath"`
+// 	AotFilePath  string         `json:"aotFilePath"`
+// 	CodeId       uint64         `json:"codeId"`
+// 	SystemDeps   []string       `json:"systemDeps"`
+// 	IsQuery      bool           `json:"isQuery"`
+// }
 
-func (r CallRequest) ToCommon(from mcodec.AccAddressPrefixed, to mcodec.AccAddressPrefixed) CallRequestCommon {
-	return CallRequestCommon{
-		To:           to,
-		From:         from,
-		Value:        r.Value,
-		GasLimit:     r.GasLimit,
-		Calldata:     r.Calldata,
-		Bytecode:     r.Bytecode,
-		CodeHash:     r.CodeHash,
-		CodeFilePath: r.CodeFilePath,
-		AotFilePath:  r.AotFilePath,
-		CodeId:       r.CodeId,
-		SystemDeps:   r.SystemDeps,
-		IsQuery:      r.IsQuery,
-	}
-}
+// func (r CallRequest) ToCommon(from mcodec.AccAddressPrefixed, to mcodec.AccAddressPrefixed) CallRequestCommon {
+// 	return CallRequestCommon{
+// 		To:           to,
+// 		From:         from,
+// 		Value:        r.Value,
+// 		GasLimit:     r.GasLimit,
+// 		Calldata:     r.Calldata,
+// 		Bytecode:     r.Bytecode,
+// 		CodeHash:     r.CodeHash,
+// 		CodeFilePath: r.CodeFilePath,
+// 		AotFilePath:  r.AotFilePath,
+// 		CodeId:       r.CodeId,
+// 		SystemDeps:   r.SystemDeps,
+// 		IsQuery:      r.IsQuery,
+// 	}
+// }
 
 type CallRequestCommon struct {
-	To           mcodec.AccAddressPrefixed `json:"to"`
-	From         mcodec.AccAddressPrefixed `json:"from"`
-	Value        *big.Int                  `json:"value"`
-	GasLimit     *big.Int                  `json:"gasLimit"`
-	Calldata     []byte                    `json:"calldata"`
-	Bytecode     []byte                    `json:"bytecode"`
-	CodeHash     []byte                    `json:"codeHash"`
-	CodeFilePath string                    `json:"codeFilePath"`
-	AotFilePath  string                    `json:"aotFilePath"`
-	CodeId       uint64                    `json:"codeId"`
-	SystemDeps   []string                  `json:"systemDeps"`
-	IsQuery      bool                      `json:"isQuery"`
+	To              mcodec.AccAddressPrefixed  `json:"to"`
+	From            mcodec.AccAddressPrefixed  `json:"from"`
+	Value           sdkmath.Int                `json:"value"`
+	GasLimit        sdkmath.Int                `json:"gasLimit"`
+	Calldata        []byte                     `json:"calldata"`
+	Bytecode        []byte                     `json:"bytecode"`
+	CodeHash        []byte                     `json:"codeHash"`
+	CodeFilePath    string                     `json:"codeFilePath"`
+	AotFilePath     string                     `json:"aotFilePath"`
+	CodeId          uint64                     `json:"codeId"`
+	SystemDeps      []string                   `json:"systemDeps"`
+	Pinned          bool                       `json:"pinned"`
+	MeteringOff     bool                       `json:"metering_off"`
+	StorageType     string                     `json:"storage_type"`
+	StorageAddress  *mcodec.AccAddressPrefixed `json:"storage_address"`
+	ContractAddress *mcodec.AccAddressPrefixed `json:"contract_address"`
+	IsQuery         bool                       `json:"isQuery"`
 }
 
 type CallRequestRaw struct {
@@ -140,42 +145,42 @@ type Instantiate2AccountResponse struct {
 	Address mcodec.AccAddressPrefixed `json:"address"`
 }
 
-func (m CallRequest) MarshalJSON() ([]byte, error) {
-	var to []byte = types.PaddLeftTo32(m.To.Bytes())
-	var from []byte = types.PaddLeftTo32(m.From.Bytes())
-	var value []byte = m.Value.FillBytes(make([]byte, 32))
-	var gasLimit []byte = m.GasLimit.FillBytes(make([]byte, 32))
-	return json.Marshal(map[string]interface{}{
-		"to":       to,
-		"from":     from,
-		"value":    value,
-		"gasLimit": gasLimit,
-		"calldata": m.Calldata,
-		"bytecode": m.Bytecode,
-		"codeHash": m.CodeHash,
-		"isQuery":  m.IsQuery,
-	})
-}
+// func (m CallRequest) MarshalJSON() ([]byte, error) {
+// 	var to []byte = types.PaddLeftTo32(m.To.Bytes())
+// 	var from []byte = types.PaddLeftTo32(m.From.Bytes())
+// 	var value []byte = m.Value.FillBytes(make([]byte, 32))
+// 	var gasLimit []byte = m.GasLimit.FillBytes(make([]byte, 32))
+// 	return json.Marshal(map[string]interface{}{
+// 		"to":       to,
+// 		"from":     from,
+// 		"value":    value,
+// 		"gasLimit": gasLimit,
+// 		"calldata": m.Calldata,
+// 		"bytecode": m.Bytecode,
+// 		"codeHash": m.CodeHash,
+// 		"isQuery":  m.IsQuery,
+// 	})
+// }
 
-func (m *CallRequest) UnmarshalJSON(data []byte) error {
-	// make sure we deserialize [] back to null
-	if string(data) == "[]" || string(data) == "null" {
-		return nil
-	}
-	var d CallRequestRaw
-	if err := json.Unmarshal(data, &d); err != nil {
-		return err
-	}
-	m.To = sdk.AccAddress(CleanupAddress(d.To))
-	m.From = sdk.AccAddress(CleanupAddress(d.From))
-	m.Value = big.NewInt(0).SetBytes(d.Value)
-	m.GasLimit = big.NewInt(0).SetBytes(d.GasLimit)
-	m.Calldata = d.Calldata
-	m.Bytecode = d.Bytecode
-	m.CodeHash = d.CodeHash
-	m.IsQuery = d.IsQuery
-	return nil
-}
+// func (m *CallRequest) UnmarshalJSON(data []byte) error {
+// 	// make sure we deserialize [] back to null
+// 	if string(data) == "[]" || string(data) == "null" {
+// 		return nil
+// 	}
+// 	var d CallRequestRaw
+// 	if err := json.Unmarshal(data, &d); err != nil {
+// 		return err
+// 	}
+// 	m.To = sdk.AccAddress(CleanupAddress(d.To))
+// 	m.From = sdk.AccAddress(CleanupAddress(d.From))
+// 	m.Value = big.NewInt(0).SetBytes(d.Value)
+// 	m.GasLimit = big.NewInt(0).SetBytes(d.GasLimit)
+// 	m.Calldata = d.Calldata
+// 	m.Bytecode = d.Bytecode
+// 	m.CodeHash = d.CodeHash
+// 	m.IsQuery = d.IsQuery
+// 	return nil
+// }
 
 func (m *CreateAccountInterpretedRequest) UnmarshalJSON(data []byte) error {
 	// make sure we deserialize [] back to null

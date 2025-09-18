@@ -129,7 +129,6 @@ func (suite *KeeperTestSuite) TestStakingUnauthorized() {
 }
 
 func (suite *KeeperTestSuite) TestConsensusUnauthorized() {
-	SkipFixmeTests(suite.T(), "TestConsensusUnauthorized: use fsm externalCall instead of call")
 	// TODO call from EOA to consensusless contracts
 	chainId := mcfg.MYTHOS_CHAIN_ID_TEST
 	suite.SetCurrentChain(chainId)
@@ -147,6 +146,7 @@ func (suite *KeeperTestSuite) TestConsensusUnauthorized() {
 	res, err := appA.ExecuteContractNoCheck(sender, consensusAddress, wasmxtypes.WasmxExecutionMessage{Data: msg1}, nil, nil, 0, nil)
 	s.Require().NoError(err)
 	s.Require().True(res.IsErr(), "should have failed authorization")
+	s.Require().Contains(res.Log, "unauthorized")
 
 	_, err = suite.App().NetworkKeeper.ExecuteContractInternal(appA.Context(), &networktypes.MsgExecuteContract{
 		Sender:   senderPrefixed.String(),

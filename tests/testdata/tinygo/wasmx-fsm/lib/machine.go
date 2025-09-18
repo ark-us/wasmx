@@ -1,11 +1,14 @@
 package lib
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
+
+	sdkmath "cosmossdk.io/math"
 
 	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
@@ -95,7 +98,8 @@ func ExecuteGuard(machine *MachineExternal, guard *ActionObject, event EventObje
 		}
 		LoggerDebug("execute guard call", logged)
 		if err != nil {
-			return false
+			// return false
+			Revert(strings.Join(logged, "; "))
 		}
 		return success
 	}
@@ -336,11 +340,72 @@ func ProcessExternalCall(machine *MachineExternal, actionType string, params []A
 	if err != nil {
 		return nil, err
 	}
-	success, resp := wasmx.Call(contractAddress, nil, calldataBytes, big.NewInt(wasmx.DEFAULT_GAS_TX), MODULE_NAME)
+	return CoreCallRequest(contractAddress, calldataBytes)
+}
+
+func CoreCallRequest(contractAddress wasmx.Bech32String, calldataBytes []byte) ([]byte, error) {
+	// library contract
+	codeInfo, contractInfo, err := getContractInfo(wasmx.AddrCanonicalize(string(contractAddress)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get library contract info: core call errored: %s", err.Error())
+	}
+
+	// this contract
+	addressThis := wasmx.GetAddress()
+	_, contractInfoThis, err := getContractInfo(wasmx.AddrCanonicalize(string(addressThis)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get this contract info: core call errored: %s", err.Error())
+	}
+
+	req := &wasmxcore.CoreCallRequest{
+		// forward our address, which is the address of the interpreted contract, not the fsm interpreter
+		To: contractAddress,
+		// forward our caller
+		From:     wasmx.GetCaller(),
+		Calldata: calldataBytes,
+		Value:    sdkmath.ZeroInt(),
+		GasLimit: sdkmath.NewIntFromUint64(uint64(wasmx.DEFAULT_GAS_TX)),
+		IsQuery:  false,
+		// library contract
+		Bytecode:        codeInfo.InterpretedBytecodeRuntime,
+		CodeHash:        codeInfo.CodeHash,
+		CodeId:          contractInfo.CodeId,
+		SystemDeps:      codeInfo.Deps,
+		Pinned:          codeInfo.Pinned,
+		MeteringOff:     codeInfo.MeteringOff,
+		StorageType:     contractInfoThis.StorageType,
+		StorageAddress:  addressThis,
+		ContractAddress: addressThis,
+	}
+	resp, success, err := wasmxcore.ExternalCall(req, MODULE_NAME)
+	if err != nil {
+		return nil, fmt.Errorf("core call errored: %s; data: %s", err.Error(), string(resp))
+	}
 	if !success {
-		return nil, fmt.Errorf("external call errored: %s", string(resp))
+		return nil, fmt.Errorf("core call errored: %s", string(resp))
 	}
 	return resp, nil
+}
+
+func getContractInfo(addr []byte) (*wasmx.CodeInfo, *wasmx.ContractInfo, error) {
+	addrbase64 := base64.StdEncoding.EncodeToString(addr)
+	calldatastr := fmt.Sprintf(`{"GetContractInstance":{"address":"%s"}}`, addrbase64)
+	success, data := wasmx.CallStatic(wasmx.ROLE_STORAGE_CONTRACTS, []byte(calldatastr), big.NewInt(wasmx.DEFAULT_GAS_TX), MODULE_NAME)
+	if !success {
+		return nil, nil, fmt.Errorf("account not found %s", addr)
+	}
+	v := &QueryContractInstanceResponse{}
+	err := json.Unmarshal(data, v)
+	if err != nil {
+		return nil, nil, fmt.Errorf("account not found %s: %s", addr, err.Error())
+	}
+	if v.CodeInfo == nil {
+		return nil, nil, fmt.Errorf("account found, code_info nil %s", addr)
+	}
+	if v.ContractInfo == nil {
+		return nil, nil, fmt.Errorf("account found, contract_info nil %s", addr)
+	}
+	return v.CodeInfo, v.ContractInfo, nil
 }
 
 // IsAdmin checks if caller is admin
@@ -844,9 +909,10 @@ func Setup(config MachineExternal, contractAddress string) {
 		Revert("could not execute setup: marshal error: " + err.Error())
 		return
 	}
-	success, _ := wasmx.Call(config.Library, nil, calldataBytes, big.NewInt(wasmx.DEFAULT_GAS_TX), MODULE_NAME)
-	if !success {
-		Revert("could not execute setup")
+
+	_, err = CoreCallRequest(config.Library, calldataBytes)
+	if err != nil {
+		Revert(fmt.Sprintf("could not execute setup: %s", err.Error()))
 	}
 }
 

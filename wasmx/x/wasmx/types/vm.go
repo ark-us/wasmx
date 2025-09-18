@@ -151,10 +151,13 @@ type WasmxCosmosHandler interface {
 	Deploy(bytecode []byte, sender *mcodec.AccAddressPrefixed, provenance *mcodec.AccAddressPrefixed, initMsg []byte, value *big.Int, deps []string, metadata CodeMetadata, label string, salt []byte, source []byte) (codeId uint64, checksum []byte, contractAddress mcodec.AccAddressPrefixed, err error)
 	Execute(contractAddress mcodec.AccAddressPrefixed, sender mcodec.AccAddressPrefixed, execmsg []byte, value *big.Int, deps []string) (res []byte, err error)
 	GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (*ContractDependency, error)
+	SystemDepsFromCodeDeps(ctx sdk.Context, deps []string) []SystemDep
+	GetAotFilePath(hash []byte) string
+	GetCodeFilePath(hash Checksum, deps []string, interpreterBytecodeRuntime []byte) string
 	CanCallSystemContract(ctx sdk.Context, addr mcodec.AccAddressPrefixed) bool
 	WithNewAddress(addr mcodec.AccAddressPrefixed) WasmxCosmosHandler
 	GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error)
-	GetRoleByContractAddress(ctx sdk.Context, addr mcodec.AccAddressPrefixed) string
+	GetRoleByContractAddress(ctx sdk.Context, addr mcodec.AccAddressPrefixed) *RoleJSON
 	FinalizeBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinalizeBlock) error
 	UpdateSystemCache(ctx sdk.Context, req *SystemBootstrap) error
 	EndBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinalizeBlock) error

@@ -121,16 +121,12 @@ func (k *Keeper) SetRoleLabelByContract(ctx sdk.Context, contractAddress sdk.Acc
 }
 
 // GetRoleByContractAddress
-func (k *Keeper) GetRoleByContractAddress(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) string {
+func (k *Keeper) GetRoleByContractAddress(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) *types.RoleJSON {
 	label := k.GetRoleLabelByContract(ctx, contractAddress)
 	if label == "" {
-		return ""
+		return nil
 	}
-	role := k.GetRoleByLabel(ctx, label)
-	if role == nil {
-		return ""
-	}
-	return role.Role
+	return k.GetRoleByLabel(ctx, label)
 }
 
 func (k *Keeper) IsInternalContract(ctx sdk.Context, addressOrRole string) (bool, error) {

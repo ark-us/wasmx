@@ -143,18 +143,20 @@ func wasmxCall(_context interface{}, rnh memc.RuntimeHandler, params []interface
 			// ! we return success here in case the contract does not exist
 			success = int32(0)
 		} else {
-			gasLimit := req.GasLimit
-			if gasLimit == nil {
-				// TODO: gas remaining!!
-			}
-			var value *big.Int = nil
+			v := sdkmath.ZeroInt()
 			if req.Value != nil {
-				value = req.Value.BigInt()
+				v = *req.Value
+			}
+			var gasLimit sdkmath.Int
+			if req.GasLimit != nil {
+				gasLimit = sdkmath.NewIntFromBigInt(req.GasLimit)
+			} else {
+				gasLimit = sdkmath.NewIntFromUint64(ctx.GasMeter.GasRemaining())
 			}
 			req := vmtypes.CallRequestCommon{
 				To:           to,
 				From:         ctx.Env.Contract.Address,
-				Value:        value,
+				Value:        v,
 				GasLimit:     gasLimit,
 				Calldata:     req.Calldata,
 				Bytecode:     contractInfo.Bytecode,
@@ -163,6 +165,10 @@ func wasmxCall(_context interface{}, rnh memc.RuntimeHandler, params []interface
 				AotFilePath:  contractInfo.AotFilePath,
 				IsQuery:      req.IsQuery,
 			}
+			req.SystemDeps = contractInfo.SystemDepsRaw
+			req.Pinned = contractInfo.Pinned
+			req.MeteringOff = contractInfo.MeteringOff
+			req.StorageType = contractInfo.StorageType.String()
 			success, returnData = WasmxCall(ctx, req)
 			ctx.ReturnData = returnData
 		}
@@ -239,7 +245,7 @@ func wasmxGetRoleByAddress(_context interface{}, rnh memc.RuntimeHandler, params
 	addr := sdk.AccAddress(addrbz)
 	contractAddr := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(addr)
 	role := ctx.CosmosHandler.GetRoleByContractAddress(ctx.Ctx, contractAddr)
-	return rnh.AllocateWriteMem([]byte(role))
+	return rnh.AllocateWriteMem([]byte(role.Role))
 }
 
 func wasmxExecuteCosmosMsg(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {

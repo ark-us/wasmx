@@ -171,10 +171,13 @@ type StoragePairs struct {
 }
 
 type Account struct {
-	Address       Bech32String `json:"address"`
-	PubKey        string       `json:"pubKey"`
-	AccountNumber int64        `json:"accountNumber"`
-	Sequence      int64        `json:"sequence"`
+	Address    Bech32String `json:"address"`
+	CodeHash   []byte       `json:"codeHash"`
+	CodeId     uint64       `json:"codeId"`
+	SystemDeps []string     `json:"deps"`
+	// instantiate -> this is the constructor + runtime + constructor args
+	// execute -> this is the runtime bytecode
+	Bytecode []byte `json:"bytecode"`
 }
 
 type WasmxLog struct {

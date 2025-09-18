@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
@@ -483,13 +482,17 @@ func call(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) (
 			req := vmtypes.CallRequestCommon{
 				To:       addr,
 				From:     ctx.Env.Contract.Address,
-				Value:    value,
-				GasLimit: big.NewInt(gasLimit),
+				Value:    sdkmath.NewIntFromBigInt(value),
+				GasLimit: sdkmath.NewIntFromUint64(uint64(gasLimit)),
 				Calldata: calldata,
 				Bytecode: contractInfo.Bytecode,
 				CodeHash: contractInfo.CodeHash,
 				IsQuery:  false,
 			}
+			req.Pinned = contractInfo.Pinned
+			req.MeteringOff = contractInfo.MeteringOff
+			req.SystemDeps = contractInfo.SystemDepsRaw
+			req.StorageType = contractInfo.StorageType.String()
 			success, returnData = WasmxCall(ctx, req)
 			ctx.ReturnData = returnData
 		}
@@ -543,13 +546,17 @@ func callCode(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 		req := vmtypes.CallRequestCommon{
 			To:       ctx.Env.Contract.Address,
 			From:     ctx.Env.Contract.Address,
-			Value:    value,
-			GasLimit: big.NewInt(gasLimit),
+			Value:    sdkmath.NewIntFromBigInt(value),
+			GasLimit: sdkmath.NewIntFromUint64(uint64(gasLimit)),
 			Calldata: calldata,
 			Bytecode: contractInfo.Bytecode,
 			CodeHash: contractInfo.CodeHash,
 			IsQuery:  false,
 		}
+		req.Pinned = contractInfo.Pinned
+		req.MeteringOff = contractInfo.MeteringOff
+		req.SystemDeps = contractInfo.SystemDepsRaw
+		req.StorageType = contractInfo.StorageType.String()
 		success, returnData = WasmxCall(ctx, req)
 		ctx.ReturnData = returnData
 	}
@@ -598,13 +605,17 @@ func callDelegate(_context interface{}, rnh memc.RuntimeHandler, params []interf
 		req := vmtypes.CallRequestCommon{
 			To:       ctx.Env.Contract.Address,
 			From:     ctx.Env.CurrentCall.Sender,
-			Value:    ctx.Env.CurrentCall.Funds,
-			GasLimit: big.NewInt(gasLimit),
+			Value:    sdkmath.NewIntFromBigInt(ctx.Env.CurrentCall.Funds),
+			GasLimit: sdkmath.NewIntFromUint64(uint64(gasLimit)),
 			Calldata: calldata,
 			Bytecode: contractInfo.Bytecode,
 			CodeHash: contractInfo.CodeHash,
 			IsQuery:  false,
 		}
+		req.Pinned = contractInfo.Pinned
+		req.MeteringOff = contractInfo.MeteringOff
+		req.SystemDeps = contractInfo.SystemDepsRaw
+		req.StorageType = contractInfo.StorageType.String()
 		success, returnData = WasmxCall(ctx, req)
 		ctx.ReturnData = returnData
 	}
@@ -652,13 +663,17 @@ func callStatic(_context interface{}, rnh memc.RuntimeHandler, params []interfac
 		req := vmtypes.CallRequestCommon{
 			To:       addr,
 			From:     ctx.Env.Contract.Address,
-			Value:    big.NewInt(0),
-			GasLimit: big.NewInt(gasLimit),
+			Value:    sdkmath.ZeroInt(),
+			GasLimit: sdkmath.NewIntFromUint64(uint64(gasLimit)),
 			Calldata: calldata,
 			Bytecode: contractInfo.Bytecode,
 			CodeHash: contractInfo.CodeHash,
 			IsQuery:  true,
 		}
+		req.Pinned = contractInfo.Pinned
+		req.MeteringOff = contractInfo.MeteringOff
+		req.SystemDeps = contractInfo.SystemDepsRaw
+		req.StorageType = contractInfo.StorageType.String()
 		success, returnData = WasmxCall(ctx, req)
 		ctx.ReturnData = returnData
 	}

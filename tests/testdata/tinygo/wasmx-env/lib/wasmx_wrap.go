@@ -116,6 +116,8 @@ func CallInternal(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, 
 	packed := Call_(ptr)
 	res := utils.PackedPtrToBytes(packed)
 
+	LoggerDebugExtended(moduleName+":wasmx_env", "call", []string{"to", string(addrBech32), "response", string(res), "is_query", fmt.Sprintf("%t", isQuery)})
+
 	var calld CallResult
 	err = json.Unmarshal(res, &calld)
 	if err != nil {
@@ -129,11 +131,11 @@ func Call(addrBech32 Bech32String, value *sdkmath.Int, calldata []byte, gasLimit
 }
 
 func CallSimple(addrBech32 Bech32String, calldata []byte, isQuery bool, moduleName string) (bool, []byte) {
-	return CallInternal(addrBech32, nil, calldata, bigInt(DEFAULT_GAS_TX), isQuery, moduleName)
+	return CallInternal(addrBech32, &sdkmath.Int{}, calldata, bigInt(DEFAULT_GAS_TX), isQuery, moduleName)
 }
 
 func CallStatic(addrBech32 Bech32String, calldata []byte, gasLimit *big.Int, moduleName string) (bool, []byte) {
-	return CallInternal(addrBech32, nil, calldata, gasLimit, false, moduleName)
+	return CallInternal(addrBech32, &sdkmath.Int{}, calldata, gasLimit, false, moduleName)
 }
 
 // log a message to the console using _log.

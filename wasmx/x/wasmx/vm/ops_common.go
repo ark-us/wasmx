@@ -3,9 +3,8 @@ package vm
 import (
 	"encoding/hex"
 	"fmt"
-	"slices"
-	"strings"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
@@ -17,7 +16,9 @@ import (
 func GetContractDependency(ctx *Context, addr mcodec.AccAddressPrefixed) *types.ContractDependency {
 	depContext, ok := ctx.ContractRouter[addr.String()]
 	if ok {
-		return depContext.ContractInfo
+		if depContext.ContractInfo.Role != types.ROLE_LIBRARY {
+			return depContext.ContractInfo
+		}
 	}
 	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
 	if err != nil {
@@ -82,20 +83,33 @@ func BankSendCoin(ctx *Context, from mcodec.AccAddressPrefixed, to mcodec.AccAdd
 }
 
 func BankCall(ctx *Context, msgbz []byte, isQuery bool) ([]byte, error) {
-	// initMsg, err := json.Marshal(types.WasmxExecutionMessage{Data: []byte{}})
-	// if err != nil {
-	// 	return returns, err
-	// }
-
 	bankAddress, err := ctx.GetCosmosHandler().GetAddressOrRole(ctx.Ctx, types.ROLE_BANK)
 	if err != nil {
 		return nil, err
 	}
+	contractInfo, err := ctx.GetCosmosHandler().GetContractInfo(bankAddress)
+	if err != nil {
+		return nil, err
+	}
+	codeInfo := ctx.GetCosmosHandler().GetCodeInfo(contractInfo.CodeId)
+	if codeInfo == nil {
+		return nil, fmt.Errorf("BankCall: code info null")
+	}
+	remaining := ctx.GasMeter.GasRemaining()
 	req := vmtypes.CallRequestCommon{
-		To:       bankAddress,
-		From:     bankAddress, // TODO wasmx?
-		Calldata: msgbz,
-		IsQuery:  isQuery,
+		To:          bankAddress,
+		From:        bankAddress, // TODO wasmx?
+		Calldata:    msgbz,
+		Value:       sdkmath.ZeroInt(),
+		GasLimit:    sdkmath.NewIntFromUint64(remaining),
+		IsQuery:     isQuery,
+		Bytecode:    codeInfo.InterpretedBytecodeRuntime,
+		CodeHash:    codeInfo.CodeHash,
+		SystemDeps:  codeInfo.Deps,
+		Pinned:      codeInfo.Pinned,
+		MeteringOff: codeInfo.MeteringOff,
+		CodeId:      contractInfo.CodeId,
+		StorageType: contractInfo.StorageType.String(),
 	}
 	success, data := WasmxCall(ctx, req)
 	if success > 0 {
@@ -107,17 +121,37 @@ func BankCall(ctx *Context, msgbz []byte, isQuery bool) ([]byte, error) {
 // All WasmX, eWasm calls must go through here
 // Returns 0 on success, 1 on failure and 2 on revert
 func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
+	// reset previous return data from previous internal calls
+	ctx.ReturnData = []byte{}
+
 	appWithHooks, appWithHooksEnabled := ctx.App.(AppWithSubCallHook)
 	if types.IsSystemAddress(req.To.Bytes()) && !ctx.CosmosHandler.CanCallSystemContract(ctx.Ctx, req.From) {
 		return int32(1), []byte(`wasmxcall: cannot call system contract`)
 	}
-	depContractInfo := GetContractDependency(ctx, req.To)
+	storageType, ok := types.ContractStorageType_value[req.StorageType]
+	if !ok {
+		errmsg := fmt.Sprintf("invalid contract storage type: %s", req.StorageType)
+		return int32(1), []byte(errmsg)
+	}
+	toStorageType := types.ContractStorageType(storageType)
+
+	storeKey := []byte{}
+	if req.StorageAddress == nil || req.StorageAddress.Empty() {
+		storeKey = types.GetContractStorePrefix(req.To.Bytes())
+	} else {
+		storeKey = types.GetContractStorePrefix(req.StorageAddress.Bytes())
+	}
+	contractAddress := req.To
+	if req.ContractAddress != nil && !req.ContractAddress.Empty() {
+		contractAddress = *req.ContractAddress
+	}
+
 	// ! we return success here in case the contract does not exist
 	// an empty transaction to any account should succeed (evm way)
 	// even with value 0 & no calldata
-	if depContractInfo == nil {
-		return int32(0), []byte(`wasmxcall: cannot get contract context`)
-	}
+	// if req.CodeId == 0 {
+	// 	return int32(0), []byte(`wasmxcall: cannot get contract context`)
+	// }
 
 	fromstr := req.From.String()
 	tostr := req.To.String()
@@ -127,7 +161,6 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	sourceContractInfo := GetContractDependency(ctx, req.From)
 	if sourceContractInfo != nil {
 		fromStorageType := sourceContractInfo.StorageType
-		toStorageType := depContractInfo.StorageType
 		if fromStorageType == types.ContractStorageType_CoreConsensus && toStorageType != types.ContractStorageType_CoreConsensus {
 			// deterministic contracts can read & write from/to metaconsensus contracts
 			if toStorageType != types.ContractStorageType_MetaConsensus {
@@ -151,81 +184,49 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	callContext := types.MessageInfo{
 		Origin:   ctx.Env.CurrentCall.Origin,
 		Sender:   req.From,
-		Funds:    req.Value,
+		Funds:    req.Value.BigInt(),
 		CallData: req.Calldata,
-		GasLimit: req.GasLimit,
+		GasLimit: req.GasLimit.BigInt(),
 	}
-
-	to := req.To
-	tostr2 := tostr
 	systemDeps := req.SystemDeps
 	// clone router
 	newrouter := cloneContractRouter(ctx.ContractRouter)
-	// TODO req.To or to?
-	routerAddress := tostr
-
-	if depContractInfo.Role == types.ROLE_LIBRARY {
-		// use the sender contract if the call is to a library
-		to = req.From
-		tostr2 = fromstr
-		// TODO
-		// newrouter[tostr2].ContractInfo.
-		// TODO inherit execution depepndencies comming from roles
-		sysdeps := newrouter[tostr].ContractInfo.SystemDeps
-		for _, dep := range sourceContractInfo.SystemDeps {
-			if strings.Contains(dep.Role, "consensus") {
-				if !slices.Contains(systemDeps, dep.Role) {
-					systemDeps = append(systemDeps, dep.Role)
-				}
-				found := slices.ContainsFunc(sysdeps, func(n types.SystemDep) bool {
-					return n.Role == dep.Role
-				})
-				if !found {
-					sysdeps = append(sysdeps, dep)
-				}
-			}
-			for _, subdep := range dep.Deps {
-				if strings.Contains(subdep.Role, "consensus") {
-					if !slices.Contains(systemDeps, subdep.Role) {
-						systemDeps = append(systemDeps, subdep.Role)
-					}
-					found := slices.ContainsFunc(sysdeps, func(n types.SystemDep) bool {
-						return n.Role == subdep.Role
-					})
-					if !found {
-						sysdeps = append(sysdeps, subdep)
-					}
-				}
-			}
-		}
-		ci := newrouter[routerAddress].ContractInfo
-		newrouter[routerAddress].ContractInfo = &types.ContractDependency{
-			Address:       ci.Address,
-			Role:          ci.Role,
-			RoleLabel:     ci.RoleLabel,
-			Label:         ci.Label,
-			StoreKey:      ci.StoreKey,
-			CodeFilePath:  ci.CodeFilePath,
-			AotFilePath:   ci.AotFilePath,
-			Bytecode:      ci.Bytecode,
-			CodeHash:      ci.CodeHash,
-			CodeId:        ci.CodeId,
-			StorageType:   ci.StorageType,
-			Pinned:        ci.Pinned,
-			SystemDepsRaw: systemDeps,
-			SystemDeps:    sysdeps,
-		}
-		newrouter[routerAddress].ContractInfo.SystemDepsRaw = systemDeps
-		newrouter[routerAddress].ContractInfo.SystemDeps = sysdeps
-	}
 	tempCtx, commit := ctx.Ctx.CacheContext()
-	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, ctx.ContractRouter[tostr2].ContractInfo.StorageType, ctx.ContractRouter[tostr2].ContractInfo.StoreKey)
+	contractStore := ctx.CosmosHandler.ContractStore(tempCtx, toStorageType, storeKey)
 
 	// for authorizing cosmos messages sent by the contract, we check the sender/signer is the contract
 	// so we initialize the cosmos handler with the target contract
-	newCosmosHandler := ctx.CosmosHandler.WithNewAddress(to)
-	sysDeps := newrouter[routerAddress].ContractInfo.SystemDeps
-	pinned := newrouter[routerAddress].ContractInfo.Pinned
+	newCosmosHandler := ctx.CosmosHandler.WithNewAddress(req.To)
+	sysDeps := ctx.CosmosHandler.SystemDepsFromCodeDeps(ctx.Ctx, req.SystemDeps)
+	pinned := req.Pinned
+	destContractInfo := &types.ContractDependency{
+		Address:       req.To,
+		Role:          "",
+		RoleLabel:     "",
+		Label:         "",
+		SystemDeps:    sysDeps,
+		Bytecode:      req.Bytecode,
+		CodeHash:      req.CodeHash,
+		CodeId:        req.CodeId,
+		SystemDepsRaw: systemDeps,
+		Pinned:        req.Pinned,
+		MeteringOff:   req.MeteringOff,
+		StorageType:   toStorageType,
+		StoreKey:      storeKey,
+	}
+
+
+	role := ctx.CosmosHandler.GetRoleByContractAddress(ctx.Ctx, req.To)
+	if role != nil {
+		destContractInfo.Role = role.Role
+		destContractInfo.RoleLabel = role.Labels[role.Primary]
+	}
+
+	destContractInfo.CodeFilePath = ctx.CosmosHandler.GetCodeFilePath(req.CodeHash, systemDeps, req.Bytecode)
+	if req.Pinned {
+		destContractInfo.AotFilePath = ctx.CosmosHandler.GetAotFilePath(req.CodeHash)
+	}
+
 	rnh := getRuntimeHandler(ctx.newIVmFn, tempCtx, sysDeps, pinned)
 	// increase current call count at this level
 	ctx.CurrentSubCallLevelCount += 1
@@ -235,7 +236,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		GoRoutineGroup:           ctx.GoRoutineGroup,
 		GoContextParent:          ctx.GoContextParent,
 		Ctx:                      tempCtx,
-		Logger:                   GetVmLogger(ctx.Logger, ctx.Env.Chain.ChainIdFull, to.String()),
+		Logger:                   GetVmLogger(ctx.Logger, ctx.Env.Chain.ChainIdFull, req.To.String()),
 		GasMeter:                 ctx.GasMeter,
 		ContractStore:            contractStore,
 		CosmosHandler:            newCosmosHandler,
@@ -245,7 +246,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		dbIterators:              map[int32]types.Iterator{},
 		RuntimeHandler:           rnh,
 		newIVmFn:                 ctx.newIVmFn,
-		ContractInfo:             newrouter[routerAddress].ContractInfo,
+		ContractInfo:             destContractInfo,
 		CurrentSubCallLevel:      ctx.CurrentSubCallLevel + 1,
 		CurrentSubCallId:         ctx.CurrentSubCallLevelCount,
 		CurrentSubCallLevelCount: 0, // new level, reset to 0
@@ -254,7 +255,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 			Transaction: ctx.Env.Transaction,
 			Chain:       ctx.Env.Chain,
 			Contract: types.EnvContractInfo{
-				Address:    to,
+				Address:    contractAddress,
 				CodeHash:   req.CodeHash,
 				Bytecode:   req.Bytecode,
 				CodeId:     req.CodeId,
@@ -263,6 +264,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 			CurrentCall: callContext,
 		},
 	}
+	newrouter[tostr] = newctx
 
 	if appWithHooksEnabled {
 		err := appWithHooks.BeginSubCall(newctx.Ctx, newctx.CurrentSubCallLevel, newctx.CurrentSubCallId, req.IsQuery)

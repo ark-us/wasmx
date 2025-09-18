@@ -27,6 +27,7 @@ func Instantiate() {}
 func main() {
 	entrypoint := os.Getenv("ENTRY_POINT")
 	lib.LoggerDebugExtended("fsm: ENTRY_POINT: "+entrypoint, nil)
+	// these entrypoints are internal by default
 	switch entrypoint {
 	case "eventual":
 		eventual()

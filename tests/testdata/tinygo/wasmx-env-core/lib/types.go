@@ -1,6 +1,8 @@
 package wasmxcore
 
 import (
+	sdkmath "cosmossdk.io/math"
+
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -95,4 +97,29 @@ type UpdateSystemCacheRequest struct {
 
 type UpdateSystemCacheResponse struct {
 	Error string `json:"error"`
+}
+
+type CoreCallRequest struct {
+	To              wasmx.Bech32String `json:"to"`
+	From            wasmx.Bech32String `json:"from"`
+	Value           sdkmath.Int        `json:"value"`
+	GasLimit        sdkmath.Int        `json:"gasLimit"`
+	Calldata        []byte             `json:"calldata"`
+	Bytecode        []byte             `json:"bytecode"`
+	CodeHash        []byte             `json:"codeHash"`
+	CodeFilePath    string             `json:"codeFilePath"`
+	AotFilePath     string             `json:"aotFilePath"`
+	CodeId          uint64             `json:"codeId"`
+	SystemDeps      []string           `json:"systemDeps"`
+	Pinned          bool               `json:"pinned"`
+	MeteringOff     bool               `json:"metering_off"`
+	IsQuery         bool               `json:"isQuery"`
+	StorageType     string             `json:"storage_type"`
+	StorageAddress  wasmx.Bech32String `json:"storage_address"`
+	ContractAddress wasmx.Bech32String `json:"contract_address"`
+}
+
+type CoreCallResponse struct {
+	Success uint8  `json:"success"`
+	Data    []byte `json:"data"`
 }

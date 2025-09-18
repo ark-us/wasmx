@@ -3,6 +3,7 @@ package wasmxcore
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 
 	utils "github.com/loredanacirstea/wasmx-env-utils"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
@@ -62,6 +63,10 @@ func storageResetGlobalWrap(bz []byte) []byte {
 
 func updateSystemCacheWrap(bz []byte) []byte {
 	return utils.PackedPtrToBytes(updateSystemCache_(utils.BytesToPackedPtr(bz)))
+}
+
+func externalCallWrap(bz []byte) []byte {
+	return utils.PackedPtrToBytes(externalCall_(utils.BytesToPackedPtr(bz)))
 }
 
 func GrpcRequest(ipAddress string, contractAddress wasmx.Bech32String, data string) (*GrpcResponse, error) {
@@ -284,4 +289,22 @@ func UpdateSystemCache(req UpdateSystemCacheRequest) (*UpdateSystemCacheResponse
 	}
 
 	return &response, nil
+}
+
+func ExternalCall(req *CoreCallRequest, moduleName string) ([]byte, bool, error) {
+	reqJSON, err := json.Marshal(req)
+	if err != nil {
+		return nil, false, err
+	}
+	result := externalCallWrap(reqJSON)
+	LoggerDebugExtended(
+		fmt.Sprintf(`%s: %s`, moduleName+":wasmx_env_core", "external_call"),
+		[]string{"data", string(reqJSON)},
+	)
+	var response CoreCallResponse
+	if err := json.Unmarshal(result, &response); err != nil {
+		return nil, false, err
+	}
+
+	return response.Data, response.Success == 0, nil
 }

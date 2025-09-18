@@ -126,28 +126,24 @@ func coreExternalCall(_context interface{}, rnh memc.RuntimeHandler, params []in
 	if err != nil {
 		return nil, err
 	}
-	var req vmtypes.CallRequest
+	var req vmtypes.CallRequestCommon
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
-		ctx.Ctx.Logger().Debug("unmarshalling CallRequest failed", "error", err)
+		ctx.Ctx.Logger().Debug("unmarshalling coreExternalCall failed", "error", err)
 		return nil, err
 	}
 
 	var success int32
 	var returnData []byte
 
-	to := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(req.To)
-	from := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(req.From)
-	commonReq := req.ToCommon(from, to)
-
 	// Send funds
-	if req.Value.BitLen() > 0 {
-		err = BankSendCoin(ctx, ctx.Env.Contract.Address, to, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value))))
+	if req.Value.GT(sdkmath.ZeroInt()) {
+		err = BankSendCoin(ctx, req.From, req.To, sdk.NewCoins(sdk.NewCoin(ctx.Env.Chain.Denom, req.Value)))
 	}
 	if err != nil {
 		success = int32(2)
 	} else {
-		success, returnData = WasmxCall(ctx, commonReq)
+		success, returnData = WasmxCall(ctx, req)
 	}
 
 	response := vmtypes.CallResponse{

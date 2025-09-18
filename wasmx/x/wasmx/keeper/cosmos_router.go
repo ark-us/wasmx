@@ -180,6 +180,19 @@ func (h *WasmxCosmosHandler) Execute(contractAddress mcodec.AccAddressPrefixed, 
 func (h *WasmxCosmosHandler) GetContractDependency(ctx sdk.Context, addr mcodec.AccAddressPrefixed) (*types.ContractDependency, error) {
 	return h.Keeper.GetContractDependency(ctx, addr)
 }
+
+func (h *WasmxCosmosHandler) SystemDepsFromCodeDeps(ctx sdk.Context, deps []string) []types.SystemDep {
+	return h.Keeper.SystemDepsFromCodeDeps(ctx, deps)
+}
+
+func (h *WasmxCosmosHandler) GetAotFilePath(hash []byte) string {
+	return h.Keeper.wasmvm.BuildPathPinned(hash)
+}
+
+func (h *WasmxCosmosHandler) GetCodeFilePath(hash types.Checksum, deps []string, interpreterBytecodeRuntime []byte) string {
+	return h.Keeper.wasmvm.GetCodeFilePath(hash, deps, interpreterBytecodeRuntime)
+}
+
 func (h *WasmxCosmosHandler) CanCallSystemContract(ctx sdk.Context, addr mcodec.AccAddressPrefixed) bool {
 	return h.Keeper.CanCallSystemContract(ctx, addr)
 }
@@ -196,7 +209,7 @@ func (h *WasmxCosmosHandler) GetAddressOrRole(ctx sdk.Context, addressOrRole str
 	}
 	return mcodec.AccAddressPrefixed{}, err
 }
-func (h *WasmxCosmosHandler) GetRoleByContractAddress(ctx sdk.Context, addr mcodec.AccAddressPrefixed) string {
+func (h *WasmxCosmosHandler) GetRoleByContractAddress(ctx sdk.Context, addr mcodec.AccAddressPrefixed) *types.RoleJSON {
 	return h.Keeper.GetRoleByContractAddress(ctx, addr)
 }
 

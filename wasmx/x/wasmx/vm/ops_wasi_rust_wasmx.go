@@ -3,7 +3,6 @@ package vm
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"os"
 	"path"
 	"path/filepath"
@@ -172,8 +171,8 @@ func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []int
 			req := vmtypes.CallRequestCommon{
 				To:           addr,
 				From:         ctx.Env.Contract.Address,
-				Value:        value,
-				GasLimit:     big.NewInt(gasLimit),
+				Value:        sdkmath.NewIntFromBigInt(value),
+				GasLimit:     sdkmath.NewIntFromUint64(uint64(gasLimit)),
 				Calldata:     calldata,
 				Bytecode:     contractInfo.Bytecode,
 				CodeHash:     contractInfo.CodeHash,
@@ -183,6 +182,10 @@ func wasiCallClassic(_context interface{}, rnh memc.RuntimeHandler, params []int
 				SystemDeps:   contractInfo.SystemDepsRaw,
 				IsQuery:      false,
 			}
+			req.Pinned = contractInfo.Pinned
+			req.MeteringOff = contractInfo.MeteringOff
+			req.SystemDeps = contractInfo.SystemDepsRaw
+			req.StorageType = contractInfo.StorageType.String()
 			success, returnData = WasmxCall(ctx, req)
 		}
 	}
@@ -235,8 +238,8 @@ func wasiCallStatic(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		req := vmtypes.CallRequestCommon{
 			To:           addr,
 			From:         ctx.Env.Contract.Address,
-			Value:        big.NewInt(0),
-			GasLimit:     big.NewInt(gasLimit),
+			Value:        sdkmath.ZeroInt(),
+			GasLimit:     sdkmath.NewIntFromUint64(uint64(gasLimit)),
 			Calldata:     calldata,
 			Bytecode:     contractInfo.Bytecode,
 			CodeHash:     contractInfo.CodeHash,
@@ -246,6 +249,10 @@ func wasiCallStatic(_context interface{}, rnh memc.RuntimeHandler, params []inte
 			SystemDeps:   contractInfo.SystemDepsRaw,
 			IsQuery:      true,
 		}
+		req.Pinned = contractInfo.Pinned
+		req.MeteringOff = contractInfo.MeteringOff
+		req.SystemDeps = contractInfo.SystemDepsRaw
+		req.StorageType = contractInfo.StorageType.String()
 		success, returnData = WasmxCall(ctx, req)
 	}
 

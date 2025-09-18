@@ -173,7 +173,7 @@ func (k *Keeper) GetContractDependencyInnerWithoutRoles(ctx sdk.Context, addr mc
 	if codeInfo.Pinned {
 		aotFilePath = k.wasmvm.BuildPathPinned(codeInfo.CodeHash)
 	}
-	filepath := k.wasmvm.GetCodeFilePath(codeInfo)
+	filepath := k.wasmvm.GetCodeFilePath(codeInfo.CodeHash, codeInfo.Deps, codeInfo.InterpretedBytecodeRuntime)
 
 	cdep := types.ContractDependency{
 		Address:       addr,
@@ -1215,7 +1215,7 @@ func (k *Keeper) SystemDepFromLabel(ctx sdk.Context, label string) (types.System
 	if codeInfo.Pinned {
 		aotFilePath = k.wasmvm.BuildPathPinned(codeInfo.CodeHash)
 	}
-	filepath := k.wasmvm.GetCodeFilePath(*codeInfo)
+	filepath := k.wasmvm.GetCodeFilePath(codeInfo.CodeHash, codeInfo.Deps, codeInfo.InterpretedBytecodeRuntime)
 	dep := types.SystemDep{
 		Role:         role.Role,
 		Label:        label,

@@ -26,8 +26,8 @@ type SysContract struct {
 }
 
 type BenchmarkRequest struct {
-	Request   vmtypes.CallRequest `json:"request"`
-	Magnitude int32               `json:"magnitude"`
+	Request   vmtypes.CallRequestCommon `json:"request"`
+	Magnitude int32                     `json:"magnitude"`
 }
 
 func (suite *KeeperTestSuite) TestWasmxBenchmark() {
@@ -36,7 +36,8 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 
 	appA := s.AppContext()
-	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
+	senderPrefixed := appA.BytesToAccAddressPrefixed(sender.Address)
+	appA.Faucet.Fund(appA.Context(), senderPrefixed, sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	wasmbin := precompiles.GetPrecompileByLabel(appA.AddressCodec(), "sys_proxy")
 
@@ -61,11 +62,11 @@ func (suite *KeeperTestSuite) TestWasmxBenchmark() {
 	req := &SysContract{
 		Benchmark: &BenchmarkRequest{
 			Magnitude: 3,
-			Request: vmtypes.CallRequest{
-				To:       contractAddress2.Bytes(),
-				From:     sender.Address,
-				Value:    big.NewInt(0),
-				GasLimit: big.NewInt(1000000),
+			Request: vmtypes.CallRequestCommon{
+				To:       contractAddress2,
+				From:     senderPrefixed,
+				Value:    sdkmath.ZeroInt(),
+				GasLimit: sdkmath.NewIntFromUint64(uint64(1000000)),
 				Calldata: appA.Hex2bz(getHex),
 				Bytecode: codeInfo.InterpretedBytecodeRuntime,
 				CodeHash: codeInfo.CodeHash,

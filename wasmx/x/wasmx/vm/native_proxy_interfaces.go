@@ -164,17 +164,17 @@ func EvmToJsonCall(addrCodec mcodec.AccBech32Codec, method *aabi.Method, context
 	req := vmtypes.CallRequestCommon{
 		To:       contractAddress,
 		From:     context.Env.CurrentCall.Sender,
-		Value:    context.Env.CurrentCall.Funds,
+		Value:    sdkmath.NewIntFromBigInt(context.Env.CurrentCall.Funds),
 		Calldata: input,
-		GasLimit: context.Env.CurrentCall.GasLimit,
+		GasLimit: sdkmath.NewIntFromBigInt(context.Env.CurrentCall.GasLimit),
 		IsQuery:  false,
 	}
 
 	var success int32
 	var returnData []byte
 	// Send funds
-	if req.Value.BitLen() > 0 {
-		err = BankSendCoin(context, context.Env.Contract.Address, req.To, sdk.NewCoins(sdk.NewCoin(context.Env.Chain.Denom, sdkmath.NewIntFromBigInt(req.Value))))
+	if req.Value.GT(sdkmath.ZeroInt()) {
+		err = BankSendCoin(context, context.Env.Contract.Address, req.To, sdk.NewCoins(sdk.NewCoin(context.Env.Chain.Denom, req.Value)))
 	}
 	if err != nil {
 		success = int32(2)
@@ -186,6 +186,10 @@ func EvmToJsonCall(addrCodec mcodec.AccBech32Codec, method *aabi.Method, context
 		} else {
 			req.Bytecode = contractInfo.Bytecode
 			req.CodeHash = contractInfo.CodeHash
+			req.SystemDeps = contractInfo.SystemDepsRaw
+			req.Pinned = contractInfo.Pinned
+			req.MeteringOff = contractInfo.MeteringOff
+			req.StorageType = contractInfo.StorageType.String()
 			success, returnData = WasmxCall(context, req)
 		}
 	}

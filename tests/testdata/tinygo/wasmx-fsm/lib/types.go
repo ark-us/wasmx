@@ -218,3 +218,8 @@ type P2PMessage struct {
 	Timestamp string      `json:"timestamp"` // simplified as string
 	Sender    NetworkNode `json:"sender"`
 }
+
+type QueryContractInstanceResponse struct {
+	CodeInfo     *wasmx.CodeInfo     `json:"code_info"`
+	ContractInfo *wasmx.ContractInfo `json:"contract_info"`
+}
