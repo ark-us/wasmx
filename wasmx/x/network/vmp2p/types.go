@@ -72,18 +72,21 @@ type MdnsService interface {
 }
 
 type P2PContext struct {
-	mtx                  sync.Mutex
-	Node                 *host.Host
-	PubSub               *pubsub.PubSub
-	Mdns                 MdnsService
-	ProtocolContexts     map[string]*ProtocolContext // indexed by protocol ID
-	CustomMessageHandler map[string]func(netmsg P2PMessage, contractAddress string, senderAddress string)
-	ssctx                *StateSyncContext
+	Node                    *host.Host
+	PubSub                  *pubsub.PubSub
+	Mdns                    MdnsService
+	mtxProtocolContexts     sync.Mutex
+	ProtocolContexts        map[string]*ProtocolContext // indexed by protocol ID
+	mtxCustomMessageHandler sync.Mutex
+	CustomMessageHandler    map[string]func(netmsg P2PMessage, contractAddress string, senderAddress string)
+	ssctx                   *StateSyncContext
 }
 
 type ProtocolContext struct {
-	ChatRooms map[string]*ChatRoom      // indexed by topic
-	Streams   map[string]network.Stream // indexed by peer address
+	mtxChatRooms sync.Mutex
+	ChatRooms    map[string]*ChatRoom // indexed by topic
+	mtxStreams   sync.Mutex
+	Streams      map[string]network.Stream // indexed by peer address
 }
 
 type StartNodeWithIdentityRequest struct {
@@ -201,9 +204,82 @@ type CalldataStart struct {
 	Start MsgStart `json:"start"`
 }
 
-func (p *P2PContext) GetPeers(protocolID string) ([]string, error) {
+func (p *ProtocolContext) getChatRoom(topic string) *ChatRoom {
+	p.mtxChatRooms.Lock()
+	defer p.mtxChatRooms.Unlock()
+	room, found := p.ChatRooms[topic]
+	if !found {
+		return nil
+	}
+	return room
+}
+
+func (p *ProtocolContext) setChatRoom(topic string, room *ChatRoom) {
+	p.mtxChatRooms.Lock()
+	defer p.mtxChatRooms.Unlock()
+	p.ChatRooms[topic] = room
+}
+
+func (p *ProtocolContext) deleteChatRoom(topic string) {
+	p.mtxChatRooms.Lock()
+	defer p.mtxChatRooms.Unlock()
+	delete(p.ChatRooms, topic)
+}
+
+func (p *ProtocolContext) getStream(peer string) network.Stream {
+	p.mtxStreams.Lock()
+	defer p.mtxStreams.Unlock()
+	stream, found := p.Streams[peer]
+	if !found {
+		return nil
+	}
+	return stream
+}
+
+func (p *ProtocolContext) setStream(peer string, stream network.Stream) {
+	p.mtxStreams.Lock()
+	defer p.mtxStreams.Unlock()
+	p.Streams[peer] = stream
+}
+
+func (p *ProtocolContext) deleteStream(peer string) {
+	p.mtxStreams.Lock()
+	defer p.mtxStreams.Unlock()
+	delete(p.Streams, peer)
+}
+
+func (p *P2PContext) getProtocolContext(protocolID string) *ProtocolContext {
+	p.mtxProtocolContexts.Lock()
+	defer p.mtxProtocolContexts.Unlock()
 	pctx, found := p.ProtocolContexts[protocolID]
 	if !found {
+		return nil
+	}
+	return pctx
+}
+
+func (p *P2PContext) setProtocolContext(protocolID string, pctx *ProtocolContext) {
+	p.mtxProtocolContexts.Lock()
+	defer p.mtxProtocolContexts.Unlock()
+	p.ProtocolContexts[protocolID] = pctx
+}
+
+func (p *P2PContext) getCustomMessageHandler(protocolID string) (func(netmsg P2PMessage, contractAddress string, senderAddress string), bool) {
+	p.mtxCustomMessageHandler.Lock()
+	defer p.mtxCustomMessageHandler.Unlock()
+	handler, found := p.CustomMessageHandler[protocolID]
+	return handler, found
+}
+
+func (p *P2PContext) setCustomMessageHandler(protocolID string, handler func(netmsg P2PMessage, contractAddress string, senderAddress string)) {
+	p.mtxCustomMessageHandler.Lock()
+	defer p.mtxCustomMessageHandler.Unlock()
+	p.CustomMessageHandler[protocolID] = handler
+}
+
+func (p *P2PContext) GetPeers(protocolID string) ([]string, error) {
+	pctx := p.getProtocolContext(protocolID)
+	if pctx == nil {
 		return nil, fmt.Errorf("protocol ID not registered: %s", protocolID)
 	}
 	peers := []string{}
@@ -214,79 +290,78 @@ func (p *P2PContext) GetPeers(protocolID string) ([]string, error) {
 }
 
 func (p *P2PContext) GetPeer(protocolID string, peer string) (network.Stream, bool) {
-	pctx, found := p.ProtocolContexts[protocolID]
-	if !found {
+	pctx := p.getProtocolContext(protocolID)
+	if pctx == nil {
 		return nil, false
 	}
-	stream, found := pctx.Streams[peer]
-	return stream, found
+
+	stream := pctx.getStream(peer)
+	if stream == nil {
+		return nil, false
+	}
+	return stream, true
 }
 
 func (p *P2PContext) AddPeer(protocolID string, peer string, stream network.Stream) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	_, found := p.ProtocolContexts[protocolID]
-	if !found {
-		p.ProtocolContexts[protocolID] = &ProtocolContext{ChatRooms: map[string]*ChatRoom{}, Streams: map[string]network.Stream{}}
+	pctx := p.getProtocolContext(protocolID)
+	if pctx == nil {
+		p.setProtocolContext(protocolID, &ProtocolContext{ChatRooms: map[string]*ChatRoom{}, Streams: map[string]network.Stream{}})
 	}
-	p.ProtocolContexts[protocolID].Streams[peer] = stream
+	pctx = p.getProtocolContext(protocolID)
+	pctx.setStream(peer, stream)
 }
 
 func (p *P2PContext) DeletePeer(protocolID string, peer string) error {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	pctx, found := p.ProtocolContexts[protocolID]
-	if !found {
+	pctx := p.getProtocolContext(protocolID)
+	if pctx == nil {
 		return fmt.Errorf("protocol ID not registered: %s", protocolID)
 	}
-	delete(pctx.Streams, peer)
+	pctx.deleteStream(peer)
 	return nil
 }
 
 func (p *P2PContext) GetChatRoom(protocolID string, topic string) (*ChatRoom, bool) {
-	pctx, found := p.ProtocolContexts[protocolID]
-	if !found {
+	pctx := p.getProtocolContext(protocolID)
+	if pctx == nil {
 		return nil, false
 	}
-	cr, found := pctx.ChatRooms[topic]
-	return cr, found
+	cr := pctx.getChatRoom(topic)
+	if cr == nil {
+		return nil, false
+	}
+	return cr, true
 }
 
 func (p *P2PContext) AddChatRoom(protocolID string, topic string, cr *ChatRoom) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	_, found := p.ProtocolContexts[protocolID]
-	if !found {
-		p.ProtocolContexts[protocolID] = &ProtocolContext{ChatRooms: map[string]*ChatRoom{}, Streams: map[string]network.Stream{}}
+	pctx := p.getProtocolContext(protocolID)
+	if pctx == nil {
+		p.setProtocolContext(protocolID, &ProtocolContext{ChatRooms: map[string]*ChatRoom{}, Streams: map[string]network.Stream{}})
 	}
-	p.ProtocolContexts[protocolID].ChatRooms[topic] = cr
+	pctx = p.getProtocolContext(protocolID)
+	pctx.setChatRoom(topic, cr)
 }
 
 func (p *P2PContext) DeleteChatRoom(protocolID string, topic string) error {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	pctx, found := p.ProtocolContexts[protocolID]
-	if !found {
+	pctx := p.getProtocolContext(protocolID)
+	if pctx == nil {
 		return fmt.Errorf("protocol ID not registered: %s", protocolID)
 	}
-	delete(pctx.ChatRooms, topic)
+	pctx.deleteChatRoom(topic)
 	return nil
 }
 
 func (p *P2PContext) AddCustomHandler(name string, handler func(netmsg P2PMessage, contractAddress string, senderAddress string)) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
 	if p.CustomMessageHandler == nil {
 		p.CustomMessageHandler = map[string]func(netmsg P2PMessage, contractAddress string, senderAddress string){}
 	}
-	p.CustomMessageHandler[name] = handler
+	p.setCustomMessageHandler(name, handler)
 }
 
 func (p *P2PContext) GetCustomHandler(name string) func(netmsg P2PMessage, contractAddress string, senderAddress string) {
 	if p.CustomMessageHandler == nil {
 		return nil
 	}
-	handler, ok := p.CustomMessageHandler[name]
+	handler, ok := p.getCustomMessageHandler(name)
 	if !ok {
 		return nil
 	}
