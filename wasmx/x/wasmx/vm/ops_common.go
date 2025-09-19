@@ -146,13 +146,6 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		contractAddress = *req.ContractAddress
 	}
 
-	// ! we return success here in case the contract does not exist
-	// an empty transaction to any account should succeed (evm way)
-	// even with value 0 & no calldata
-	// if req.CodeId == 0 {
-	// 	return int32(0), []byte(`wasmxcall: cannot get contract context`)
-	// }
-
 	fromstr := req.From.String()
 	tostr := req.To.String()
 
@@ -214,7 +207,6 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		StorageType:   toStorageType,
 		StoreKey:      storeKey,
 	}
-
 
 	role := ctx.CosmosHandler.GetRoleByContractAddress(ctx.Ctx, req.To)
 	if role != nil {

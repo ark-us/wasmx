@@ -32,6 +32,8 @@ import (
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+
 	abci "github.com/cometbft/cometbft/abci/types"
 
 	// "github.com/cosmos/cosmos-sdk/client/flags"
@@ -1252,7 +1254,7 @@ func getGenTxData(
 		flags,
 		customAddrCodec,
 		contractAddress,
-		sender,
+		authtypes.NewModuleAddress(wasmxtypes.ModuleName),
 		querymsg,
 		nil,
 		nil,
