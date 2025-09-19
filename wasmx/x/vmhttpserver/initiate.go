@@ -6,7 +6,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InstantiateHttpServerVm_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateHttpServerVm_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxHttpServer_i32(context, rnh)
 	if err != nil {
 		return err
@@ -18,7 +18,7 @@ func InstantiateHttpServerVm_i32(context *vmtypes.Context, rnh memc.RuntimeHandl
 	return nil
 }
 
-func InstantiateHttpVmServerMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateHttpVmServerMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxHttpServerMock_i32(context, rnh)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func InstantiateHttpVmServerMock_i32(context *vmtypes.Context, rnh memc.RuntimeH
 	return nil
 }
 
-func InstantiateHttpServerVm_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateHttpServerVm_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxHttpServer_i64(context, rnh)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func InstantiateHttpServerVm_i64(context *vmtypes.Context, rnh memc.RuntimeHandl
 	return nil
 }
 
-func InstantiateHttpVmServerMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateHttpVmServerMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxHttpServerMock_i64(context, rnh)
 	if err != nil {
 		return err

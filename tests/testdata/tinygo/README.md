@@ -18,7 +18,9 @@ cd wasmx-gov-continuous && GOWORK=off tinygo build -o ../../../../wasmx/x/wasmx/
 
 cd wasmx-fsm && GOWORK=off tinygo build -o ../../../../wasmx/x/wasmx/vm/precompiles/28.finite_state_machine.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd && cd ..
 
-tinygo build -o add.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./add
+tinygo build -o nondeterm.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./add/cmd1
+
+tinygo build -o determ.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./add/cmd2
 
 cd simple_storage && GOWORK=off tinygo build -o ../simple_storage.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 

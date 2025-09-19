@@ -6,7 +6,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InstantiateHttpClientVm_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateHttpClientVm_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxHttpClient_i32(context, rnh)
 	if err != nil {
 		return err
@@ -18,7 +18,7 @@ func InstantiateHttpClientVm_i32(context *vmtypes.Context, rnh memc.RuntimeHandl
 	return nil
 }
 
-func InstantiateHttpClientVmMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateHttpClientVmMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxHttpClientMock_i32(context, rnh)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func InstantiateHttpClientVmMock_i32(context *vmtypes.Context, rnh memc.RuntimeH
 	return nil
 }
 
-func InstantiateHttpClientVm_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateHttpClientVm_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxHttpClient_i64(context, rnh)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func InstantiateHttpClientVm_i64(context *vmtypes.Context, rnh memc.RuntimeHandl
 	return nil
 }
 
-func InstantiateHttpClientVmMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateHttpClientVmMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxHttpClientMock_i64(context, rnh)
 	if err != nil {
 		return err

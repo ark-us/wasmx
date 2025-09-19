@@ -6,7 +6,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InstantiateWasmxMultiChainJsonMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateWasmxMultiChainJsonMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxMultichainJson1Mock_i64(context, rnh)
 	if err != nil {
 		return err

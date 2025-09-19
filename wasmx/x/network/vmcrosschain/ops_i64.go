@@ -7,7 +7,7 @@ import (
 )
 
 // !!!!This is an internal API only to be used by trusted system contracts
-func InstantiateWasmxCrossChainJson_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateWasmxCrossChainJson_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	var err error
 	wasmx, err := BuildWasmxCrosschainJson1_i64(context, rnh)
 	if err != nil {

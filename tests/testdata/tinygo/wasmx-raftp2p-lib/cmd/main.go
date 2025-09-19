@@ -38,6 +38,10 @@ func Wasmx_multichain_json_i64_1() {}
 //export wasmx_p2p_json_i64_1
 func Wasmx_p2p_json_i64_1() {}
 
+//go:wasm-module wasmxcore
+//export wasmx_nondeterministic_1
+func Wasmx_nondeterministic_1() {}
+
 //go:wasm-module wasmx-raftp2p
 //export instantiate
 func Instantiate() {}

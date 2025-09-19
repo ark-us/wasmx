@@ -6,7 +6,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InstantiateKvVM_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateKvVM_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxKvVM_i32(context, rnh)
 	if err != nil {
 		return err
@@ -18,7 +18,7 @@ func InstantiateKvVM_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep 
 	return nil
 }
 
-func InstantiateKvVMMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateKvVMMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxKvVMMock_i32(context, rnh)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func InstantiateKvVMMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, 
 	return nil
 }
 
-func InstantiateKvVM_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateKvVM_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxKvVM_i64(context, rnh)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func InstantiateKvVM_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep 
 	return nil
 }
 
-func InstantiateKvVMMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateKvVMMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxKvVMMock_i64(context, rnh)
 	if err != nil {
 		return err

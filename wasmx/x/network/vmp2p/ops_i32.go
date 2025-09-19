@@ -6,7 +6,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InstantiateWasmxP2PJson_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateWasmxP2PJson_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxP2P1_i32(context, rnh)
 	if err != nil {
 		return err

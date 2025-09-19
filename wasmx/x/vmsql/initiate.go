@@ -6,7 +6,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InstantiateSqlVM_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateSqlVM_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxSqlVM_i32(context, rnh)
 	if err != nil {
 		return err
@@ -18,7 +18,7 @@ func InstantiateSqlVM_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep
 	return nil
 }
 
-func InstantiateSqlVMMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateSqlVMMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxSqlVMMock_i32(context, rnh)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func InstantiateSqlVMMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler,
 	return nil
 }
 
-func InstantiateSqlVM_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateSqlVM_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxSqlVM_i64(context, rnh)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func InstantiateSqlVM_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep
 	return nil
 }
 
-func InstantiateSqlVMMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateSqlVMMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxSqlVMMock_i64(context, rnh)
 	if err != nil {
 		return err

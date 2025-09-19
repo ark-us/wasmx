@@ -5,7 +5,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InstantiateWasmxConsensusJson_i64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateWasmxConsensusJson_i64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	var err error
 	wasmx, err := BuildWasmxConsensus_i64(context, rnh)
 	if err != nil {

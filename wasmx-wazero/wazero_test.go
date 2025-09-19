@@ -481,10 +481,10 @@ func TestWazeroWasi(t *testing.T) {
 	vm := runtime.NewWazeroVmRaw(ctx, cache, r, nil, false)
 	rnh := wasmxvm.RuntimeDepHandler[types.WASMX_MEMORY_PTRLEN_i64](vm, nil)
 
-	err = wasmxvm.InitiateWasmxEnvi64(vmCtx, rnh, nil)
+	err = wasmxvm.InitiateWasmxEnvi64(vmCtx, rnh, nil, nil, false)
 	require.NoError(t, err)
 
-	err = wasmxvm.InitiateWasi(vmCtx, rnh, nil)
+	err = wasmxvm.InitiateWasi(vmCtx, rnh, nil, nil, false)
 	require.NoError(t, err)
 
 	vm.InstantiateWasi([]string{``}, []string{}, []string{}, map[string][]byte{})

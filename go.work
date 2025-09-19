@@ -26,7 +26,13 @@ use (
 	./tests/testdata/tinygo/wasmx-gov
 	./tests/testdata/tinygo/wasmx-gov-continuous
 	./tests/testdata/tinygo/wasmx-multichain-registry
+	// tests
 	./tests/testdata/tinygo/emailchain
+	./tests/testdata/tinygo/add
+	./tests/testdata/tinygo/forward
+	./tests/testdata/tinygo/simple_storage
+	./tests/testdata/tinygo/imaptest
+	./tests/testdata/tinygo/smtptest
 )
 
 replace (

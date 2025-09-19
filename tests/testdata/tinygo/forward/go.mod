@@ -1,6 +1,8 @@
-module forward
+module github.com/loredanacirstea/forward
 
-go 1.23
+go 1.24
+
+toolchain go1.24.4
 
 require (
 	github.com/loredanacirstea/wasmx-env v0.0.0
@@ -14,4 +16,10 @@ require (
 	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
 )
 
+require github.com/loredanacirstea/wasmx-env-utils v0.0.0 // indirect
+
 replace github.com/loredanacirstea/wasmx-env v0.0.0 => ../wasmx-env
+
+replace github.com/loredanacirstea/wasmx-env-utils v0.0.0 => ../wasmx-env-utils
+
+replace github.com/loredanacirstea/wasmx-utils v0.0.0 => ../wasmx-utils

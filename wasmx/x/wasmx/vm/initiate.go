@@ -1,6 +1,8 @@
 package vm
 
 import (
+	"strings"
+
 	sdkerr "cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -23,7 +25,29 @@ var (
 	ALLOWED_CW8_EXPORTS  = []string{"interface_version_8", "allocate", "deallocate", "instantiate", "execute", "query", "migrate", "reply", "sudo", "ibc_channel_open", "ibc_channel_connect", "ibc_channel_close", "ibc_packet_receive", "ibc_packet_ack", "ibc_packet_timeout"}
 )
 
-func InitiateSysEnv1(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func EnableNonDeterminism(allDeps []types.SystemDep, hasCoreRole bool) bool {
+	if !hasCoreRole {
+		return false
+	}
+	if NeedsNonDeterminism(allDeps) {
+		return true
+	}
+	return false
+}
+
+func NeedsNonDeterminism(allDeps []types.SystemDep) bool {
+	for _, dep := range allDeps {
+		if strings.Contains(dep.Role, types.HOST_WASMX_NONDETERMINISTIC_EXPORT) {
+			return true
+		}
+		if ok := NeedsNonDeterminism(dep.Deps); ok {
+			return true
+		}
+	}
+	return false
+}
+
+func InitiateSysEnv1(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	sys, err := BuildSysEnv(context, rnh)
 	if err != nil {
 		return err
@@ -35,24 +59,34 @@ func InitiateSysEnv1(context *Context, rnh memc.RuntimeHandler, dep *types.Syste
 	return nil
 }
 
-func InitiateWasmxEnv1(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateWasmxEnv1(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxEnv1(context, rnh)
 	if err != nil {
 		return err
 	}
-	env, err := BuildAssemblyScriptEnv(context, rnh)
-	if err != nil {
-		return err
-	}
 	vm := rnh.GetVm()
-
 	err = vm.RegisterModule(wasmx)
 	if err != nil {
 		return err
 	}
-	err = vm.RegisterModule(env)
-	if err != nil {
-		return err
+	if EnableNonDeterminism(allDeps, hasCoreRole) {
+		env, err := BuildAssemblyScriptEnvNonDeterministic(context, rnh)
+		if err != nil {
+			return err
+		}
+		err = vm.RegisterModule(env)
+		if err != nil {
+			return err
+		}
+	} else {
+		env, err := BuildAssemblyScriptEnv(context, rnh)
+		if err != nil {
+			return err
+		}
+		err = vm.RegisterModule(env)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -69,7 +103,7 @@ func InitiateKeccak256(ctx sdk.Context, newvm memc.NewIVmFn) (memc.RuntimeHandle
 	return keccakRnh, nil
 }
 
-func InitiateWasmxEnv2(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateWasmxEnv2(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	vm := rnh.GetVm()
 	keccakRnh, err := InitiateKeccak256(context.Ctx, vm.New)
 	if err != nil {
@@ -81,39 +115,63 @@ func InitiateWasmxEnv2(context *Context, rnh memc.RuntimeHandler, dep *types.Sys
 	if err != nil {
 		return err
 	}
-	env, err := BuildAssemblyScriptEnv(context, rnh)
-	if err != nil {
-		return err
-	}
+
 	err = vm.RegisterModule(wasmx)
 	if err != nil {
 		return err
 	}
-	err = vm.RegisterModule(env)
-	if err != nil {
-		return err
+
+	if EnableNonDeterminism(allDeps, hasCoreRole) {
+		env, err := BuildAssemblyScriptEnvNonDeterministic(context, rnh)
+		if err != nil {
+			return err
+		}
+		err = vm.RegisterModule(env)
+		if err != nil {
+			return err
+		}
+	} else {
+		env, err := BuildAssemblyScriptEnv(context, rnh)
+		if err != nil {
+			return err
+		}
+		err = vm.RegisterModule(env)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func InitiateAssemblyScript(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateAssemblyScript(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	vm := rnh.GetVm()
-	env, err := BuildAssemblyScriptEnv(context, rnh)
-	if err != nil {
-		return err
-	}
-	err = vm.RegisterModule(env)
-	if err != nil {
-		return err
+	if EnableNonDeterminism(allDeps, hasCoreRole) {
+		env, err := BuildAssemblyScriptEnvNonDeterministic(context, rnh)
+		if err != nil {
+			return err
+		}
+		err = vm.RegisterModule(env)
+		if err != nil {
+			return err
+		}
+	} else {
+		env, err := BuildAssemblyScriptEnv(context, rnh)
+		if err != nil {
+			return err
+		}
+		err = vm.RegisterModule(env)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func InitiateWasmxEnvi64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateWasmxEnvi64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	return InitiateWasmxEnv(context, rnh, dep, BuildWasmxEnvi64)
 }
 
-func InitiateWasmxEnvi32(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateWasmxEnvi32(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	return InitiateWasmxEnv(context, rnh, dep, BuildWasmxEnvi32)
 }
 
@@ -141,11 +199,11 @@ func InitiateWasmxEnv(
 	return nil
 }
 
-func InitiateWasmxCoreEnvi64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateWasmxCoreEnvi64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	return InitiateWasmxCoreEnv(context, rnh, dep, BuildWasmxCoreEnvi64)
 }
 
-func InitiateWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	return InitiateWasmxCoreEnv(context, rnh, dep, BuildWasmxCoreEnvi32)
 }
 
@@ -167,7 +225,7 @@ func InitiateWasmxCoreEnv(
 	return nil
 }
 
-func InitiateInterpreter(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateInterpreter(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	err := rnh.GetVm().InstantiateWasm(dep.CodeFilePath, dep.AotFilePath, nil)
 	if err != nil {
 		return err
@@ -175,9 +233,9 @@ func InitiateInterpreter(context *Context, rnh memc.RuntimeHandler, dep *types.S
 	return nil
 }
 
-func InitiateWasi(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateWasi(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	vm := rnh.GetVm()
-	wasi, err := BuildWasiEnv(context, rnh)
+	wasi, err := BuildWasiEnv(context, rnh, EnableNonDeterminism(allDeps, hasCoreRole))
 	if err != nil {
 		return sdkerr.Wrapf(err, "could not build wasi module")
 	}
@@ -188,7 +246,7 @@ func InitiateWasi(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDe
 	return nil
 }
 
-func InitiateWasmxEnvRusti64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateWasmxEnvRusti64(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	vm := rnh.GetVm()
 	// TODO javascript interpreter change!!
 	env1, err := BuildWasmxEnvRusti64(context, rnh)
@@ -208,7 +266,7 @@ func InitiateWasmxEnvRusti64(context *Context, rnh memc.RuntimeHandler, dep *typ
 	return nil
 }
 
-func InitiateEwasmTypeEnv(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateEwasmTypeEnv(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	ewasmEnv, err := BuildEwasmEnv(context, rnh)
 	if err != nil {
 		return err
@@ -220,7 +278,7 @@ func InitiateEwasmTypeEnv(context *Context, rnh memc.RuntimeHandler, dep *types.
 	return nil
 }
 
-func InitiateCosmWasmEnv8(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InitiateCosmWasmEnv8(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildCosmWasm_8(context, rnh)
 	if err != nil {
 		return err
@@ -232,9 +290,11 @@ func InitiateCosmWasmEnv8(context *Context, rnh memc.RuntimeHandler, dep *types.
 	return nil
 }
 
-var SystemDepHandler = map[string]func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error{}
+type SystemDepHandlerInterface = func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error
 
-var SystemDepHandlerMock = map[string]func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error{}
+var SystemDepHandler = map[string]SystemDepHandlerInterface{}
+
+var SystemDepHandlerMock = map[string]SystemDepHandlerInterface{}
 
 type ExecuteFunctionInterface func(context *Context, vm memc.IVm, funcName string, args []interface{}, interpreted bool) ([]int32, error)
 
@@ -294,6 +354,7 @@ func init() {
 	DependenciesMap[types.SYS_VM_EXPORT] = true
 	DependenciesMap[types.WASMX_CONS_VM_EXPORT] = true
 	DependenciesMap[types.MEMORY_EXPORT] = true
+	DependenciesMap[types.HOST_WASMX_NONDETERMINISTIC_EXPORT] = true
 
 	RuntimeDepHandler[types.WASMX_MEMORY_ASSEMBLYSCRIPT] = memas.NewRuntimeHandlerAS
 	RuntimeDepHandler[types.WASMX_MEMORY_TAYLOR] = memtay.NewRuntimeHandlerTay
@@ -304,14 +365,14 @@ func init() {
 
 func SetSystemDepHandler(
 	key string,
-	handler func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error,
+	handler SystemDepHandlerInterface,
 ) {
 	SystemDepHandler[key] = handler
 }
 
 func SetSystemDepHandlerMock(
 	key string,
-	handler func(context *Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error,
+	handler SystemDepHandlerInterface,
 ) {
 	SystemDepHandlerMock[key] = handler
 }

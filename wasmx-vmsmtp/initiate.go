@@ -8,7 +8,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InstantiateSmtpVM_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateSmtpVM_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxSmtpVM_i32(context, rnh)
 	if err != nil {
 		return err
@@ -20,7 +20,7 @@ func InstantiateSmtpVM_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, de
 	return nil
 }
 
-func InstantiateSmtpVMMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateSmtpVMMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	context.Ctx.Logger().Info(fmt.Sprintf("instantiate SMTP mock i32 APIs: %s", context.ContractInfo.Address.String()))
 	wasmx, err := BuildWasmxSmtpVMMock_i32(context, rnh)
 	if err != nil {
@@ -33,7 +33,7 @@ func InstantiateSmtpVMMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler
 	return nil
 }
 
-func InstantiateSmtpVM_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateSmtpVM_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxSmtpVM_i64(context, rnh)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func InstantiateSmtpVM_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, de
 	return nil
 }
 
-func InstantiateSmtpVMMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateSmtpVMMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	context.Ctx.Logger().Info(fmt.Sprintf("instantiate SMTP mock i64 APIs: %s", context.ContractInfo.Address.String()))
 	wasmx, err := BuildWasmxSmtpVMMock_i64(context, rnh)
 	if err != nil {

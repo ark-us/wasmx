@@ -19,19 +19,22 @@ require (
 	github.com/loredanacirstea/wasmx-utils v0.0.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
+	github.com/loredanacirstea/wasmx-env-utils v0.0.0 // indirect
 )
 
 replace github.com/loredanacirstea/wasmx-env-sql => ../wasmx-env-sql
 
-replace github.com/loredanacirstea/wasmx-env v0.0.0 => ../wasmx-env
+replace github.com/loredanacirstea/wasmx-env => ../wasmx-env
 
-replace github.com/loredanacirstea/wasmx-env-imap v0.0.0 => ../wasmx-env-imap
+replace github.com/loredanacirstea/wasmx-env-utils => ../wasmx-env-utils
 
-replace github.com/loredanacirstea/wasmx-env-smtp v0.0.0 => ../wasmx-env-smtp
+replace github.com/loredanacirstea/wasmx-env-imap => ../wasmx-env-imap
 
-replace github.com/loredanacirstea/wasmx-utils v0.0.0 => ../wasmx-utils
+replace github.com/loredanacirstea/wasmx-env-smtp => ../wasmx-env-smtp
 
-replace github.com/loredanacirstea/wasmx-env-httpclient v0.0.0 => ../wasmx-env-httpclient
+replace github.com/loredanacirstea/wasmx-utils => ../wasmx-utils
+
+replace github.com/loredanacirstea/wasmx-env-httpclient => ../wasmx-env-httpclient
 
 // replace github.com/emersion/go-msgauth => ../../../../../go-msgauth
 

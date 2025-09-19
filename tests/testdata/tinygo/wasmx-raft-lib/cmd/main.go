@@ -32,6 +32,10 @@ func Wasmx_crosschain_json_i64_1() {}
 //export wasmx_multichain_json_i64_1
 func Wasmx_multichain_json_i64_1() {}
 
+//go:wasm-module wasmxcore
+//export wasmx_nondeterministic_1
+func Wasmx_nondeterministic_1() {}
+
 //go:wasm-module wasmx-raft
 //export instantiate
 func Instantiate() {}

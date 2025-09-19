@@ -324,14 +324,15 @@ func BasePrecompiles() SystemContracts {
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
-		{
-			Address:     ADDR_SYS_PROXY,
-			Label:       SYS_PROXY,
-			InitMessage: initMsg,
-			Pinned:      false,
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
+		// removed until it is added the nondeterminism export
+		// {
+		// 	Address:     ADDR_SYS_PROXY,
+		// 	Label:       SYS_PROXY,
+		// 	InitMessage: initMsg,
+		// 	Pinned:      false,
+		// 	StorageType: ContractStorageType_CoreConsensus,
+		// 	Deps:        []string{},
+		// },
 	}
 }
 

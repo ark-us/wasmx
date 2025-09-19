@@ -1,8 +1,6 @@
 package vm
 
 import (
-	crypto_rand "crypto/rand"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -343,22 +341,18 @@ func asConsoleDebug(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	return returns, nil
 }
 
-// TODO - move this only for non-deterministic contracts
 func asDateNow(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
 	returns := make([]interface{}, 1)
-	returns[0] = float64(time.Now().UTC().UnixMilli())
+	// ctx.Env.Block.Time is in nanoseconds
+	timestamp := time.Unix(0, int64(ctx.Env.Block.Timestamp))
+	returns[0] = float64(timestamp.Unix())
 	return returns, nil
 }
 
-// TODO - move this only for non-deterministic contracts
 func asSeed(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	returns := make([]interface{}, 1)
-	var b [8]byte
-	_, err := crypto_rand.Read(b[:])
-	if err != nil {
-		return nil, err
-	}
-	returns[0] = float64(binary.LittleEndian.Uint64(b[:]))
+	returns[0] = float64(0)
 	return returns, nil
 }
 
@@ -399,6 +393,23 @@ func BuildAssemblyScriptEnv(context *Context, rnh memc.RuntimeHandler) (interfac
 		// TODO this is non-deterministic, must be moved to a special host module
 		vm.BuildFn("Date.now", asDateNow, []interface{}{}, []interface{}{vm.ValType_F64()}, 0),
 		vm.BuildFn("seed", asSeed, []interface{}{}, []interface{}{vm.ValType_F64()}, 0),
+	}
+
+	return vm.BuildModule(rnh, "env", context, fndefs)
+}
+
+func BuildAssemblyScriptEnvNonDeterministic(context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
+	vm := rnh.GetVm()
+	fndefs := []memc.IFn{
+		vm.BuildFn("abort", asAbort, []interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("console.log", asConsoleLog, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("console.info", asConsoleInfo, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("console.error", asConsoleError, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+		vm.BuildFn("console.debug", asConsoleDebug, []interface{}{vm.ValType_I32()}, []interface{}{}, 0),
+
+		// TODO this is non-deterministic, must be moved to a special host module
+		vm.BuildFn("Date.now", asDateNow_NonD, []interface{}{}, []interface{}{vm.ValType_F64()}, 0),
+		vm.BuildFn("seed", asSeed_NonD, []interface{}{}, []interface{}{vm.ValType_F64()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "env", context, fndefs)

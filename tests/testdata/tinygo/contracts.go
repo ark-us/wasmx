@@ -8,8 +8,11 @@ var (
 	//go:embed forward.wasm
 	TinyGoForward []byte
 
-	//go:embed add.wasm
-	TinyGoAdd []byte
+	//go:embed determ.wasm
+	TinyGoDeterministic []byte
+
+	//go:embed nondeterm.wasm
+	TinyGoNonDeterministic []byte
 
 	//go:embed simple_storage.wasm
 	TinyGoSimpleStorage []byte

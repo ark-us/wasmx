@@ -26,7 +26,7 @@ func InitiateWasm(context *Context, rnh memc.RuntimeHandler, wasmFilePath string
 		label := types.DEFAULT_SYS_DEP
 		systemDeps = append(systemDeps, types.SystemDep{Role: label, Label: label})
 	}
-	err := initiateWasmDeps(context, rnh, systemDeps, hasCoreRole)
+	err := initiateWasmDeps(context, rnh, systemDeps, systemDeps, hasCoreRole)
 	if err != nil {
 		return err
 	}
@@ -42,10 +42,10 @@ func InitiateWasm(context *Context, rnh memc.RuntimeHandler, wasmFilePath string
 }
 
 // finds registered host APIs for the given role
-func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, systemDeps []types.SystemDep, hasCoreRole bool) error {
+func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, allDeps []types.SystemDep, systemDeps []types.SystemDep, hasCoreRole bool) error {
 	for _, systemDep := range systemDeps {
 		// system deps of system deps
-		err := initiateWasmDeps(context, rnh, systemDep.Deps, hasCoreRole)
+		err := initiateWasmDeps(context, rnh, allDeps, systemDep.Deps, hasCoreRole)
 		if err != nil {
 			return err
 		}
@@ -55,7 +55,7 @@ func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, systemDeps []ty
 		if isProtected && !hasCoreRole {
 			handler, found := getFirstKeyFromMapping(SystemDepHandlerMock, []string{systemDep.Role, systemDep.Label})
 			if found {
-				err := handler(context, rnh, &systemDep)
+				err := handler(context, rnh, &systemDep, allDeps, hasCoreRole)
 				if err != nil {
 					return err
 				}
@@ -65,7 +65,7 @@ func initiateWasmDeps(context *Context, rnh memc.RuntimeHandler, systemDeps []ty
 		}
 		handler, found := getFirstKeyFromMapping(SystemDepHandler, []string{systemDep.Role, systemDep.Label})
 		if found {
-			err := handler(context, rnh, &systemDep)
+			err := handler(context, rnh, &systemDep, allDeps, hasCoreRole)
 			if err != nil {
 				return err
 			}

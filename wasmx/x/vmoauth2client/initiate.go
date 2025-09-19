@@ -6,7 +6,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
-func InstantiateOAuth2Vm_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateOAuth2Vm_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxOAuth2Client_i32(context, rnh)
 	if err != nil {
 		return err
@@ -18,7 +18,7 @@ func InstantiateOAuth2Vm_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, 
 	return nil
 }
 
-func InstantiateOAuth2VmMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateOAuth2VmMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxOAuth2ClientMock_i32(context, rnh)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func InstantiateOAuth2VmMock_i32(context *vmtypes.Context, rnh memc.RuntimeHandl
 	return nil
 }
 
-func InstantiateOAuth2Vm_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateOAuth2Vm_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxOAuth2Client_i64(context, rnh)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func InstantiateOAuth2Vm_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, 
 	return nil
 }
 
-func InstantiateOAuth2VmMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep) error {
+func InstantiateOAuth2VmMock_i64(context *vmtypes.Context, rnh memc.RuntimeHandler, dep *types.SystemDep, allDeps []types.SystemDep, hasCoreRole bool) error {
 	wasmx, err := BuildWasmxOAuth2ClientMock_i64(context, rnh)
 	if err != nil {
 		return err

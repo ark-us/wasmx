@@ -7,6 +7,14 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
+//go:wasm-module wasmx
+//export memory_ptrlen_i64_1
+func Wemory_ptrlen_i64_1() {}
+
+//go:wasm-module wasmx
+//export wasmx_env_i64_2
+func Wasmx_env_i64_2() {}
+
 //go:wasm-module simplestorage
 //export instantiate
 func Instantiate() {
@@ -81,7 +89,7 @@ func wrapStore(address string, key string, value string) {
 	if err != nil {
 		panic(err)
 	}
-	success, _ := wasmx.Call(wasmx.Bech32String(address), nil, calld, big.NewInt(50000000))
+	success, _ := wasmx.Call(wasmx.Bech32String(address), nil, calld, big.NewInt(50000000), "simple_storage")
 	if !success {
 		panic("call failed")
 	}
@@ -95,7 +103,7 @@ func wrapLoad(address string, key string) []byte {
 	if err != nil {
 		panic(err)
 	}
-	success, data := wasmx.CallStatic(wasmx.Bech32String(address), calld, big.NewInt(50000000))
+	success, data := wasmx.CallStatic(wasmx.Bech32String(address), calld, big.NewInt(50000000), "simple_storage")
 	if !success {
 		panic("call failed")
 	}

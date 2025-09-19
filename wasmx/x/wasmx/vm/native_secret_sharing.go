@@ -53,7 +53,7 @@ func SecretSharing(context *Context, input []byte) ([]byte, error) {
 		vm.Cleanup()
 	}()
 	rnh := membase.NewRuntimeHandlerBase(vm)
-	wasi, err := BuildWasiEnv(context, rnh)
+	wasi, err := BuildWasiEnv(context, rnh, false)
 	if err != nil {
 		return nil, sdkerr.Wrapf(err, "could not build wasi module")
 	}

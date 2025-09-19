@@ -9,6 +9,14 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
+//go:wasm-module wasmx
+//export memory_ptrlen_i64_1
+func Wemory_ptrlen_i64_1() {}
+
+//go:wasm-module wasmx
+//export wasmx_env_i64_2
+func Wasmx_env_i64_2() {}
+
 //go:wasm-module forward
 //export instantiate
 func instantiate() {
@@ -66,7 +74,7 @@ func forward(value string, addrs []string) []byte {
 	if err != nil {
 		panic(err)
 	}
-	success, data := wasmx.Call(wasmx.Bech32String(address), nil, calldata, big.NewInt(1000000))
+	success, data := wasmx.Call(wasmx.Bech32String(address), nil, calldata, big.NewInt(1000000), "forward")
 	if !success {
 		panic("[go] call failed")
 	}
@@ -82,7 +90,7 @@ func forwardGet(addrs []string) []byte {
 	if err != nil {
 		panic(err)
 	}
-	success, data := wasmx.CallStatic(wasmx.Bech32String(address), calldata, big.NewInt(1000000))
+	success, data := wasmx.CallStatic(wasmx.Bech32String(address), calldata, big.NewInt(1000000), "forward")
 	if !success {
 		panic("[go] call_static failed")
 	}

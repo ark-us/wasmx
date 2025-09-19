@@ -189,6 +189,9 @@ var WASMX_ENVi32_2 = "wasmx_env_i32_2"
 var WASMX_ENVi64_2 = "wasmx_env_i64_2"
 var WASMX_ENV_RUSTi64_2 = "wasmx_env_rusti64_2"
 
+var HOST_WASMX_NONDETERMINISTIC_EXPORT = "wasmx_nondeterministic_"
+var WASMX_NONDETERMINISTIC_1 = "wasmx_nondeterministic_1"
+
 var WASMX_CORE_ENVi32_1 = "wasmx_env_core_i32_1"
 var WASMX_CORE_ENVi64_1 = "wasmx_env_core_i64_1"
 
@@ -242,6 +245,7 @@ var SUPPORTED_HOST_INTERFACES = map[string]bool{
 }
 
 var PROTECTED_HOST_APIS = map[string]bool{
+	SYS_ENV_1:                  true,
 	WASMX_CONSENSUS_JSON_1:     true,
 	WASMX_CONSENSUS_JSON_i32_1: true,
 	WASMX_CONSENSUS_JSON_i64_1: true,

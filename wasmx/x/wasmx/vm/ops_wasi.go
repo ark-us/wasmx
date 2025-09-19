@@ -71,16 +71,24 @@ const (
 	WasiClockProcessCPUTimeID = int32(2)
 	WasiClockThreadCPUTimeID  = int32(3)
 
-	WasiErrnoSuccess = int32(0)
-	WasiErrnoInval   = int32(28) // if you want to use EINVAL for bad params
-	WasiErrnoNotSup  = int32(58) // ENOTSUP for unsupported clocks
+	WasiErrnoSuccess  = int32(0)
+	WasiErrnoBADF     = int32(8)
+	WasiErrnoFault    = int32(21)
+	WasiErrnoInval    = int32(28) // if you want to use EINVAL for bad params
+	WasiErrnoIo       = int32(29)
+	WasiErrnoISDIR    = int32(31)
+	WasiErrnoNOENT    = int32(44)
+	WasiErrnoNOSYS    = int32(52)
+	WasiErrnoNOTDIR   = int32(54)
+	WasiErrnoNotSup   = int32(58) // ENOTSUP for unsupported clocks
+	WasiErrnoOVERFLOW = int32(75)
 )
 
 func wasi_stubUnimplemented(_ interface{}, _ memc.RuntimeHandler, _ []interface{}) ([]interface{}, error) {
 	// Return ENOSYS = 52
 	// Function not implemented
 	returns := make([]interface{}, 1)
-	returns[0] = int32(52)
+	returns[0] = WasiErrnoNOSYS
 	return returns, nil
 }
 
@@ -251,10 +259,9 @@ func wasi_clockResGet(_context interface{}, rnh memc.RuntimeHandler, params []in
 	return wasi_stubUnimplemented(_context, rnh, params)
 }
 
-// TODO this is non-deterministic, must be moved to a special host module
-// we need it for consensus algorithms & other single consensus contracts
 // 6) clock_time_get(id: clockid, precision: timestamp) -> (errno, timestamp)
 func wasi_clockTimeGet(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	// deterministic implentation, takes the clock from block timestamp
 	ctx := _context.(*WasiContext)
 	LoggerExtended(ctx.c).Debug("wasi_clockTimeGet", "params", params)
 	returns := make([]interface{}, 1)
@@ -275,8 +282,9 @@ func wasi_clockTimeGet(_context interface{}, rnh memc.RuntimeHandler, params []i
 	var ns uint64
 	switch clockid {
 	case WasiClockRealtime:
-		// Nanoseconds since UNIX epoch, UTC.
-		ns = uint64(time.Now().UTC().UnixNano())
+		// ctx.Env.Block.Time is in nanoseconds
+		timestamp := time.Unix(0, int64(ctx.c.Env.Block.Timestamp))
+		ns = uint64(timestamp.Unix())
 	default:
 		return []interface{}{WasiErrnoNotSup}, nil
 	}
@@ -316,7 +324,7 @@ func wasi_fdClose(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	// Check if this FD exists in our openFiles
 	if _, ok := ctx.openFiles[fd]; !ok {
 		// EBADF => 8 (Bad file descriptor)
-		returns[0] = int32(8)
+		returns[0] = WasiErrnoBADF
 		return returns, nil
 	}
 
@@ -354,7 +362,7 @@ func wasi_fdFdstatGet(_context interface{}, rnh memc.RuntimeHandler, params []in
 
 	if !ok {
 		// EBADF => 8
-		returns[0] = int32(8)
+		returns[0] = WasiErrnoBADF
 		return returns, nil
 	}
 
@@ -363,7 +371,7 @@ func wasi_fdFdstatGet(_context interface{}, rnh memc.RuntimeHandler, params []in
 	_, ok = fileMap[openF.path]
 	if !ok {
 		// Not found => ENOENT => 44 or EIO => 29
-		returns[0] = int32(44)
+		returns[0] = WasiErrnoNOENT
 		return returns, nil
 	}
 
@@ -473,13 +481,13 @@ func wasi_fdPrestatGet(_context interface{}, rnh memc.RuntimeHandler, params []i
 
 	// // By convention, FDs 0, 1, 2 = stdin, stdout, stderr
 	// if fd < 3 || fd > int32(len(preopens)+2) {
-	// 	returns[0] = int32(8) // EBADF = 8 in WASI
+	// 	returns[0] = WasiErrnoBADF // EBADF = 8 in WASI
 	// 	return returns, nil
 	// }
 	// preopen := preopens[fd-3]
 	preopen, ok := preopens[fd]
 	if !ok {
-		returns[0] = int32(8) // EBADF = 8 in WASI
+		returns[0] = WasiErrnoBADF // EBADF = 8 in WASI
 		return returns, nil
 	}
 
@@ -522,20 +530,20 @@ func wasi_fdPrestatDirName(_context interface{}, rnh memc.RuntimeHandler, params
 
 	preopens := ctx.GetOpenFiles(vm)
 	// if fd < 3 || fd > int32(len(preopens)+2) {
-	// 	returns[0] = int32(8) // EBADF
+	// 	returns[0] = WasiErrnoBADF // EBADF
 	// 	return returns, nil
 	// }
 	// preopen := preopens[fd-3]
 
 	preopen, ok := preopens[fd]
 	if !ok {
-		returns[0] = int32(8) // EBADF = 8 in WASI
+		returns[0] = WasiErrnoBADF // EBADF = 8 in WASI
 		return returns, nil
 	}
 
 	if int32(len(preopen.path)) > pathLen {
 		// EOVERFLOW if there's not enough space to write the full path
-		returns[0] = int32(75) // EOVERFLOW = 75
+		returns[0] = WasiErrnoOVERFLOW // EOVERFLOW = 75
 		return returns, nil
 	}
 
@@ -578,7 +586,7 @@ func wasi_fdRead(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	returns := make([]interface{}, 1) // We'll return just errno: i32
 	if !ok {
 		// EBADF => 8
-		returns[0] = int32(8)
+		returns[0] = WasiErrnoBADF
 		return returns, nil
 	}
 
@@ -586,7 +594,7 @@ func wasi_fdRead(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	content, ok := fileMap[openF.path]
 	if !ok {
 		// ENOENT => 44
-		returns[0] = int32(44)
+		returns[0] = WasiErrnoNOENT
 		return returns, nil
 	}
 
@@ -664,19 +672,19 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	mem, err := rnh.GetMemory()
 	if err != nil {
 		// EFAULT => 21 if we can't access memory
-		returns[0] = int32(21)
+		returns[0] = WasiErrnoFault
 		return returns, nil
 	}
 
 	of, ok := ctx.openFiles[fd]
 	if !ok {
 		// EBADF => 8
-		returns[0] = int32(8)
+		returns[0] = WasiErrnoBADF
 		return returns, nil
 	}
 	if !of.isdir {
 		// ENOTDIR => 54
-		returns[0] = int32(54)
+		returns[0] = WasiErrnoNOTDIR
 		return returns, nil
 	}
 
@@ -725,20 +733,20 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		// 1) Write d_next (8 bytes, i+1 => next cookie)
 		dNext := uint64(i + 1)
 		if err := wasimem.WriteUint64Le(mem, currentOffset, dNext); err != nil {
-			returns[0] = int32(21) // EFAULT
+			returns[0] = WasiErrnoFault // EFAULT
 			return returns, nil
 		}
 
 		// 2) Write d_ino (8 bytes). We'll just use 0 or a placeholder
 		dIno := uint64(0)
 		if err := wasimem.WriteUint64Le(mem, currentOffset+8, dIno); err != nil {
-			returns[0] = int32(21)
+			returns[0] = WasiErrnoFault
 			return returns, nil
 		}
 
 		// 3) Write d_namlen (4 bytes)
 		if err := wasimem.WriteUint32Le(mem, currentOffset+16, uint32(nameLen)); err != nil {
-			returns[0] = int32(21)
+			returns[0] = WasiErrnoFault
 			return returns, nil
 		}
 
@@ -748,7 +756,7 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 			filetype = 3
 		}
 		if err := mem.Write(currentOffset+20, []byte{filetype}); err != nil {
-			returns[0] = int32(21)
+			returns[0] = WasiErrnoFault
 			return returns, nil
 		}
 		// The 3 padding bytes [21..23] remain zero by default if your mem.Write(...) starts from zero memory.
@@ -757,7 +765,7 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 		// 5) Write the name bytes right after the 24-byte struct
 		nameOffset := currentOffset + direntSize
 		if err := mem.Write(nameOffset, []byte(e.Name)); err != nil {
-			returns[0] = int32(21)
+			returns[0] = WasiErrnoFault
 			return returns, nil
 		}
 
@@ -768,7 +776,7 @@ func wasi_fdReaddir(_context interface{}, rnh memc.RuntimeHandler, params []inte
 
 	// Write how many bytes we wrote in total to outNread
 	if err := wasimem.WriteUint32Le(mem, outNread, uint32(totalWritten)); err != nil {
-		returns[0] = int32(21)
+		returns[0] = WasiErrnoFault
 		return returns, nil
 	}
 
@@ -807,7 +815,7 @@ func wasi_fdSeek(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 
 	if !ok {
 		// EBADF => 8
-		returns[0] = int32(8)
+		returns[0] = WasiErrnoBADF
 		return returns, nil
 	}
 
@@ -823,20 +831,20 @@ func wasi_fdSeek(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		fileContent, ok := fileMap[openF.path]
 		if !ok {
 			// EIO => 29, or maybe ENOENT => 44
-			returns[0] = int32(44)
+			returns[0] = WasiErrnoNOENT
 			return returns, nil
 		}
 		base = int64(len(fileContent))
 	default:
 		// EINVAL => 28
-		returns[0] = int32(28)
+		returns[0] = WasiErrnoInval
 		return returns, nil
 	}
 
 	newOffset := base + offset
 	if newOffset < 0 {
 		// ESPIPE => 70 or EINVAL => 28, depending on how you want to handle negative seeks
-		returns[0] = int32(28)
+		returns[0] = WasiErrnoInval
 		return returns, nil
 	}
 
@@ -892,7 +900,7 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	openF, ok := openFiles[fd]
 	if !ok {
 		// EBADF => 8 (Bad file descriptor)
-		returns[0] = int32(8)
+		returns[0] = WasiErrnoBADF
 		return returns, nil
 	}
 
@@ -900,7 +908,7 @@ func wasi_fdWrite(_context interface{}, rnh memc.RuntimeHandler, params []interf
 	content, ok := fileMap[openF.path]
 	if !ok {
 		// ENOENT => 44 (No such file or directory)
-		returns[0] = int32(44)
+		returns[0] = WasiErrnoNOENT
 		return returns, nil
 	}
 
@@ -1004,7 +1012,7 @@ func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params 
 	pathBytes, err := mem.Read(pathPtr, pathLen)
 	if err != nil {
 		// EFAULT => invalid memory => 21 in WASI, or something appropriate
-		returns[0] = int32(21)
+		returns[0] = WasiErrnoFault
 		return returns, nil
 	}
 	guestPath := string(pathBytes)
@@ -1017,7 +1025,7 @@ func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params 
 	// preopenDir, ok := ctx.PreopenDirs[fd]
 	if !ok {
 		// EBADF => 8
-		returns[0] = int32(8)
+		returns[0] = WasiErrnoBADF
 		return returns, nil
 	}
 
@@ -1034,7 +1042,7 @@ func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params 
 	fileContent, ok := fileMap[fullPath]
 	if !ok {
 		// Possibly also check if it's a directory if you store them separately
-		returns[0] = int32(44)
+		returns[0] = WasiErrnoNOENT
 		return returns, nil
 	}
 
@@ -1045,7 +1053,7 @@ func wasi_pathFilestatGet(_context interface{}, rnh memc.RuntimeHandler, params 
 		isDir = false
 	} else {
 		// Doesn't exist
-		returns[0] = int32(44) // ENOENT
+		returns[0] = WasiErrnoNOENT // ENOENT
 		return returns, nil
 	}
 
@@ -1185,7 +1193,7 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 
 	mem, err := rnh.GetMemory()
 	if err != nil {
-		returns[0] = int32(21)
+		returns[0] = WasiErrnoFault
 		return returns, nil
 	}
 
@@ -1197,7 +1205,7 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	pathBytes, err := mem.Read(pathPtr, pathLen)
 	if err != nil {
 		// Return EFAULT => 21
-		returns[0] = int32(21)
+		returns[0] = WasiErrnoFault
 		return returns, nil
 	}
 	guestPath := string(pathBytes)
@@ -1206,7 +1214,7 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	baseDirPath, ok := preopens[dirFd]
 	if !ok || !baseDirPath.isdir {
 		// EBADF => 8
-		returns[0] = int32(8)
+		returns[0] = WasiErrnoBADF
 		return returns, nil
 	}
 
@@ -1238,7 +1246,7 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 			ctx.fileMapping[fullPath] = []byte{}
 		} else {
 			// ENOENT => 44
-			returns[0] = int32(44)
+			returns[0] = WasiErrnoNOENT
 			return returns, nil
 		}
 	}
@@ -1246,12 +1254,12 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	// If the path is a directory but the guest wanted a file, or vice versa, handle that:
 	if isDir && !wantsDir {
 		// EISDIR => 31
-		returns[0] = int32(31)
+		returns[0] = WasiErrnoISDIR
 		return returns, nil
 	}
 	if !isDir && wantsDir {
 		// ENOTDIR => 54
-		returns[0] = int32(54)
+		returns[0] = WasiErrnoNOTDIR
 		return returns, nil
 	}
 
@@ -1272,7 +1280,7 @@ func wasi_pathOpen(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	// 9) Write the new FD into guest memory at newFdPtr
 	if err := wasimem.WriteUint32Le(mem, newFdPtr, uint32(newFd)); err != nil {
 		// EFAULT => 21 or some other code
-		returns[0] = int32(21)
+		returns[0] = WasiErrnoFault
 		return returns, nil
 	}
 
@@ -1475,443 +1483,6 @@ func (wc *WasiContext) SetOpenFile(vm memc.IVm, fd int32, f *openFile) {
 		wc.InitContext(vm)
 	}
 	wc.openFiles[fd] = f
-}
-
-func BuildWasiEnv(_context *Context, rnh memc.RuntimeHandler) (interface{}, error) {
-	context := &WasiContext{
-		c:           _context,
-		openFiles:   map[int32]*openFile{},
-		fileMapping: map[string][]byte{},
-		dirMapping:  map[string]bool{},
-	}
-	vm := rnh.GetVm()
-	fndefs := []memc.IFn{
-		// 1) args_get(argv: Pointer<Pointer<u8>>, argv_buf: Pointer<u8>) -> errno
-		vm.BuildFn(
-			"args_get",
-			wasi_argsGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()}, // argv, argv_buf
-			[]interface{}{vm.ValType_I32()},                   // errno
-			0,
-		),
-
-		// 2) args_sizes_get() -> (errno, size, size)
-		vm.BuildFn(
-			"args_sizes_get",
-			wasi_argsSizesGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()}, // no inputs
-			[]interface{}{vm.ValType_I32()},                   // errno, size, size
-			0,
-		),
-
-		// 3) environ_get(environ: Pointer<Pointer<u8>>, environ_buf: Pointer<u8>) -> errno
-		vm.BuildFn(
-			"environ_get",
-			wasi_environGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()}, // environ, environ_buf
-			[]interface{}{vm.ValType_I32()},                   // errno
-			0,
-		),
-
-		// 4) environ_sizes_get() -> (errno, size, size)
-		vm.BuildFn(
-			"environ_sizes_get",
-			wasi_environSizesGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 5) clock_res_get(id: clockid) -> (errno, timestamp)
-		vm.BuildFn(
-			"clock_res_get",
-			wasi_clockResGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()}, // clockid
-			[]interface{}{vm.ValType_I32()},                   // errno, timestamp
-			0,
-		),
-
-		// 6) clock_time_get(id: clockid, precision: timestamp) -> (errno, timestamp)
-		vm.BuildFn(
-			"clock_time_get",
-			wasi_clockTimeGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 7) fd_advise(fd: fd, offset: filesize, len: filesize, advice: advice) -> errno
-		vm.BuildFn(
-			"fd_advise",
-			wasi_fdAdvise,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 8) fd_allocate(fd: fd, offset: filesize, len: filesize) -> errno
-		vm.BuildFn(
-			"fd_allocate",
-			wasi_fdAllocate,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 9) fd_close(fd: fd) -> errno
-		vm.BuildFn(
-			"fd_close",
-			wasi_fdClose,
-			[]interface{}{vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 10) fd_datasync(fd: fd) -> errno
-		vm.BuildFn(
-			"fd_datasync",
-			wasi_fdDatasync,
-			[]interface{}{vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 11) fd_fdstat_get(fd: fd) -> (errno, fdstat)
-		// fdstat is typically written back to memory rather than returned.
-		// But if you’re returning it directly, you need to decide how to represent fdstat as ValTypes.
-		vm.BuildFn(
-			"fd_fdstat_get",
-			wasi_fdFdstatGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()}, // For example: (errno, fdstatPlaceholder)
-			0,
-		),
-
-		// 12) fd_fdstat_set_flags(fd: fd, flags: fdflags) -> errno
-		vm.BuildFn(
-			"fd_fdstat_set_flags",
-			wasi_fdFdstatSetFlags,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 13) fd_fdstat_set_rights(fd: fd, fs_rights_base: rights, fs_rights_inheriting: rights) -> errno
-		vm.BuildFn(
-			"fd_fdstat_set_rights",
-			wasi_fdFdstatSetRights,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 14) fd_filestat_get(fd: fd) -> (errno, filestat)
-		// Same note as fdstat: filestat often is written to memory, but here we show a direct return placeholder.
-		vm.BuildFn(
-			"fd_filestat_get",
-			wasi_fdFilestatGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()}, // placeholder
-			0,
-		),
-
-		// 15) fd_filestat_set_size(fd: fd, size: filesize) -> errno
-		vm.BuildFn(
-			"fd_filestat_set_size",
-			wasi_fdFilestatSetSize,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I64()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 16) fd_filestat_set_times(fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags) -> errno
-		vm.BuildFn(
-			"fd_filestat_set_times",
-			wasi_fdFilestatSetTimes,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 17) fd_pread(fd: fd, iovs: iovec_array, offset: filesize) -> (errno, size)
-		vm.BuildFn(
-			"fd_pread",
-			wasi_fdPread,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 18) fd_prestat_get(fd: fd) -> (errno, prestat)
-		// Typically returns a structure in memory, but you can placeholder it similarly as above.
-		vm.BuildFn(
-			"fd_prestat_get",
-			wasi_fdPrestatGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()}, // placeholder
-			0,
-		),
-
-		// 19) fd_prestat_dir_name(fd: fd, path: Pointer<u8>, path_len: size) -> errno
-		vm.BuildFn(
-			"fd_prestat_dir_name",
-			wasi_fdPrestatDirName,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 20) fd_pwrite(fd: fd, iovs: ciovec_array, offset: filesize) -> (errno, size)
-		vm.BuildFn(
-			"fd_pwrite",
-			wasi_fdPwrite,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 21) fd_read(fd: fd, iovs: iovec_array) -> (errno, size)
-		vm.BuildFn(
-			"fd_read",
-			wasi_fdRead,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 22) fd_readdir(fd: fd, buf: Pointer<u8>, buf_len: size, cookie: dircookie) -> (errno, size)
-		vm.BuildFn(
-			"fd_readdir",
-			wasi_fdReaddir,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 23) fd_renumber(fd: fd, to: fd) -> errno
-		vm.BuildFn(
-			"fd_renumber",
-			wasi_fdRenumber,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 24) fd_seek(fd: fd, offset: filedelta, whence: whence) -> (errno, filesize)
-		vm.BuildFn(
-			"fd_seek",
-			wasi_fdSeek,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 25) fd_sync(fd: fd) -> errno
-		vm.BuildFn(
-			"fd_sync",
-			wasi_fdSync,
-			[]interface{}{vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 26) fd_tell(fd: fd) -> (errno, filesize)
-		vm.BuildFn(
-			"fd_tell",
-			wasi_fdTell,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 27) fd_write(fd: fd, iovs: ciovec_array) -> (errno, size)
-		vm.BuildFn(
-			"fd_write",
-			wasi_fdWrite,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 28) path_create_directory(fd: fd, path: string) -> errno
-		// Typically "path" is a pointer+length, but we simplify to one pointer here.
-		vm.BuildFn(
-			"path_create_directory",
-			wasi_pathCreateDirectory,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 29) path_filestat_get(fd: fd, flags: lookupflags, path: string) -> (errno, filestat)
-		vm.BuildFn(
-			"path_filestat_get",
-			wasi_pathFilestatGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()}, // placeholder
-			0,
-		),
-
-		// 30) path_filestat_set_times(fd: fd, flags: lookupflags, path: string,
-		//     atim: timestamp, mtim: timestamp, fst_flags: fstflags) -> errno
-		vm.BuildFn(
-			"path_filestat_set_times",
-			wasi_pathFilestatSetTimes,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 31) path_link(old_fd: fd, old_flags: lookupflags, old_path: string,
-		//     new_fd: fd, new_path: string) -> errno
-		vm.BuildFn(
-			"path_link",
-			wasi_pathLink,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 32) path_open(fd: fd, dirflags: lookupflags, path: string,
-		//     oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights,
-		//     fdflags: fdflags) -> (errno, fd)
-		vm.BuildFn(
-			"path_open",
-			wasi_pathOpen,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I64(), vm.ValType_I64(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()}, // errno, fd
-			0,
-		),
-
-		// 33) path_readlink(fd: fd, path: string, buf: Pointer<u8>, buf_len: size) -> (errno, size)
-		vm.BuildFn(
-			"path_readlink",
-			wasi_pathReadlink,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 34) path_remove_directory(fd: fd, path: string) -> errno
-		vm.BuildFn(
-			"path_remove_directory",
-			wasi_pathRemoveDirectory,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 35) path_rename(fd: fd, old_path: string, new_fd: fd, new_path: string) -> errno
-		vm.BuildFn(
-			"path_rename",
-			wasi_pathRename,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 36) path_symlink(old_path: string, fd: fd, new_path: string) -> errno
-		vm.BuildFn(
-			"path_symlink",
-			wasi_pathSymlink,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 37) path_unlink_file(fd: fd, path: string) -> errno
-		vm.BuildFn(
-			"path_unlink_file",
-			wasi_pathUnlinkFile,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 38) poll_oneoff(in: ConstPointer<subscription>, out: Pointer<event>, nsubscriptions: size) -> (errno, size)
-		vm.BuildFn(
-			"poll_oneoff",
-			wasi_pollOneoff,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 39) proc_exit(rval: exitcode)
-		// Typically does not return; might raise a trap or shut down the instance.
-		// But as a placeholder, you can define a return type of none (empty).
-		vm.BuildFn(
-			"proc_exit",
-			wasi_procExit,
-			[]interface{}{vm.ValType_I32()},
-			[]interface{}{},
-			0,
-		),
-
-		// 40) proc_raise(sig: signal) -> errno
-		vm.BuildFn(
-			"proc_raise",
-			wasi_procRaise,
-			[]interface{}{vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 41) sched_yield() -> errno
-		vm.BuildFn(
-			"sched_yield",
-			wasi_schedYield,
-			[]interface{}{},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 42) random_get(buf: Pointer<u8>, buf_len: size) -> errno
-		vm.BuildFn(
-			"random_get",
-			wasi_randomGet,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		vm.BuildFn(
-			"sock_accept",
-			wasi_sockAccept,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 43) sock_recv(fd: fd, ri_data: iovec_array, ri_flags: riflags) -> (errno, size, roflags)
-		vm.BuildFn(
-			"sock_recv",
-			wasi_sockRecv,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 44) sock_send(fd: fd, si_data: ciovec_array, si_flags: siflags) -> (errno, size)
-		vm.BuildFn(
-			"sock_send",
-			wasi_sockSend,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-
-		// 45) sock_shutdown(fd: fd, how: sdflags) -> errno
-		vm.BuildFn(
-			"sock_shutdown",
-			wasi_sockShutdown,
-			[]interface{}{vm.ValType_I32(), vm.ValType_I32()},
-			[]interface{}{vm.ValType_I32()},
-			0,
-		),
-	}
-	// wasi_unstable
-	return vm.BuildModule(rnh, "wasi_snapshot_preview1", context, fndefs)
 }
 
 func endsWithSlash(s string) bool {
