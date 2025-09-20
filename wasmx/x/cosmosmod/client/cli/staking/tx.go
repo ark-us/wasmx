@@ -47,11 +47,11 @@ func NewTxCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec, ac address.Codec, appCr
 
 	stakingTxCmd.AddCommand(
 		NewCreateValidatorCmd(wasmVmMeta, valAddrCodec, ac, appCreator),
-		NewEditValidatorCmd(valAddrCodec, ac),
-		NewDelegateCmd(valAddrCodec, ac),
-		NewRedelegateCmd(valAddrCodec, ac),
-		NewUnbondCmd(valAddrCodec, ac),
-		NewCancelUnbondingDelegation(valAddrCodec, ac),
+		NewEditValidatorCmd(wasmVmMeta, valAddrCodec, ac, appCreator),
+		NewDelegateCmd(wasmVmMeta, valAddrCodec, ac, appCreator),
+		NewRedelegateCmd(wasmVmMeta, valAddrCodec, ac, appCreator),
+		NewUnbondCmd(wasmVmMeta, valAddrCodec, ac, appCreator),
+		NewCancelUnbondingDelegation(wasmVmMeta, valAddrCodec, ac, appCreator),
 	)
 
 	return stakingTxCmd
@@ -135,7 +135,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 }
 
 // NewEditValidatorCmd returns a CLI command handler for creating a MsgEditValidator transaction.
-func NewEditValidatorCmd(valAddrCodec address.Codec, ac address.Codec) *cobra.Command {
+func NewEditValidatorCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec address.Codec, ac address.Codec, appFactory multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "edit-validator",
 		Short: "edit an existing validator account",
@@ -183,7 +183,22 @@ func NewEditValidatorCmd(valAddrCodec address.Codec, ac address.Codec) *cobra.Co
 
 			msg := types.NewMsgEditValidator(valAddr, description, newRate, newMinSelfDelegation)
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			if err != nil {
+				return err
+			}
+
+			chainId := mcctx.ClientCtx.ChainID
+
+			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			chainapp := appCreator(chainId, mcctx.Config)
+			defer chainapp.Teardown()
+
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
 		},
 	}
 
@@ -197,7 +212,7 @@ func NewEditValidatorCmd(valAddrCodec address.Codec, ac address.Codec) *cobra.Co
 }
 
 // NewDelegateCmd returns a CLI command handler for creating a MsgDelegate transaction.
-func NewDelegateCmd(valAddrCodec, ac address.Codec) *cobra.Command {
+func NewDelegateCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec address.Codec, ac address.Codec, appFactory multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delegate [validator-addr] [amount]",
 		Args:  cobra.ExactArgs(2),
@@ -216,6 +231,22 @@ $ %s tx staking delegate cosmosvalopers1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59wm 1
 			if err != nil {
 				return err
 			}
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			if err != nil {
+				return err
+			}
+
+			chainId := mcctx.ClientCtx.ChainID
+
+			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			chainapp := appCreator(chainId, mcctx.Config)
+			defer chainapp.Teardown()
+
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
 			amount, err := sdk.ParseCoinNormalized(args[1])
 			if err != nil {
 				return err
@@ -232,8 +263,7 @@ $ %s tx staking delegate cosmosvalopers1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59wm 1
 			}
 
 			msg := types.NewMsgDelegate(delAddr, args[0], amount)
-
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
 		},
 	}
 
@@ -244,7 +274,7 @@ $ %s tx staking delegate cosmosvalopers1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59wm 1
 }
 
 // NewRedelegateCmd returns a CLI command handler for creating a MsgBeginRedelegate transaction.
-func NewRedelegateCmd(valAddrCodec, ac address.Codec) *cobra.Command {
+func NewRedelegateCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec address.Codec, ac address.Codec, appFactory multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "redelegate [src-validator-addr] [dst-validator-addr] [amount]",
 		Short: "Redelegate illiquid tokens from one validator to another",
@@ -285,7 +315,22 @@ $ %s tx staking redelegate cosmosvalopers1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj
 
 			msg := types.NewMsgBeginRedelegate(delAddr, args[0], args[1], amount)
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			if err != nil {
+				return err
+			}
+
+			chainId := mcctx.ClientCtx.ChainID
+
+			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			chainapp := appCreator(chainId, mcctx.Config)
+			defer chainapp.Teardown()
+
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
 		},
 	}
 
@@ -296,7 +341,7 @@ $ %s tx staking redelegate cosmosvalopers1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj
 }
 
 // NewUnbondCmd returns a CLI command handler for creating a MsgUndelegate transaction.
-func NewUnbondCmd(valAddrCodec, ac address.Codec) *cobra.Command {
+func NewUnbondCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec address.Codec, ac address.Codec, appFactory multichain.NewAppCreator) *cobra.Command {
 	bech32PrefixValAddr := sdk.GetConfig().GetBech32ValidatorAddrPrefix()
 
 	cmd := &cobra.Command{
@@ -334,7 +379,22 @@ $ %s tx staking unbond %s1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj 100stake --from
 
 			msg := types.NewMsgUndelegate(delAddr, args[0], amount)
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			if err != nil {
+				return err
+			}
+
+			chainId := mcctx.ClientCtx.ChainID
+
+			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			chainapp := appCreator(chainId, mcctx.Config)
+			defer chainapp.Teardown()
+
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
 		},
 	}
 
@@ -345,7 +405,7 @@ $ %s tx staking unbond %s1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj 100stake --from
 }
 
 // NewCancelUnbondingDelegation returns a CLI command handler for creating a MsgCancelUnbondingDelegation transaction.
-func NewCancelUnbondingDelegation(valAddrCodec, ac address.Codec) *cobra.Command {
+func NewCancelUnbondingDelegation(wasmVmMeta memc.IWasmVmMeta, valAddrCodec address.Codec, ac address.Codec, appFactory multichain.NewAppCreator) *cobra.Command {
 	bech32PrefixValAddr := sdk.GetConfig().GetBech32ValidatorAddrPrefix()
 
 	cmd := &cobra.Command{
@@ -390,7 +450,22 @@ $ %s tx staking cancel-unbond %s1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj 100stake
 
 			msg := types.NewMsgCancelUnbondingDelegation(delAddr, args[0], creationHeight, amount)
 
-			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+			mcctx, err := multichain.MultiChainCtxByChainId(clientCtx, cmd.Flags(), []signing.CustomGetSigner{})
+			if err != nil {
+				return err
+			}
+
+			chainId := mcctx.ClientCtx.ChainID
+
+			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			chainapp := appCreator(chainId, mcctx.Config)
+			defer chainapp.Teardown()
+
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, msg)
 		},
 	}
 

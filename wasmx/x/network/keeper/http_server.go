@@ -88,32 +88,26 @@ func (env *Environment) GetRoutes() cometcore.RoutesMap {
 }
 
 func (env *Environment) Subscribe(ctx *rpctypes.Context, query string) (*ctypes.ResultSubscribe, error) {
-	fmt.Println("= WS Subscribe")
 	return nil, fmt.Errorf("Subscribe not implemented")
 }
 
 func (env *Environment) Unsubscribe(ctx *rpctypes.Context, query string) (*ctypes.ResultUnsubscribe, error) {
-	fmt.Println("= WS Unsubscribe")
 	return nil, fmt.Errorf("Unsubscribe not implemented")
 }
 
 func (env *Environment) UnsubscribeAll(ctx *rpctypes.Context) (*ctypes.ResultUnsubscribe, error) {
-	fmt.Println("= WS UnsubscribeAll")
 	return nil, fmt.Errorf("UnsubscribeAll not implemented")
 }
 
 func (env *Environment) Health(*rpctypes.Context) (*ctypes.ResultHealth, error) {
-	fmt.Println("= WS Health")
 	return nil, fmt.Errorf("Health not implemented")
 }
 
 func (env *Environment) Status(ctx *rpctypes.Context) (*ctypes.ResultStatus, error) {
-	fmt.Println("= WS Status")
 	return env.networkWrap.Status(context.TODO())
 }
 
 func (env *Environment) NetInfo(*rpctypes.Context) (*ctypes.ResultNetInfo, error) {
-	fmt.Println("= WS NetInfo")
 	return nil, fmt.Errorf("NetInfo not implemented")
 }
 
@@ -121,32 +115,26 @@ func (env *Environment) BlockchainInfo(
 	_ *rpctypes.Context,
 	minHeight, maxHeight int64,
 ) (*ctypes.ResultBlockchainInfo, error) {
-	fmt.Println("= WS BlockchainInfo")
 	return env.networkWrap.BlockchainInfo(context.TODO(), minHeight, maxHeight)
 }
 
 func (env *Environment) Genesis(*rpctypes.Context) (*ctypes.ResultGenesis, error) {
-	fmt.Println("= WS Genesis")
 	return nil, fmt.Errorf("Genesis not implemented")
 }
 
 func (env *Environment) GenesisChunked(_ *rpctypes.Context, chunk uint) (*ctypes.ResultGenesisChunk, error) {
-	fmt.Println("= WS GenesisChunked")
 	return nil, fmt.Errorf("GenesisChunked not implemented")
 }
 
 func (env *Environment) Block(ctx *rpctypes.Context, height *int64) (*ctypes.ResultBlock, error) {
-	fmt.Println("= WS Block")
 	return env.networkWrap.Block(context.TODO(), height)
 }
 
 func (env *Environment) BlockByHash(_ *rpctypes.Context, hash []byte) (*ctypes.ResultBlock, error) {
-	fmt.Println("= WS BlockByHash")
 	return env.networkWrap.BlockByHash(context.TODO(), hash)
 }
 
 func (env *Environment) BlockResults(_ *rpctypes.Context, heightPtr *int64) (*ctypes.ResultBlockResults, error) {
-	fmt.Println("= WS BlockResults")
 	return env.networkWrap.BlockResults(context.TODO(), heightPtr)
 }
 
@@ -154,22 +142,18 @@ func (env *Environment) BlockResults(_ *rpctypes.Context, heightPtr *int64) (*ct
 // If no height is provided, it will fetch the commit for the latest block.
 // More: https://docs.cometbft.com/v0.38.x/rpc/#/Info/commit
 func (env *Environment) Commit(_ *rpctypes.Context, heightPtr *int64) (*ctypes.ResultCommit, error) {
-	fmt.Println("= WS Commit")
 	return env.networkWrap.Commit(context.TODO(), heightPtr)
 }
 
 func (env *Environment) Header(_ *rpctypes.Context, heightPtr *int64) (*ctypes.ResultHeader, error) {
-	fmt.Println("= WS Header")
 	return nil, fmt.Errorf("Header not implemented")
 }
 
 func (env *Environment) HeaderByHash(_ *rpctypes.Context, hash bytes.HexBytes) (*ctypes.ResultHeader, error) {
-	fmt.Println("= WS HeaderByHash")
 	return nil, fmt.Errorf("HeaderByHash not implemented")
 }
 
 func (env *Environment) CheckTx(_ *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultCheckTx, error) {
-	fmt.Println("= WS CheckTx")
 	req := &abci.RequestCheckTx{
 		Tx:   tx,
 		Type: abci.CheckTxType_New,
@@ -187,7 +171,6 @@ func (env *Environment) CheckTx(_ *rpctypes.Context, tx comettypes.Tx) (*ctypes.
 // place.
 // More: https://docs.cometbft.com/v0.38.x/rpc/#/Info/tx
 func (env *Environment) Tx(ctx *rpctypes.Context, hash []byte, prove bool) (*ctypes.ResultTx, error) {
-	fmt.Println("= WS Tx")
 	return env.networkWrap.Tx(context.TODO(), hash, prove)
 }
 
@@ -198,7 +181,6 @@ func (env *Environment) TxSearch(
 	pagePtr, perPagePtr *int,
 	orderBy string,
 ) (*ctypes.ResultTxSearch, error) {
-	fmt.Println("= WS TxSearch")
 	return env.networkWrap.TxSearch(context.TODO(), query, prove, pagePtr, perPagePtr, orderBy)
 }
 
@@ -208,7 +190,6 @@ func (env *Environment) BlockSearch(
 	pagePtr, perPagePtr *int,
 	orderBy string,
 ) (*ctypes.ResultBlockSearch, error) {
-	fmt.Println("= WS BlockSearch")
 	return env.networkWrap.BlockSearch(context.TODO(), query, pagePtr, perPagePtr, orderBy)
 }
 
@@ -217,17 +198,14 @@ func (env *Environment) Validators(
 	heightPtr *int64,
 	pagePtr, perPagePtr *int,
 ) (*ctypes.ResultValidators, error) {
-	fmt.Println("= WS Validators")
 	return env.networkWrap.Validators(context.TODO(), heightPtr, pagePtr, perPagePtr)
 }
 
 func (env *Environment) DumpConsensusState(*rpctypes.Context) (*ctypes.ResultDumpConsensusState, error) {
-	fmt.Println("= WS DumpConsensusState")
 	return nil, fmt.Errorf("DumpConsensusState not implemented")
 }
 
 func (env *Environment) GetConsensusState(*rpctypes.Context) (*ctypes.ResultConsensusState, error) {
-	fmt.Println("= WS GetConsensusState")
 	return nil, fmt.Errorf("GetConsensusState not implemented")
 }
 
@@ -238,35 +216,29 @@ func (env *Environment) ConsensusParams(
 	_ *rpctypes.Context,
 	heightPtr *int64,
 ) (*ctypes.ResultConsensusParams, error) {
-	fmt.Println("= WS ConsensusParams")
 	client := env.networkWrap.(*ABCIClient)
 	return client.ConsensusParams(context.TODO(), heightPtr)
 }
 
 func (env *Environment) UnconfirmedTxs(_ *rpctypes.Context, limitPtr *int) (*ctypes.ResultUnconfirmedTxs, error) {
-	fmt.Println("= WS UnconfirmedTxs")
 	return nil, fmt.Errorf("UnconfirmedTxs not implemented")
 }
 
 func (env *Environment) NumUnconfirmedTxs(*rpctypes.Context) (*ctypes.ResultUnconfirmedTxs, error) {
-	fmt.Println("= WS NumUnconfirmedTxs")
 	return nil, fmt.Errorf("NumUnconfirmedTxs not implemented")
 }
 
 // BroadcastTxCommit returns with the responses from CheckTx and ExecTxResult.
 // More: https://docs.cometbft.com/v0.38.x/rpc/#/Tx/broadcast_tx_commit
 func (env *Environment) BroadcastTxCommit(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTxCommit, error) {
-	fmt.Println("= WS BroadcastTxCommit")
 	return env.networkWrap.BroadcastTxCommit(context.TODO(), tx)
 }
 
 func (env *Environment) BroadcastTxSync(ctx *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTx, error) {
-	fmt.Println("= WS BroadcastTxSync")
 	return env.networkWrap.BroadcastTxSync(context.TODO(), tx)
 }
 
 func (env *Environment) BroadcastTxAsync(_ *rpctypes.Context, tx comettypes.Tx) (*ctypes.ResultBroadcastTx, error) {
-	fmt.Println("= WS BroadcastTxAsync")
 	return env.networkWrap.BroadcastTxAsync(context.TODO(), tx)
 
 	// err := env.Mempool.CheckTx(tx, nil, mempl.TxInfo{})
@@ -283,7 +255,6 @@ func (env *Environment) ABCIQuery(
 	height int64,
 	prove bool,
 ) (*ctypes.ResultABCIQuery, error) {
-	fmt.Println("= WS ABCIQuery-", height, path, prove)
 	return env.networkWrap.ABCIQueryWithOptions(context.TODO(), path, data, rpcclient.ABCIQueryOptions{Height: height, Prove: prove})
 }
 
@@ -295,6 +266,5 @@ func (env *Environment) BroadcastEvidence(
 	_ *rpctypes.Context,
 	ev comettypes.Evidence,
 ) (*ctypes.ResultBroadcastEvidence, error) {
-	fmt.Println("= WS BroadcastEvidence")
 	return nil, fmt.Errorf("BroadcastEvidence not implemented")
 }
