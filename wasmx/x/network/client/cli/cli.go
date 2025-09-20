@@ -1355,7 +1355,7 @@ func signGenTxDataLobby(
 		flags,
 		customAddrCodec,
 		contractAddr,
-		sender,
+		authtypes.NewModuleAddress(wasmxtypes.ModuleName),
 		querymsg,
 		nil,
 		nil,

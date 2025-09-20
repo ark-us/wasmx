@@ -17,7 +17,6 @@ import (
 )
 
 func (suite *KeeperTestSuite) TestPriviledgedAPI() {
-	SkipFixmeTests(suite.T(), "TestPriviledgedAPI")
 	// test that contracts without a role requiring a protected host API, only use the mocked host API
 	wasmbin := testdata.WasmxTestSql
 	sender := suite.GetRandomAccount()
@@ -45,13 +44,6 @@ func (suite *KeeperTestSuite) TestPriviledgedAPI() {
 	// now set a role for this priviledged contract
 	utils.RegisterRole(suite, appA, "somerole", contractAddress, sender)
 
-	cmdQuery = &Calldata{Query: &vmsql.SqlQueryRequest{
-		Id:     "conn1",
-		Query:  `SELECT value FROM kvstore WHERE key = "hello"`,
-		Params: vmsql.Params{},
-	}}
-	data, err = json.Marshal(cmdQuery)
-	suite.Require().NoError(err)
 	qres = appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil)
 	suite.Require().Equal(`{"error":"sql connection not found","data":"null"}`, string(qres))
 }

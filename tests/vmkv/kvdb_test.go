@@ -106,7 +106,6 @@ func (suite *KeeperTestSuite) TestKvWrapContract() {
 }
 
 func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
-	SkipFixmeTests(suite.T(), "TestRolledBackDbCalls")
 	wasmbin := testdata.WasmxTestKvDB
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
@@ -238,7 +237,6 @@ func (suite *KeeperTestSuite) TestRolledBackDbCalls() {
 }
 
 func (suite *KeeperTestSuite) TestNestedCalls() {
-	SkipFixmeTests(suite.T(), "TestNestedCalls")
 	wasmbin := testdata.WasmxTestKvDB
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)

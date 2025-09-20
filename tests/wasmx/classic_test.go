@@ -735,7 +735,7 @@ func (suite *KeeperTestSuite) TestInvalidTransaction() {
 }
 
 func (suite *KeeperTestSuite) TestInvalidMessageTransaction() {
-	SkipFixmeTests(suite.T(), "TestInvalidMessageTransaction")
+	SkipFixmeTests(suite.T(), "TestInvalidMessageTransaction rewrite test")
 	// TODO now AddToMempoolFSM does not revert anymore if tx does not pass CheckTx
 	// because we wanted to preserve state in the consensus contract
 	// the tx is not added to mempool
