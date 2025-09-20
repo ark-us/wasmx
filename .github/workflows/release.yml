@@ -15,7 +15,7 @@ on:
 jobs:
   build:
     name: Build Mythos-Wazero Binary for Multiple Platforms
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       GOPRIVATE: github.com/loredanacirstea*
       GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
@@ -37,7 +37,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.23
+        go-version: 1.24
 
     - run: git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
 
@@ -96,7 +96,7 @@ jobs:
   release:
     name: Release Binaries
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
 
     - name: Checkout repository
@@ -149,7 +149,7 @@ jobs:
   # release-public:
   #   name: Upload Release Assets to Public Repo
   #   needs: release
-  #   runs-on: ubuntu-latest
+  #   runs-on: ubuntu-22.04
   #   steps:
 
   #   - name: Clone Target Repository
