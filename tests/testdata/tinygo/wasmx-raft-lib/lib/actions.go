@@ -1717,10 +1717,8 @@ func StartBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 	if err != nil {
 		return false, fmt.Errorf("failed to get self node info: %v", err)
 	}
-	// TODO fix me, are these the correct addresses to compare?
-	nodeAddrBz := wasmx.AddrCanonicalize(string(selfNode.Address))
-	oeran := processReqWithMeta.OptimisticExecution && strings.ToLower(string(processReq.ProposerAddress)) == hex.EncodeToString(nodeAddrBz)
-	// fmt.Println("--startBlockFinalizationInternal.oeran--", oeran, processReq.ProposerAddress, selfNode.Address, hex.EncodeToString(nodeAddrBz))
+
+	oeran := processReqWithMeta.OptimisticExecution && (entryobj.Data.ProposerAddress == selfNode.Address)
 	if !oeran {
 		resbegin, err := consensuswrap.BeginBlock(finReq)
 		if err != nil {

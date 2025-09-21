@@ -16,6 +16,7 @@ import (
 )
 
 func (k *Keeper) SetSystemBootstrap(ctx sdk.Context, data *types.SystemBootstrap) error {
+	k.Logger(ctx).Info("SetSystemBootstrap", "CodeRegistryAddress", data.CodeRegistryAddress.String(), "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress.String(), "chain_id", ctx.ChainID())
 	internalData := &types.SystemBootstrapData{
 		RoleAddress:              data.RoleAddress.String(),
 		CodeRegistryAddress:      data.CodeRegistryAddress.String(),
@@ -35,6 +36,7 @@ func (k *Keeper) SetSystemBootstrap(ctx sdk.Context, data *types.SystemBootstrap
 // * at chain bootstrap for system contracts
 // * governance upgrades for cached contracts (roles, codes)
 func (k *Keeper) SetSystemBootstrapData(ctx sdk.Context, data *types.SystemBootstrapData) error {
+	k.Logger(ctx).Info("store system cache: SetSystemBootstrapData", "CodeRegistryAddress", data.CodeRegistryAddress, "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress, "chain_id", ctx.ChainID())
 	store := ctx.KVStore(k.storeKey)
 	databz, err := json.Marshal(data)
 	if err != nil {
@@ -50,6 +52,7 @@ func (k *Keeper) SetSystemBootstrapData(ctx sdk.Context, data *types.SystemBoots
 // reading does not change state root hashes, and we make it not consume gas
 // otherwise, we would get results hash mismatch in blocks due to gas consumption
 func (k *Keeper) GetSystemBootstrapData(ctx_ sdk.Context) (*types.SystemBootstrapData, error) {
+	k.Logger(ctx_).Info("load system cache: GetSystemBootstrapData", "chain_id", ctx_.ChainID())
 	ctx := sdk.NewContext(ctx_.MultiStore().CacheMultiStore(), ctx_.BlockHeader(), ctx_.IsCheckTx(), ctx_.Logger())
 	ctx = ctx.WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
 
@@ -111,10 +114,11 @@ func (k *Keeper) GetSystemBootstrap(ctx sdk.Context) *types.SystemBootstrap {
 }
 
 func (k *Keeper) UpdateSystemCache(ctx sdk.Context, req *types.SystemBootstrap) error {
-	cache := k.GetSystemBootstrap(ctx)
 	if req == nil {
 		return nil
 	}
+	k.Logger(ctx).Info("update system cache: UpdateSystemCache", "chain_id", ctx.ChainID(), "CodeRegistryAddress", req.CodeRegistryAddress, "CodeRegistryId", req.CodeRegistryId, "RoleAddress", req.RoleAddress)
+	cache := k.GetSystemBootstrap(ctx)
 	if len(req.RoleAddress.Bytes()) > 0 {
 		cache.RoleAddress = req.RoleAddress
 		k.Logger(ctx).Info("system cache updated roles", "contract_address", req.RoleAddress.String())
@@ -190,6 +194,7 @@ func (k *Keeper) EndBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinal
 				if err != nil {
 					return err
 				}
+				changed = true
 			}
 			if changed {
 				err := k.SetSystemBootstrap(ctx, cache)

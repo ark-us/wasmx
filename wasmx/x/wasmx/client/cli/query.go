@@ -492,9 +492,6 @@ func GetCmdGetContractCall(ac address.Codec) *cobra.Command {
 				return fmt.Errorf("wrap query data %s", err)
 			}
 			sender := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
-			if err != nil {
-				return fmt.Errorf("sender to string: %s", err)
-			}
 			if len(sender.Bytes()) == 0 {
 				sender = contractAddr
 			}

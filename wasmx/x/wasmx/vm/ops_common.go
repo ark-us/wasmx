@@ -272,7 +272,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	if err != nil {
 		success = int32(2)
 		// note, just log the error here, because it may contain non-deterministic data added by the WASM runtime
-		newctx.Logger(newctx.Ctx).Debug("internal call failed", "error", err.Error(), "data", string(newctx.ReturnData), "from", newctx.Env.CurrentCall.Sender.String(), "to", newctx.Env.Contract.Address.String())
+		newctx.Logger(newctx.Ctx).Debug("internal call failed", "error", err.Error(), "data", hex.EncodeToString(newctx.ReturnData), "from", newctx.Env.CurrentCall.Sender.String(), "to", newctx.Env.Contract.Address.String())
 		LoggerExtended(newctx).Debug("internal call failed", "to", newctx.Env.Contract.Address.String(), "calldata", hex.EncodeToString(newctx.Env.CurrentCall.CallData))
 	} else {
 		success = int32(0)
@@ -286,7 +286,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	if appWithHooksEnabled {
 		err2 := appWithHooks.EndSubCall(newctx.Ctx, newctx.CurrentSubCallLevel, newctx.CurrentSubCallId, req.IsQuery, err)
 		if err2 != nil {
-			newctx.Logger(newctx.Ctx).Debug("EndSubCall error: "+err2.Error(), "data", string(newctx.ReturnData))
+			newctx.Logger(newctx.Ctx).Debug("EndSubCall error: "+err2.Error(), "data", hex.EncodeToString(newctx.ReturnData))
 			errmsg := fmt.Sprintf("BeginSubCall error: %s", err2.Error())
 			return int32(1), []byte(errmsg)
 		}
