@@ -201,7 +201,7 @@ type IndexedTopic struct {
 	Values []string `json:"values"`
 }
 
-func ExtractIndexedTopics(finalizeResp consensus.ResponseFinalizeBlock, txhashes [][]byte) []IndexedTopic {
+func ExtractIndexedTopics(txResults []consensus.ExecTxResult, txhashes [][]byte) []IndexedTopic {
 	topicMap := map[string][]string{}
 	push := func(topic string, txhash []byte) {
 		if len(topic) > MaxKeyLength {
@@ -211,8 +211,8 @@ func ExtractIndexedTopics(finalizeResp consensus.ResponseFinalizeBlock, txhashes
 		arr = append(arr, base64.StdEncoding.EncodeToString(txhash))
 		topicMap[topic] = arr
 	}
-	for i := range finalizeResp.TxResults {
-		res := finalizeResp.TxResults[i]
+	for i := range txResults {
+		res := txResults[i]
 		for _, ev := range res.Events {
 			for _, attr := range ev.Attributes {
 				if attr.Index {

@@ -7,6 +7,7 @@ type CallData struct {
 	SetConsensusParams          *CallDataSetConsensusParams          `json:"setConsensusParams,omitempty"`
 	SetIndexedTransactionByHash *CallDataSetIndexedTransactionByHash `json:"setIndexedTransactionByHash,omitempty"`
 	BootstrapAfterStateSync     *CallDataBootstrap                   `json:"bootstrapAfterStateSync,omitempty"`
+	Rollback                    *CalldataRollback                    `json:"rollback,omitempty"`
 
 	GetIndexedData              *CallDataGetIndexedData              `json:"getIndexedData,omitempty"`
 	GetLastBlockIndex           *CallDataGetLastBlockIndex           `json:"getLastBlockIndex,omitempty"`
@@ -83,4 +84,11 @@ type CallDataBootstrap struct {
 	LastBlockHeight   int64  `json:"last_block_height"`
 	LastHeightChanged int64  `json:"last_height_changed"`
 	Params            []byte `json:"params"`
+}
+
+type CalldataRollback struct {
+	Height        int64          `json:"height"`
+	Hash          []byte         `json:"hash"`
+	TxHashes      [][]byte       `json:"txhashes"`
+	IndexedTopics []IndexedTopic `json:"indexed_topics"`
 }

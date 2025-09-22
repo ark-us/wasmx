@@ -1855,7 +1855,7 @@ func StartBlockFinalizationInternal(entryobj *LogEntryAggregate, retry bool) (bo
 	if err != nil {
 		return false, err
 	}
-	indexedTopics := extractIndexedTopics(*finalizeResp, txHashBytes)
+	indexedTopics := extractIndexedTopics(finalizeResp.TxResults, txHashBytes)
 	if err := setFinalizedBlock(string(blockData), base64.StdEncoding.EncodeToString(processReq.Hash), txHashBytes, indexedTopics); err != nil {
 		return false, err
 	}
@@ -2254,5 +2254,132 @@ func VerifyCommitLight(params []fsm.ActionParam, event fsm.EventObject) error {
 		Error: "",
 	})
 	wasmx.SetFinishData(respbz)
+	return nil
+}
+
+// Leader usually commits one block in advance
+// so if this node is a follower, it should only remove the block in-waiting to be committed
+// TODO fixme; now we need to go back 2 blocks with the Leader & Followers, otherwise
+// the AppHash has a mismatch
+func Rollback(params []fsm.ActionParam, event fsm.EventObject) error {
+	// Extract commit parameter
+	height := int64(0)
+	for _, p := range params {
+		if p.Key == "height" {
+			height = parseI64(p.Value, height)
+			break
+		}
+	}
+	if height == 0 {
+		for _, p := range event.Params {
+			if p.Key == "data" {
+				height = parseI64(p.Value, height)
+				break
+			}
+		}
+	}
+	lastCommited, err := GetLastBlockIndex()
+	if err != nil {
+		return err
+	}
+	if height == 0 {
+		height = lastCommited
+	}
+
+	LoggerInfo("rolling back block", []string{"height", fmt.Sprintf("%d", height), "lastCommited", fmt.Sprintf("%d", lastCommited)})
+
+	if height > lastCommited+1 {
+		return nil
+	}
+	if height < lastCommited {
+		Revert(fmt.Sprintf(`must roll back last block first: %d`, height))
+	}
+
+	newHeight := height - 1
+
+	if height == lastCommited {
+		LoggerInfo("rolling back block", []string{"height", fmt.Sprint(height)})
+
+		data, err := getFinalBlock(height)
+		if err != nil {
+			return err
+		}
+		if data == "" {
+			return nil
+		}
+
+		var blockData blocks.BlockEntry
+		if err := json.Unmarshal([]byte(data), &blockData); err != nil {
+			return fmt.Errorf("failed to parse BlockEntry: %v", err)
+		}
+
+		var processReqWithMeta typestnd.RequestProcessProposalWithMetaInfo
+		if err := json.Unmarshal(blockData.Data, &processReqWithMeta); err != nil {
+			return fmt.Errorf("failed to unmarshal RequestProcessProposalWithMetaInfo: %v", err)
+		}
+		processReq := processReqWithMeta.Request
+
+		var finalizeResp typestnd.ResponseFinalizeBlock
+		if err := json.Unmarshal(blockData.Result, &finalizeResp); err != nil {
+			return fmt.Errorf("failed to unmarshal ResponseFinalizeBlock: %v", err)
+		}
+
+		var blockCommit typestnd.BlockCommit
+		if err := json.Unmarshal(blockData.LastCommit, &blockCommit); err != nil {
+			return fmt.Errorf("failed to unmarshal BlockCommit: %v", err)
+		}
+
+		var header typestnd.Header
+		if err := json.Unmarshal(blockData.Header, &header); err != nil {
+			return fmt.Errorf("failed to unmarshal Header: %v", err)
+		}
+
+		hash, err := consutils.GetHeaderHash(header)
+		if err != nil {
+			return err
+		}
+
+		// Rollback block from storage
+		var txhashes [][]byte
+		for _, tx := range processReq.Txs {
+			txhash := wasmx.Sha256(tx)
+			txhashes = append(txhashes, txhash)
+		}
+		indexedTopics := extractIndexedTopics(finalizeResp.TxResults, txhashes)
+
+		RollbackBlockData(height, hash, txhashes, indexedTopics)
+		LoggerInfo("rolled back block data", []string{"height", fmt.Sprint(height)})
+
+		// Update consensus state
+		lastCommitHash, _ := hex.DecodeString(strings.ToLower(string(header.LastCommitHash)))
+		lastResultsHash, _ := hex.DecodeString(strings.ToLower(string(header.LastResultsHash)))
+
+		state, err := GetCurrentState()
+		if err != nil {
+			return err
+		}
+		state.NextHeight = height
+		state.NextHash = []byte{}
+		state.AppHash = finalizeResp.AppHash
+		state.LastBlockID = GetBlockID(hash)
+		state.LastCommitHash = lastCommitHash
+		state.LastResultsHash = lastResultsHash
+		state.LastTime = processReq.Time
+		state.ValidValue = 0
+		state.ValidRound = 0
+		state.LockedValue = 0
+		state.LockedRound = 0
+		// state.LastBlockSignatures = blockCommit.Signatures
+
+		SetCurrentState(state)
+		LoggerInfo("rolledback consensus state", []string{"new_height", fmt.Sprint(newHeight), "app_hash", hex.EncodeToString(state.AppHash)})
+	}
+
+	// Reset indexes
+	RemoveLogEntry(height)
+	SetLastLogIndex(newHeight)
+	LoggerInfo("rolled back consensus data", []string{"new_height", fmt.Sprint(newHeight)})
+
+	LoggerInfo("rollback consensus completed", []string{"new_height", fmt.Sprint(newHeight)})
 	return nil
 }

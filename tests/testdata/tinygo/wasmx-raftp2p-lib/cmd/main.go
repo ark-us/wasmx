@@ -313,6 +313,11 @@ func main() {
 			lib.Revert("VerifyCommitLight failed: " + err.Error())
 			return
 		}
+	case "rollback":
+		if err := raft.Rollback(calld.Params, calld.Event); err != nil {
+			lib.Revert("Rollback failed: " + err.Error())
+			return
+		}
 	default:
 		wasmx.Revert(append([]byte("invalid function call data: "), databz...))
 		return

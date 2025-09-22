@@ -424,8 +424,8 @@ func updateConsensusParams(height int64, updates *typestnd.ConsensusParams) erro
 }
 
 // Expose select consensus-utils helpers
-func extractIndexedTopics(resp typestnd.ResponseFinalizeBlock, txhashes [][]byte) []blocks.IndexedTopic {
-	topics := consutils.ExtractIndexedTopics(resp, txhashes)
+func extractIndexedTopics(txResults []typestnd.ExecTxResult, txhashes [][]byte) []blocks.IndexedTopic {
+	topics := consutils.ExtractIndexedTopics(txResults, txhashes)
 	out := make([]blocks.IndexedTopic, len(topics))
 	for i := range topics {
 		out[i] = blocks.IndexedTopic{Topic: topics[i].Topic, Values: topics[i].Values}
@@ -1115,4 +1115,31 @@ func WeAreNotAloneInternal(nodes []p2p.NodeInfo, state CurrentState) bool {
 		return true
 	}
 	return state.WeAreNotAlone
+}
+
+func RollbackBlockData(height int64, hash []byte, txhashes [][]byte, indexedTopics []blocks.IndexedTopic) error {
+	calldata := blocks.CalldataRollback{
+		Height:        height,
+		Hash:          hash,
+		TxHashes:      txhashes,
+		IndexedTopics: indexedTopics,
+	}
+
+	payload := map[string]any{
+		"rollback": calldata,
+	}
+	calldatastr, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal rollback data: %s", err.Error())
+	}
+
+	// Call storage
+	resp, err := callStorage(string(calldatastr), false)
+	if err != nil {
+		return fmt.Errorf("could not rollback finalized block: %s: %s", resp.Data, err.Error())
+	}
+	if resp.Success > 0 {
+		return fmt.Errorf("could not rollback finalized block: %s", resp.Data)
+	}
+	return nil
 }
