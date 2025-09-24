@@ -66,6 +66,7 @@ func (k *Keeper) GetSystemBootstrapData(ctx_ sdk.Context) (*types.SystemBootstra
 	if err != nil {
 		return nil, sdkerr.Wrapf(err, "cannot unmarshal system bootstrap data")
 	}
+	k.Logger(ctx_).Info("load system cache: GetSystemBootstrapData", "chain_id", ctx_.ChainID(), "CodeRegistryAddress", data.CodeRegistryAddress, "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress)
 	return &data, nil
 }
 

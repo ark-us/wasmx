@@ -55,6 +55,7 @@ import (
 	// this line is used by starport scaffolding # root/moduleImport
 
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
+	vmpostgresql "github.com/loredanacirstea/wasmx-vmpostgresql"
 	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
 	mapi "github.com/loredanacirstea/wasmx/apictx"
 	app "github.com/loredanacirstea/wasmx/app"
@@ -106,6 +107,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, initializeD
 	goctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(goctx)
 	goctx, _ = wasmxtypes.WithSystemBootstrap(goctx)
 	goctx = vmsql.WithSqlEmptyContext(goctx)
+	goctx = vmpostgresql.WithSqlEmptyContext(goctx)
 	goctx = vmkv.WithKvDbEmptyContext(goctx)
 	goctx = vmimap.WithImapEmptyContext(goctx)
 	goctx = vmsmtp.WithSmtpEmptyContext(goctx)

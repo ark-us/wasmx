@@ -30,6 +30,7 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
+	vmpostgresql "github.com/loredanacirstea/wasmx-vmpostgresql"
 	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
 )
 
@@ -52,6 +53,7 @@ func NewAppCreator(
 	ctx, _ = mctx.WithTimeoutGoroutinesInfoEmpty(ctx)
 	ctx, _ = wasmxtypes.WithSystemBootstrap(ctx)
 	ctx = vmsql.WithSqlEmptyContext(ctx)
+	ctx = vmpostgresql.WithSqlEmptyContext(ctx)
 	ctx = vmkv.WithKvDbEmptyContext(ctx)
 	ctx = vmimap.WithImapEmptyContext(ctx)
 	ctx = vmsmtp.WithSmtpEmptyContext(ctx)
