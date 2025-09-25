@@ -400,7 +400,6 @@ func StartInProcess(wasmVmMeta memc.IWasmVmMeta, svrCtx *server.Context, clientC
 	}
 
 	traceWriterFile := svrCtx.Viper.GetString(srvflags.TraceStore)
-	// db, err := openDB(home, server.GetAppDBBackend(svrCtx.Viper))
 	db, err := initializeDb(home, server.GetAppDBBackend(svrCtx.Viper))
 	if err != nil {
 		logger.Error("failed to open DB", "error", err.Error())

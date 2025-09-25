@@ -4,7 +4,7 @@ The only WASM-modular blockchain engine capable of regeneration and metamorphosi
 
 * Multi VM, language-agnostic, general & domain-specific language interpreters, variety of host APIs.
     * EVM, TinyGo, AssemblyScript, JavaScript, Python, Rust, FSMvm (finite state machine interpreter).
-    * host APIs: wasmx (our core API), wasmx crosschain, wasmx multichain, wasmx consensus, ewasm, WASI adaptor, GRPC, libp2p, HTTP, SQL, KV dbs, SMTP, IMAP
+    * host APIs: wasmx (our core API), wasmx crosschain, wasmx multichain, wasmx consensus, ewasm, WASI adaptor, GRPC, libp2p, HTTP, SQL, PostgreSQL KV dbs, SMTP, IMAP
     * multichain, crosschain, atomic crosschain transactions: each node can run multiple chains and subchains
 
 Compatible with both Ethereum and Cosmos SDK wallets.

@@ -206,6 +206,7 @@ import (
 
 	srvconfig "github.com/loredanacirstea/wasmx/server/config"
 
+	vmpostgresql "github.com/loredanacirstea/wasmx-vmpostgresql"
 	"github.com/loredanacirstea/wasmx/x/network/vmcrosschain"
 	"github.com/loredanacirstea/wasmx/x/network/vmmc"
 	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
@@ -252,9 +253,11 @@ func init() {
 	// enabled VM extensions for contracts
 	vmp2p.Setup()
 	vmmc.Setup()
-	// experimental WIP, do not enable in production
+
+	// experimental WIP, do not enable in production:
 	vmcrosschain.Setup()
 	vmsql.Setup()
+	vmpostgresql.Setup()
 	vmkv.Setup()
 	// vmimap.Setup()
 	// vmsmtp.Setup()
@@ -889,6 +892,7 @@ func NewApp(
 		websrvModule,
 		vmsql.NewAppModule(app.goContextParent, app),
 		vmkv.NewAppModule(app.goContextParent, app),
+		vmpostgresql.NewAppModule(app.goContextParent, app),
 
 		// sdk
 		// crisis - always be last to make sure that it checks for all invariants and not only part of them
@@ -938,6 +942,7 @@ func NewApp(
 		websrvmoduletypes.ModuleName,
 		vmsql.ModuleName,
 		vmkv.ModuleName,
+		vmpostgresql.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/beginBlockers
 	)
 
@@ -963,21 +968,32 @@ func NewApp(
 		websrvmoduletypes.ModuleName,
 		vmsql.ModuleName,
 		vmkv.ModuleName,
+		vmpostgresql.ModuleName,
 		// this line is used by starport scaffolding # stargate/app/endBlockers
 	)
 
 	app.mm.SetOrderBeginTransaction(
 		vmsql.ModuleName,
 		vmkv.ModuleName,
+		vmpostgresql.ModuleName,
 	)
 
 	app.mm.SetOrderEndTransaction(
 		vmsql.ModuleName,
 		vmkv.ModuleName,
+		vmpostgresql.ModuleName,
 	)
 
-	app.OrderBeginSubCall = []string{vmsql.ModuleName, vmkv.ModuleName}
-	app.OrderEndSubCall = []string{vmsql.ModuleName, vmkv.ModuleName}
+	app.OrderBeginSubCall = []string{
+		vmsql.ModuleName,
+		vmkv.ModuleName,
+		vmpostgresql.ModuleName,
+	}
+	app.OrderEndSubCall = []string{
+		vmsql.ModuleName,
+		vmkv.ModuleName,
+		vmpostgresql.ModuleName,
+	}
 
 	// NOTE: The genutils module must occur after staking so that pools are
 	// properly initialized with tokens from genesis accounts.
@@ -1015,6 +1031,7 @@ func NewApp(
 		websrvmoduletypes.ModuleName,
 		vmsql.ModuleName,
 		vmkv.ModuleName,
+		vmpostgresql.ModuleName,
 	}
 
 	app.mm.SetOrderInitGenesis(genesisModuleOrder...)
