@@ -465,6 +465,8 @@ func (a appCreator) appExport(
 // extendUnsafeResetAllCmd - also clear wasm dir
 func extendUnsafeResetAllCmd(rootCmd *cobra.Command) {
 	unsafeResetCmd := tmcmd.ResetAllCmd.Use
+	tmcmd.ResetAllCmd.Flags().String("db_backend", "", "database backend (only for postgresql)")
+
 	for _, branchCmd := range rootCmd.Commands() {
 		if branchCmd.Use != "tendermint" {
 			continue
@@ -477,7 +479,24 @@ func extendUnsafeResetAllCmd(rootCmd *cobra.Command) {
 						return nil
 					}
 					serverCtx := server.GetServerContextFromCmd(cmd)
-					return os.RemoveAll(filepath.Join(serverCtx.Config.RootDir, wasmxtypes.ContractsDir))
+					if err := os.RemoveAll(filepath.Join(serverCtx.Config.RootDir, wasmxtypes.ContractsDir)); err != nil {
+						return nil
+					}
+					// if postgresql backend used, reset the database
+					opts := serverCtx.Viper
+					backend := sdkserver.GetAppDBBackend(opts)
+					if backend == dbm.PostgreSQLBackend {
+						dbname, snapshotChainDir, err := mcfg.GetSnapshotStoreDir(opts)
+						if err != nil {
+							return err
+						}
+						dbm.RemovePostgreSQLDb(dbname, snapshotChainDir, opts)
+
+						homeDir := cast.ToString(opts.Get(flags.FlagHome))
+						dataDir := filepath.Join(homeDir, "data")
+						dbm.RemovePostgreSQLDb("application", dataDir, opts)
+					}
+					return nil
 				}
 				return
 			}

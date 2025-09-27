@@ -902,6 +902,8 @@ github.com/loredanacirstea/cosmos-db v1.0.3-0.20250924200408-fb3cd66ce73c h1:amW
 github.com/loredanacirstea/cosmos-db v1.0.3-0.20250924200408-fb3cd66ce73c/go.mod h1:28vMdAycypWIxrzjmVQxNqTY2Mie84raW7c1XgE8MIs=
 github.com/loredanacirstea/cosmos-db v1.0.3-0.20250927182036-7d892912ab68 h1:zjdxKMQZ5P3SrROVM4UAeOUNKdzZ/HX3EuL7nc7i4zw=
 github.com/loredanacirstea/cosmos-db v1.0.3-0.20250927182036-7d892912ab68/go.mod h1:28vMdAycypWIxrzjmVQxNqTY2Mie84raW7c1XgE8MIs=
+github.com/loredanacirstea/cosmos-db v1.0.3-0.20250927203546-25a006eb6d2e h1:vKulUpJ8NgaWlb2u2y9BnkkX/1+6jlAr68rwOTMpLw4=
+github.com/loredanacirstea/cosmos-db v1.0.3-0.20250927203546-25a006eb6d2e/go.mod h1:28vMdAycypWIxrzjmVQxNqTY2Mie84raW7c1XgE8MIs=
 github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250421141813-f467a3b4d9f6 h1:oIz0C6MlQcZmajdhZ3tNSjyDtQhww3KD8yLNLVgsnmo=
 github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250421141813-f467a3b4d9f6/go.mod h1:xockbhPJll8lOl8K/unHQXK6nhUlVt3AZwXdPM9dDaI=
 github.com/lufeee/execinquery v1.2.1/go.mod h1:EC7DrEKView09ocscGHC+apXMIaorh4xqSxS/dy8SbM=

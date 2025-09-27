@@ -172,6 +172,9 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/pgx/v5 v5.7.6 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -334,8 +337,8 @@ replace github.com/loredanacirstea/wasmx-wazero => ../wasmx-wazero
 require (
 	github.com/emersion/go-imap/v2 v2.0.0-beta.5
 	github.com/loredanacirstea/wasmx-vmimap v0.0.0
-	github.com/loredanacirstea/wasmx-vmsmtp v0.0.0
 	github.com/loredanacirstea/wasmx-vmpostgresql v0.0.0
+	github.com/loredanacirstea/wasmx-vmsmtp v0.0.0
 	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/onsi/gomega v1.27.10
 	golang.org/x/oauth2 v0.30.0

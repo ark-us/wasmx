@@ -85,15 +85,12 @@ func GetChainId(appOpts sdk.AppOptions) string {
 }
 
 func GetSnapshotStore(appOpts sdk.AppOptions) (*snapshots.Store, error) {
-	chainID := GetChainId(appOpts)
-	homeDir := cast.ToString(appOpts.Get(flags.FlagHome))
-	snapshotDir := filepath.Join(homeDir, "data", "snapshots")
-	if err := os.MkdirAll(snapshotDir, 0o744); err != nil {
-		return nil, fmt.Errorf("failed to create snapshots directory: %w", err)
+	dbname, snapshotChainDir, err := GetSnapshotStoreDir(appOpts)
+	if err != nil {
+		return nil, err
 	}
-	snapshotChainDir := filepath.Join(snapshotDir, chainID)
 
-	snapshotDB, err := dbm.NewDB("metadata", sdkserver.GetAppDBBackend(appOpts), snapshotChainDir)
+	snapshotDB, err := dbm.NewDB(dbname, sdkserver.GetAppDBBackend(appOpts), snapshotChainDir)
 	if err != nil {
 		return nil, err
 	}
@@ -103,4 +100,16 @@ func GetSnapshotStore(appOpts sdk.AppOptions) (*snapshots.Store, error) {
 	}
 
 	return snapshotStore, nil
+}
+
+func GetSnapshotStoreDir(appOpts sdk.AppOptions) (string, string, error) {
+	chainID := GetChainId(appOpts)
+	homeDir := cast.ToString(appOpts.Get(flags.FlagHome))
+	snapshotDir := filepath.Join(homeDir, "data", "snapshots")
+	if err := os.MkdirAll(snapshotDir, 0o744); err != nil {
+		return "", "", fmt.Errorf("failed to create snapshots directory: %w", err)
+	}
+	snapshotChainDir := filepath.Join(snapshotDir, chainID)
+
+	return "metadata", snapshotChainDir, nil
 }
