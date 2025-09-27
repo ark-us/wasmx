@@ -1126,7 +1126,16 @@ func buildBlockProposal(txs [][]byte, optimisticExecution bool, _cummulatedGas i
 		return err
 	}
 	misbehavior := []typestnd.Misbehavior{}
-	timeISO := time.Now().UTC().Format(time.RFC3339)
+	timeNow := time.Now()
+	timeISO := timeNow.UTC().Format(time.RFC3339Nano)
+
+	t, _ := time.Parse(time.RFC3339Nano, st.LastTime)
+
+	// protect against the machine recalibrating time, make sure this time is > than state.last_time
+	if t.UnixMilli() >= timeNow.UnixMilli() {
+		Revert(fmt.Sprintf(`last block time %s higher than current time %s, revert and skip round`, st.LastTime, timeISO))
+	}
+
 	prepareReq := typestnd.RequestPrepareProposal{
 		MaxTxBytes:         maxDataBytes,
 		Txs:                txs,

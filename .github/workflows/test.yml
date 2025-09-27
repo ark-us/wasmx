@@ -60,3 +60,4 @@ jobs:
           go test -failfast=false -timeout 2000s -v ./tests/vmkv -wasm-runtime=wazero
           go test -failfast=false -timeout 2000s -v ./tests/vmhttp -wasm-runtime=wazero
           go test -failfast=false -timeout 2000s -v ./tests/vmemail -wasm-runtime=wazero
+          # go test -failfast=false -timeout 2000s -v ./tests/vmpostgresql -wasm-runtime=wazero
