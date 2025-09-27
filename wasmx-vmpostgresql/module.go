@@ -158,7 +158,7 @@ func (am AppModule) EndTransaction(ctx context.Context, txmode sdk.ExecMode, gIn
 				return fmt.Errorf("cannot rollback postgresql open tx: %s", err.Error())
 			}
 		}
-		conn.OpenSavepointTx.Invalidate()
+		conn.OpenSavepointTx.Close()
 		conn.OpenSavepointTx = nil
 		conn.resetSavePoints()
 	}

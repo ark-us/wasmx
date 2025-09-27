@@ -39,7 +39,7 @@ type Calldata struct {
 	CreateDatabase *vmpostgresql.SqlCreateDatabase      `json:"CreateDatabase,omitempty"`
 }
 
-var localConn = `postgresql://localhost:5432/postgres`
+var localConn = `postgresql://postgres@localhost:5432/postgres`
 
 // var conn0db = "postgres"
 var dbname = "testpostgres"
