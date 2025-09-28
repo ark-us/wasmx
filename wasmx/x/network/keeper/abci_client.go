@@ -558,13 +558,13 @@ func (c *ABCIClient) Tx(ctx context.Context, hash []byte, prove bool) (*rpctypes
 	var entry types.BlockEntry
 	err = json.Unmarshal(resp.Data, &entry)
 	if err != nil {
-		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode BlockEntry")
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Tx failed to decode BlockEntry")
 	}
 
 	var bmeta types.RequestProcessProposalWithMetaInfo
 	err = c.nk.Codec().UnmarshalJSON(entry.Data, &bmeta)
 	if err != nil {
-		return nil, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode RequestProcessProposalWithMetaInfo")
+		return nil, errorsmod.Wrapf(err, "ABCIClient.Tx failed to decode RequestProcessProposalWithMetaInfo")
 	}
 	blockData := bmeta.Request
 
@@ -765,9 +765,9 @@ func (c *ABCIClient) CheckTxAsync(ctx context.Context, req *abci.RequestCheckTx)
 // height is nil for latest block
 func (c *ABCIClient) GetBlockEntry(ctx context.Context, height *int64) (*types.BlockEntry, int64, error) {
 	latestHeight, err := c.LatestBlockHeight(ctx)
-	c.logger.Debug("ABCIClient.Block", "latest height", latestHeight)
+	c.logger.Debug("ABCIClient.GetBlockEntry", "latest height", latestHeight)
 	if err != nil {
-		return nil, latestHeight, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+		return nil, latestHeight, errorsmod.Wrapf(err, "ABCIClient.GetBlockEntry failed")
 	}
 	blockHeight, err := getHeight(latestHeight, height)
 	if err != nil {
@@ -783,7 +783,7 @@ func (c *ABCIClient) GetBlockEntryByHeight(ctx context.Context, height int64) (*
 	key := types.GetBlockKey(height)
 	resp, err := c.fsmQuery(key)
 	if err != nil {
-		return nil, height, errorsmod.Wrapf(err, "ABCIClient.Block failed")
+		return nil, height, errorsmod.Wrapf(err, "ABCIClient.GetBlockEntryByHeight failed")
 	}
 
 	if len(resp.Data) == 0 {
@@ -793,7 +793,7 @@ func (c *ABCIClient) GetBlockEntryByHeight(ctx context.Context, height int64) (*
 	var entry types.BlockEntry
 	err = json.Unmarshal(resp.Data, &entry)
 	if err != nil {
-		return nil, height, errorsmod.Wrapf(err, "ABCIClient.Block failed to decode BlockEntry")
+		return nil, height, errorsmod.Wrapf(err, "ABCIClient.GetBlockEntryByHeight failed to decode BlockEntry")
 	}
 	return &entry, height, nil
 }

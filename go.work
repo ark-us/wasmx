@@ -37,8 +37,8 @@ use (
 )
 
 replace (
-	// go get github.com/loredanacirstea/cosmos-db@25a006eb6d2edfed9ca453bd4126e7beb6d91f7a
-	github.com/cosmos/cosmos-db => github.com/loredanacirstea/cosmos-db v1.0.3-0.20250927203546-25a006eb6d2e
+	// go get github.com/loredanacirstea/cosmos-db@c3cda2071a0e24399f845be60f398a5477cc436f
+	github.com/cosmos/cosmos-db => github.com/loredanacirstea/cosmos-db v1.0.3-0.20250928222443-c3cda2071a0e
 
 	// github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 	// cosmossdk.io/store => ../cosmos-sdk/store

@@ -93,5 +93,6 @@ application.
 	blockHeightPtr = cmd.Flags().Int64("height", 0, "block height to remove, optional")
 	cmd.Flags().String(flags.FlagChainID, "testnet", "Specify Chain ID for sending Tx")
 	cmd.Flags().String(multichain.FlagRegistryChainId, "", "multichain registry chain id")
+	cmd.Flags().String("db_backend", "", "database backend")
 	return cmd
 }
