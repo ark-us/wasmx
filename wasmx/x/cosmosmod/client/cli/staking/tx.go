@@ -69,13 +69,13 @@ func NewCreateValidatorCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec address.Cod
 		Long:  `Create a new validator initialized with a self-delegation by submitting a JSON file with the new validator details.`,
 		Example: strings.TrimSpace(
 			fmt.Sprintf(`
-$ %s tx staking create-validator path/to/validator.json --from keyname
+$ %s tx cosmosmod staking create-validator path/to/validator.json --from keyname
 
 Where validator.json contains:
 
 {
 	"pubkey": {"type_url":"/cosmos.crypto.ed25519.PubKey","value":"eyJrZXkiOiJqZXFaQU1mSHpZS1cyT0IraDlFWktiRW9mVEhETHduWG1sWSt5bXFkdk1jPSJ9"},
-	"amount": "1000000stake",
+	"amount": "10000000000000000000amyt",
 	"moniker": "myvalidator",
 	"identity": "optional identity signature (ex. UPort or Keybase)",
 	"website": "validator's (optional) website",
@@ -84,7 +84,7 @@ Where validator.json contains:
 	"commission-rate": "0.1",
 	"commission-max-rate": "0.2",
 	"commission-max-change-rate": "0.01",
-	"min-self-delegation": "1"
+	"min-self-delegation": "1000000000000"
 }
 
 where we can get the pubkey using "%s tendermint show-validator"
