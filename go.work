@@ -40,8 +40,8 @@ replace (
 	// go get github.com/loredanacirstea/cosmos-db@c3cda2071a0e24399f845be60f398a5477cc436f
 	github.com/cosmos/cosmos-db => github.com/loredanacirstea/cosmos-db v1.0.3-0.20250928222443-c3cda2071a0e
 
-	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250425153656-ca9792061eb7
-	cosmossdk.io/store => github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20250425153656-ca9792061eb7
+	github.com/cosmos/cosmos-sdk => github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20250930184820-a24c1f11e77e
+	cosmossdk.io/store => github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20250930184820-a24c1f11e77e
 
 	// github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 	// cosmossdk.io/store => ../cosmos-sdk/store
