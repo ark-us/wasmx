@@ -17,6 +17,8 @@ import (
 
 func (k *Keeper) SetSystemBootstrap(ctx sdk.Context, data *types.SystemBootstrap) error {
 	k.Logger(ctx).Info("SetSystemBootstrap", "CodeRegistryAddress", data.CodeRegistryAddress.String(), "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress.String(), "chain_id", ctx.ChainID())
+	ctx.Logger().Info("SetSystemBootstrap", "CodeRegistryAddress", data.CodeRegistryAddress.String(), "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress.String(), "chain_id", ctx.ChainID())
+	fmt.Println("SetSystemBootstrap", "CodeRegistryAddress", data.CodeRegistryAddress.String(), "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress.String(), "chain_id", ctx.ChainID())
 	internalData := &types.SystemBootstrapData{
 		RoleAddress:              data.RoleAddress.String(),
 		CodeRegistryAddress:      data.CodeRegistryAddress.String(),
@@ -37,6 +39,8 @@ func (k *Keeper) SetSystemBootstrap(ctx sdk.Context, data *types.SystemBootstrap
 // * governance upgrades for cached contracts (roles, codes)
 func (k *Keeper) SetSystemBootstrapData(ctx sdk.Context, data *types.SystemBootstrapData) error {
 	k.Logger(ctx).Info("store system cache: SetSystemBootstrapData", "CodeRegistryAddress", data.CodeRegistryAddress, "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress, "chain_id", ctx.ChainID())
+	ctx.Logger().Info("store system cache: SetSystemBootstrapData", "CodeRegistryAddress", data.CodeRegistryAddress, "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress, "chain_id", ctx.ChainID())
+	fmt.Println("store system cache: SetSystemBootstrapData", "CodeRegistryAddress", data.CodeRegistryAddress, "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress, "chain_id", ctx.ChainID())
 	store := ctx.KVStore(k.storeKey)
 	databz, err := json.Marshal(data)
 	if err != nil {
@@ -53,6 +57,9 @@ func (k *Keeper) SetSystemBootstrapData(ctx sdk.Context, data *types.SystemBoots
 // otherwise, we would get results hash mismatch in blocks due to gas consumption
 func (k *Keeper) GetSystemBootstrapData(ctx_ sdk.Context) (*types.SystemBootstrapData, error) {
 	k.Logger(ctx_).Info("load system cache: GetSystemBootstrapData", "chain_id", ctx_.ChainID())
+	ctx_.Logger().Info("load system cache: GetSystemBootstrapData(2)", "chain_id", ctx_.ChainID())
+	fmt.Println("load system cache: GetSystemBootstrapData", "chain_id", ctx_.ChainID())
+
 	ctx := sdk.NewContext(ctx_.MultiStore().CacheMultiStore(), ctx_.BlockHeader(), ctx_.IsCheckTx(), ctx_.Logger())
 	ctx = ctx.WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
 
@@ -67,6 +74,8 @@ func (k *Keeper) GetSystemBootstrapData(ctx_ sdk.Context) (*types.SystemBootstra
 		return nil, sdkerr.Wrapf(err, "cannot unmarshal system bootstrap data")
 	}
 	k.Logger(ctx_).Info("load system cache: GetSystemBootstrapData", "chain_id", ctx_.ChainID(), "CodeRegistryAddress", data.CodeRegistryAddress, "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress)
+	ctx_.Logger().Info("load system cache: GetSystemBootstrapData(2)", "chain_id", ctx_.ChainID(), "CodeRegistryAddress", data.CodeRegistryAddress, "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress)
+	fmt.Println("load system cache: GetSystemBootstrapData", "chain_id", ctx_.ChainID(), "CodeRegistryAddress", data.CodeRegistryAddress, "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress)
 	return &data, nil
 }
 

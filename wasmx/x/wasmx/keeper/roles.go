@@ -61,6 +61,7 @@ func (k *Keeper) GetAddressOrRoleInitial(ctx sdk.Context, addressOrRole string) 
 
 // GetContractAddressByRoleInitial
 func (k *Keeper) GetContractAddressByRoleInitial(ctx sdk.Context, role string) (mcodec.AccAddressPrefixed, bool) {
+	fmt.Println("--GetContractAddressByRoleInitial--", role)
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.GetRolePrefix(types.AccAddressFromHex(types.ADDR_ROLES), role))
 	if bz == nil {
@@ -70,17 +71,20 @@ func (k *Keeper) GetContractAddressByRoleInitial(ctx sdk.Context, role string) (
 	if err != nil {
 		return mcodec.AccAddressPrefixed{}, false
 	}
+	fmt.Println("--GetContractAddressByRoleInitial.addr--", addr.String())
 	return addr, true
 }
 
 // SetContractAddressByRole
 func (k *Keeper) SetContractAddressByRole(ctx sdk.Context, role string, contractAddress mcodec.AccAddressPrefixed) {
+	fmt.Println("--SetContractAddressByRole--", role, contractAddress.String())
 	store := ctx.KVStore(k.storeKey)
 	store.Set(types.GetRolePrefix(types.AccAddressFromHex(types.ADDR_ROLES), role), []byte(contractAddress.String()))
 }
 
 // GetRoleByLabelInitial
 func (k *Keeper) GetRoleByLabelInitial(ctx sdk.Context, label string) *types.RoleChanged {
+	fmt.Println("--GetRoleByLabelInitial--", label)
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.GetRoleLabelPrefix(types.AccAddressFromHex(types.ADDR_ROLES), label))
 	if bz == nil {
@@ -91,6 +95,7 @@ func (k *Keeper) GetRoleByLabelInitial(ctx sdk.Context, label string) *types.Rol
 	if err != nil {
 		return nil
 	}
+	fmt.Println("--GetRoleByLabelInitial.rolej--", rolej)
 	return rolej
 }
 
@@ -99,6 +104,7 @@ func (k *Keeper) SetRoleByLabel(ctx sdk.Context, role *types.RoleChanged) {
 	if role == nil {
 		return
 	}
+	fmt.Println("--SetRoleByLabel--", role)
 	store := ctx.KVStore(k.storeKey)
 	value, err := k.cdc.Marshal(&types.RoleChanged{Role: role.Role, Label: role.Label, ContractAddress: role.ContractAddress})
 	if err != nil {
@@ -109,13 +115,16 @@ func (k *Keeper) SetRoleByLabel(ctx sdk.Context, role *types.RoleChanged) {
 
 // GetRoleLabelByContractInitial
 func (k *Keeper) GetRoleLabelByContractInitial(ctx sdk.Context, contractAddress sdk.AccAddress) string {
+	fmt.Println("--GetRoleLabelByContractInitial--", contractAddress)
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.GetRoleContractPrefix(types.AccAddressFromHex(types.ADDR_ROLES), contractAddress))
+	fmt.Println("--GetRoleLabelByContractInitial.res--", string(bz))
 	return string(bz)
 }
 
 // SetRoleLabelByContract
 func (k *Keeper) SetRoleLabelByContract(ctx sdk.Context, contractAddress sdk.AccAddress, label string) {
+	fmt.Println("--SetRoleLabelByContract--", label, contractAddress.String())
 	store := ctx.KVStore(k.storeKey)
 	store.Set(types.GetRoleContractPrefix(types.AccAddressFromHex(types.ADDR_ROLES), contractAddress), []byte(label))
 }
@@ -149,7 +158,10 @@ func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec
 	if err != nil {
 		// this happens only at chain instantiation, so we read directly from storage
 		if strings.Contains(err.Error(), `contract: not found`) {
+			k.Logger(ctx).Info("reading directly from storage, must be instantiating the chain: get address or role", "addressOrRole", addressOrRole)
+			fmt.Println("---GetAddressOrRoleInitial--", addressOrRole, err.Error())
 			resultAddr, err := k.GetAddressOrRoleInitial(ctx, addressOrRole)
+			fmt.Println("---GetAddressOrRoleInitial--", err, resultAddr)
 			if err != nil {
 				return mcodec.AccAddressPrefixed{}, err
 			}
@@ -187,6 +199,8 @@ func (k *Keeper) GetRoleLabelByContract(ctx sdk.Context, contractAddress mcodec.
 	if err != nil {
 		// this happens only at chain instantiation, so we read directly from storage
 		if strings.Contains(err.Error(), `contract: not found`) {
+			k.Logger(ctx).Info("reading directly from storage, must be instantiating the chain: get role label from address", "address", contractAddress.String())
+			fmt.Println("---GetRoleLabelByContractInitial--", contractAddress.String(), err.Error())
 			return k.GetRoleLabelByContractInitial(ctx, contractAddress.Bytes())
 		}
 		return ""
@@ -203,7 +217,10 @@ func (k *Keeper) GetRoleByLabel(ctx sdk.Context, label string) *types.RoleJSON {
 	if err != nil {
 		// this happens only at chain instantiation, so we read directly from storage
 		if strings.Contains(err.Error(), `contract: not found`) {
+			k.Logger(ctx).Info("reading directly from storage, must be instantiating the chain: get role by label", "label", label)
+			fmt.Println("---GetRoleByLabelInitial--", label, err.Error())
 			role := k.GetRoleByLabelInitial(ctx, label)
+			fmt.Println("---GetRoleByLabelInitial--", role)
 			return &types.RoleJSON{Role: role.Role, Primary: 0, Labels: []string{role.Label}, Addresses: []string{role.ContractAddress}}
 		}
 		return nil
