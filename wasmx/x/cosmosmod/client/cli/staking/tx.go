@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -26,6 +27,8 @@ import (
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	"github.com/loredanacirstea/wasmx/multichain"
+	cmsrvconfig "github.com/loredanacirstea/wasmx/server/config"
+	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
@@ -104,6 +107,11 @@ where we can get the pubkey using "%s tendermint show-validator"
 			chainapp := appCreator(chainId, mcctx.Config)
 			defer chainapp.Teardown()
 
+			memo, err := memoFromAppConfig(cmd, chainId)
+			if err != nil {
+				return fmt.Errorf("failed to determine memo from app config: %w", err)
+			}
+
 			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
 			if err != nil {
 				return err
@@ -114,7 +122,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 				return fmt.Errorf("could not parse validator JSON file: %s", err.Error())
 			}
 
-			txf, msg, err := newBuildCreateValidatorMsg(mcctx.ClientCtx, customValCodec, mcctx.CustomAddrCodec, txf, cmd.Flags(), validator)
+			txf, msg, err := newBuildCreateValidatorMsg(mcctx.ClientCtx, customValCodec, mcctx.CustomAddrCodec, txf, cmd.Flags(), validator, memo)
 			if err != nil {
 				return err
 			}
@@ -475,7 +483,7 @@ $ %s tx staking cancel-unbond %s1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj 100stake
 	return cmd
 }
 
-func newBuildCreateValidatorMsg(clientCtx client.Context, customValCodec mcodec.ValBech32Codec, valAc address.Codec, txf tx.Factory, fs *flag.FlagSet, val validator) (tx.Factory, *types.MsgCreateValidator, error) {
+func newBuildCreateValidatorMsg(clientCtx client.Context, customValCodec mcodec.ValBech32Codec, valAc address.Codec, txf tx.Factory, fs *flag.FlagSet, val validator, thismemo string) (tx.Factory, *types.MsgCreateValidator, error) {
 	valAddr := customValCodec.BytesToValAddressPrefixed(clientCtx.GetFromAddress())
 
 	description := types.NewDescription(
@@ -508,9 +516,38 @@ func newBuildCreateValidatorMsg(clientCtx client.Context, customValCodec mcodec.
 	}
 
 	memo, _ := fs.GetString(FlagMemo)
-	if memo != "" {
-		txf = txf.WithMemo(memo)
+	if memo == "" {
+		memo = thismemo
 	}
+	if memo == "" {
+		panic("empty memo")
+	}
+	txf = txf.WithMemo(memo)
 
 	return txf, msg, nil
+}
+
+func memoFromAppConfig(cmd *cobra.Command, chainId string) (string, error) {
+	serverCtx := sdkserver.GetServerContextFromCmd(cmd)
+	if serverCtx == nil || serverCtx.Viper == nil {
+		return "", fmt.Errorf("server context not initialized")
+	}
+
+	cfg, err := cmsrvconfig.GetConfig(serverCtx.Viper)
+	if err != nil {
+		return "", fmt.Errorf("read app config: %w", err)
+	}
+
+	peers := networktypes.GetPeersFromConfigIps(chainId, cfg.Network.Ips)
+	idx, err := networktypes.GetCurrentNodeIdFromConfig(chainId, cfg.Network.Id)
+	if idx < 0 || idx >= len(peers) {
+		return "", fmt.Errorf("node id %d out of bounds for chain %s (available peers: %d)", idx, chainId, len(peers))
+	}
+
+	memo := peers[idx]
+	if memo == "" {
+		return "", fmt.Errorf("memo resolved empty for chain %s at index %d", chainId, idx)
+	}
+
+	return memo, nil
 }
