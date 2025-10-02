@@ -1248,11 +1248,13 @@ func (app *App) EndBlocker(ctx sdk.Context, metadata []byte) (sdk.EndBlock, erro
 }
 
 func (app *App) BeginTransaction(ctx context.Context, txmode sdk.ExecMode, txBytes []byte) error {
+	fmt.Println("--app.BeginTransaction--", app.ChainID(), txmode)
 	// TODO maybe give access to contracts to this hook
 	return app.mm.BeginTransaction(ctx, txmode, txBytes)
 }
 
 func (app *App) EndTransaction(ctx context.Context, txmode sdk.ExecMode, gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, err error) error {
+	fmt.Println("--app.EndTransaction--", app.ChainID(), txmode, gInfo.GasUsed, err)
 	// TODO maybe give access to contracts to this hook
 	return app.mm.EndTransaction(ctx, txmode, gInfo, result, anteEvents, err)
 }

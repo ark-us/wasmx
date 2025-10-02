@@ -3,6 +3,7 @@ package vm
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/libs/protoio"
@@ -166,7 +167,9 @@ func FinalizeBlock(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	}
 
 	bapp := ctx.GetApplication()
+	fmt.Println("--host.FinalizeBlock--")
 	resp, err := bapp.FinalizeBlockSimple(&req.Request)
+	fmt.Println("--host.FinalizeBlock.END--", err)
 	errmsg := ""
 	if err != nil {
 		ctx.Ctx.Logger().Error(errorsmod.Wrapf(err, "FinalizeBlockSimple failed").Error(), "host_api", "consensus", "function", "FinalizeBlock")
