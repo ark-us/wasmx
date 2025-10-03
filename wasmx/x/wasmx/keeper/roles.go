@@ -120,8 +120,24 @@ func (k *Keeper) SetRoleLabelByContract(ctx sdk.Context, contractAddress sdk.Acc
 	store.Set(types.GetRoleContractPrefix(types.AccAddressFromHex(types.ADDR_ROLES), contractAddress), []byte(label))
 }
 
-// GetRoleByContractAddress
+// TODO cache roles contract in SystemBootstrap
+// GetRoleByContractAddress ; used in WasmxCall
 func (k *Keeper) GetRoleByContractAddress(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) *types.RoleJSON {
+	cache := k.MustGetSystemBootstrap(ctx)
+	if cache.RoleAddress.String() == contractAddress.String() {
+		role, err := k.GetRoleByRoleName(ctx, types.ROLE_ROLES)
+		if err != nil {
+			return nil
+		}
+		return role
+	}
+	if cache.CodeRegistryAddress.String() == contractAddress.String() {
+		role, err := k.GetRoleByRoleName(ctx, types.ROLE_STORAGE_CONTRACTS)
+		if err != nil {
+			return nil
+		}
+		return role
+	}
 	label := k.GetRoleLabelByContract(ctx, contractAddress)
 	if label == "" {
 		return nil
@@ -143,12 +159,23 @@ func (k *Keeper) IsInternalContract(ctx sdk.Context, addressOrRole string) (bool
 }
 
 func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec.AccAddressPrefixed, error) {
-	contractAddr := k.GetRoleContractAddress(ctx)
+	if addressOrRole == "" {
+		return mcodec.AccAddressPrefixed{}, fmt.Errorf("addressOrRole is empty")
+	}
+	cache := k.MustGetSystemBootstrap(ctx)
+	if addressOrRole == types.ROLE_ROLES {
+		return cache.RoleAddress, nil
+	}
+	if addressOrRole == types.ROLE_STORAGE_CONTRACTS {
+		return cache.CodeRegistryAddress, nil
+	}
+	contractAddr := cache.RoleAddress
 	msg := fmt.Sprintf(`{"GetAddressOrRole":{"addressOrRole":"%s"}}`, addressOrRole)
 	data, err := k.internalQuery(ctx, contractAddr, msg)
 	if err != nil {
 		// this happens only at chain instantiation, so we read directly from storage
 		if strings.Contains(err.Error(), `contract: not found`) {
+			k.Logger(ctx).Info("reading directly from storage, must be instantiating the chain: get address or role", "addressOrRole", addressOrRole)
 			resultAddr, err := k.GetAddressOrRoleInitial(ctx, addressOrRole)
 			if err != nil {
 				return mcodec.AccAddressPrefixed{}, err
@@ -165,6 +192,9 @@ func (k *Keeper) GetAddressOrRole(ctx sdk.Context, addressOrRole string) (mcodec
 }
 
 func (k *Keeper) GetRoleByRoleName(ctx sdk.Context, roleName string) (*types.RoleJSON, error) {
+	if roleName == "" {
+		return nil, fmt.Errorf("host.GetRoleByRoleName: empty role")
+	}
 	contractAddr := k.GetRoleContractAddress(ctx)
 	msg := fmt.Sprintf(`{"GetRoleByRoleName":{"role":"%s"}}`, roleName)
 	data, err := k.internalQuery(ctx, contractAddr, msg)
@@ -187,6 +217,7 @@ func (k *Keeper) GetRoleLabelByContract(ctx sdk.Context, contractAddress mcodec.
 	if err != nil {
 		// this happens only at chain instantiation, so we read directly from storage
 		if strings.Contains(err.Error(), `contract: not found`) {
+			k.Logger(ctx).Info("reading directly from storage, must be instantiating the chain: get role label from address", "address", contractAddress.String())
 			return k.GetRoleLabelByContractInitial(ctx, contractAddress.Bytes())
 		}
 		return ""
@@ -196,6 +227,9 @@ func (k *Keeper) GetRoleLabelByContract(ctx sdk.Context, contractAddress mcodec.
 
 // GetRoleByLabel
 func (k *Keeper) GetRoleByLabel(ctx sdk.Context, label string) *types.RoleJSON {
+	if label == "" {
+		return nil
+	}
 	contractAddr := k.GetRoleContractAddress(ctx)
 	msg := fmt.Sprintf(`{"GetRoleByLabel":{"label":"%s"}}`, label)
 	// Note! role contract should not have any other depedencies aside from the host import interface
@@ -203,6 +237,7 @@ func (k *Keeper) GetRoleByLabel(ctx sdk.Context, label string) *types.RoleJSON {
 	if err != nil {
 		// this happens only at chain instantiation, so we read directly from storage
 		if strings.Contains(err.Error(), `contract: not found`) {
+			k.Logger(ctx).Info("reading directly from storage, must be instantiating the chain: get role by label", "label", label)
 			role := k.GetRoleByLabelInitial(ctx, label)
 			return &types.RoleJSON{Role: role.Role, Primary: 0, Labels: []string{role.Label}, Addresses: []string{role.ContractAddress}}
 		}

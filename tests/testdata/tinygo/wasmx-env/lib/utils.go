@@ -99,14 +99,14 @@ func OnlyRole(moduleName string, roleName string, message string) {
 // OnlyInternal restricts calls to internal/core contract callers.
 func OnlyInternal(moduleName string, message string) {
 	caller := GetCaller()
-	if HasRole(caller, moduleName) {
+	addr := GetAddress()
+	if caller == addr {
 		return
 	}
 	if IsGoCoreModule(AddrCanonicalize(string(caller))) {
 		return
 	}
-	addr := GetAddress()
-	if caller == addr {
+	if HasRole(caller, moduleName) {
 		return
 	}
 	msg := fmt.Sprintf("%s: unauthorized caller: %s: %s", moduleName, caller, message)

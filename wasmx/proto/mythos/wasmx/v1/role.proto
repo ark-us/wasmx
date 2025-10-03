@@ -47,9 +47,13 @@ message SystemBootstrapData {
     option (gogoproto.equal) = false;
     // bech32 address of contract for roles
     string role_address = 1;
+    uint64 role_registry_id = 2;
+    CodeInfoPB role_registry_code_info = 3;
+    ContractInfoPB role_registry_contract_info = 4;
+
     // bech32 address of contract for contract data storage
-    string code_registry_address = 2;
-    uint64 code_registry_id = 3;
-    CodeInfoPB code_registry_code_info = 4;
-    ContractInfoPB code_registry_contract_info = 5;
+    string code_registry_address = 5;
+    uint64 code_registry_id = 6;
+    CodeInfoPB code_registry_code_info = 7;
+    ContractInfoPB code_registry_contract_info = 8;
 }

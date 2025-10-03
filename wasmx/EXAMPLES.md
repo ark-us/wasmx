@@ -16,7 +16,7 @@ mythosd start --home=./testnet/node0/mythosd --db_backend=postgresql
 ## create a chain with 2 validators on the same machine
 
 ```bash
-mythosd testnet init-files --network.initial-chains=mythos --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p --min-level-validators=2 --enable-eid=false
+mythosd testnet init-files --chain-id=mythos_7000-14 --network.initial-chains=mythos --output-dir=$(pwd)/testnet --v=2 --keyring-backend=test --minimum-gas-prices="1000amyt" --same-machine=true --nocors --libp2p --min-level-validators=2 --enable-eid=false
 
 mythosd start --home=./testnet/node0/mythosd --same-machine-node-index=0
 mythosd start --home=./testnet/node1/mythosd --same-machine-node-index=1

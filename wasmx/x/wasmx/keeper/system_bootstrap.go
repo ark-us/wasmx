@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -16,9 +17,12 @@ import (
 )
 
 func (k *Keeper) SetSystemBootstrap(ctx sdk.Context, data *types.SystemBootstrap) error {
-	k.Logger(ctx).Info("SetSystemBootstrap", "CodeRegistryAddress", data.CodeRegistryAddress.String(), "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress.String(), "chain_id", ctx.ChainID())
+	k.Logger(ctx).Info("SetSystemBootstrap", "CodeRegistryAddress", data.CodeRegistryAddress.String(), "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress.String(), "RoleRegistryId", data.RoleRegistryId, "chain_id", ctx.ChainID())
 	internalData := &types.SystemBootstrapData{
 		RoleAddress:              data.RoleAddress.String(),
+		RoleRegistryId:           data.RoleRegistryId,
+		RoleRegistryCodeInfo:     data.RoleRegistryCodeInfo.ToProto(),
+		RoleRegistryContractInfo: data.RoleRegistryContractInfo.ToProto(),
 		CodeRegistryAddress:      data.CodeRegistryAddress.String(),
 		CodeRegistryId:           data.CodeRegistryId,
 		CodeRegistryCodeInfo:     data.CodeRegistryCodeInfo.ToProto(),
@@ -36,12 +40,13 @@ func (k *Keeper) SetSystemBootstrap(ctx sdk.Context, data *types.SystemBootstrap
 // * at chain bootstrap for system contracts
 // * governance upgrades for cached contracts (roles, codes)
 func (k *Keeper) SetSystemBootstrapData(ctx sdk.Context, data *types.SystemBootstrapData) error {
-	k.Logger(ctx).Info("store system cache: SetSystemBootstrapData", "CodeRegistryAddress", data.CodeRegistryAddress, "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress, "chain_id", ctx.ChainID())
 	store := ctx.KVStore(k.storeKey)
 	databz, err := json.Marshal(data)
 	if err != nil {
 		return sdkerr.Wrapf(err, "cannot marshal system bootstrap data")
 	}
+	k.Logger(ctx).Info("store system cache: SetSystemBootstrapData", "chain_id", ctx.ChainID(), "data", string(databz))
+
 	store.Set(types.GetCacheSystemBootstrapPrefix(), databz)
 	return nil
 }
@@ -52,7 +57,6 @@ func (k *Keeper) SetSystemBootstrapData(ctx sdk.Context, data *types.SystemBoots
 // reading does not change state root hashes, and we make it not consume gas
 // otherwise, we would get results hash mismatch in blocks due to gas consumption
 func (k *Keeper) GetSystemBootstrapData(ctx_ sdk.Context) (*types.SystemBootstrapData, error) {
-	k.Logger(ctx_).Info("load system cache: GetSystemBootstrapData", "chain_id", ctx_.ChainID())
 	ctx := sdk.NewContext(ctx_.MultiStore().CacheMultiStore(), ctx_.BlockHeader(), ctx_.IsCheckTx(), ctx_.Logger())
 	ctx = ctx.WithGasMeter(storetypes.NewGasMeter(k.queryGasLimit))
 
@@ -62,27 +66,29 @@ func (k *Keeper) GetSystemBootstrapData(ctx_ sdk.Context) (*types.SystemBootstra
 	if databz == nil {
 		return nil, fmt.Errorf("system bootstrap data missing")
 	}
+	k.Logger(ctx_).Info("load system cache: GetSystemBootstrapData", "chain_id", ctx_.ChainID(), "data", string(databz))
 	err := json.Unmarshal(databz, &data)
 	if err != nil {
 		return nil, sdkerr.Wrapf(err, "cannot unmarshal system bootstrap data")
 	}
-	k.Logger(ctx_).Info("load system cache: GetSystemBootstrapData", "chain_id", ctx_.ChainID(), "CodeRegistryAddress", data.CodeRegistryAddress, "CodeRegistryId", data.CodeRegistryId, "RoleAddress", data.RoleAddress)
 	return &data, nil
 }
 
-func (k *Keeper) GetRoleContractAddress(ctx sdk.Context) mcodec.AccAddressPrefixed {
+func (k *Keeper) MustGetSystemBootstrap(ctx sdk.Context) *types.SystemBootstrap {
 	data := k.GetSystemBootstrap(ctx)
 	if data == nil {
 		panic("cannot find system bootstrap data")
 	}
+	return data
+}
+
+func (k *Keeper) GetRoleContractAddress(ctx sdk.Context) mcodec.AccAddressPrefixed {
+	data := k.MustGetSystemBootstrap(ctx)
 	return data.RoleAddress
 }
 
 func (k *Keeper) GetCodeRegistryAddress(ctx sdk.Context) mcodec.AccAddressPrefixed {
-	data := k.GetSystemBootstrap(ctx)
-	if data == nil {
-		panic("cannot find system bootstrap data")
-	}
+	data := k.MustGetSystemBootstrap(ctx)
 	return data.CodeRegistryAddress
 }
 
@@ -104,6 +110,9 @@ func (k *Keeper) GetSystemBootstrap(ctx sdk.Context) *types.SystemBootstrap {
 		}
 		data = &types.SystemBootstrap{
 			RoleAddress:              roleAddress,
+			RoleRegistryId:           _data.RoleRegistryId,
+			RoleRegistryCodeInfo:     _data.RoleRegistryCodeInfo.ToJson(),
+			RoleRegistryContractInfo: _data.RoleRegistryContractInfo.ToJson(),
 			CodeRegistryAddress:      registryAddress,
 			CodeRegistryId:           _data.CodeRegistryId,
 			CodeRegistryCodeInfo:     _data.CodeRegistryCodeInfo.ToJson(),
@@ -118,11 +127,23 @@ func (k *Keeper) UpdateSystemCache(ctx sdk.Context, req *types.SystemBootstrap) 
 	if req == nil {
 		return nil
 	}
-	k.Logger(ctx).Info("update system cache: UpdateSystemCache", "chain_id", ctx.ChainID(), "CodeRegistryAddress", req.CodeRegistryAddress, "CodeRegistryId", req.CodeRegistryId, "RoleAddress", req.RoleAddress)
+	k.Logger(ctx).Info("update system cache: UpdateSystemCache", "chain_id", ctx.ChainID(), "CodeRegistryAddress", req.CodeRegistryAddress, "CodeRegistryId", req.CodeRegistryId, "RoleAddress", req.RoleAddress, "RoleRegistryId", req.RoleRegistryId)
 	cache := k.GetSystemBootstrap(ctx)
 	if len(req.RoleAddress.Bytes()) > 0 {
 		cache.RoleAddress = req.RoleAddress
 		k.Logger(ctx).Info("system cache updated roles", "contract_address", req.RoleAddress.String())
+		if req.RoleRegistryId > 0 {
+			cache.RoleRegistryId = req.RoleRegistryId
+			k.Logger(ctx).Info("system cache updated roles", "code_id", req.RoleRegistryId)
+		}
+		if req.RoleRegistryCodeInfo != nil {
+			cache.RoleRegistryCodeInfo = req.RoleRegistryCodeInfo
+			k.Logger(ctx).Info("system cache updated roles", "code_info", hex.EncodeToString(req.RoleRegistryCodeInfo.CodeHash))
+		}
+		if req.RoleRegistryContractInfo != nil {
+			cache.RoleRegistryContractInfo = req.RoleRegistryContractInfo
+			k.Logger(ctx).Info("system cache updated roles", "contract_info", req.RoleRegistryContractInfo.CodeId)
+		}
 	}
 	if len(req.CodeRegistryAddress.Bytes()) > 0 {
 		k.Logger(ctx).Info("system cache updated codes", "contract_address", req.CodeRegistryAddress.String())
@@ -183,7 +204,10 @@ func (k *Keeper) EndBlockResultHandler(ctx sdk.Context, resp *abci.ResponseFinal
 				if err != nil {
 					return sdkerr.Wrapf(err, "roles upgrade invalid address %s", contractAddrStr)
 				}
-				cache.RoleAddress = addr
+				err = k.UpdateSystemCacheRoles(ctx, cache, addr)
+				if err != nil {
+					return err
+				}
 				changed = true
 			}
 			if role == types.ROLE_STORAGE_CONTRACTS {
@@ -220,5 +244,20 @@ func (k *Keeper) UpdateSystemCacheCodes(ctx sdk.Context, cache *types.SystemBoot
 	}
 	cache.CodeRegistryCodeInfo = codeInfo
 	cache.CodeRegistryContractInfo = contractInfo
+	return nil
+}
+
+func (k *Keeper) UpdateSystemCacheRoles(ctx sdk.Context, cache *types.SystemBootstrap, addr mcodec.AccAddressPrefixed) error {
+	cache.RoleAddress = addr
+	// get code & contract info for address
+	contractInfo, codeInfo, _, err := k.ContractInstance(ctx, cache.RoleAddress)
+	if err != nil {
+		return sdkerr.Wrapf(err, "contract registry code info upgrade not found %s", addr.String())
+	}
+	if codeInfo == nil || contractInfo == nil {
+		return fmt.Errorf("contract registry code info upgrade not found %s", addr.String())
+	}
+	cache.RoleRegistryCodeInfo = codeInfo
+	cache.RoleRegistryContractInfo = contractInfo
 	return nil
 }

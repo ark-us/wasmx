@@ -89,6 +89,9 @@ type GlobalStorageResetResponse struct {
 
 type UpdateSystemCacheRequest struct {
 	RoleAddress              wasmx.Bech32String  `json:"role_address"`
+	RoleRegistryId           uint64              `json:"role_registry_id"`
+	RoleRegistryCodeInfo     *wasmx.CodeInfo     `json:"role_registry_code_info"`
+	RoleRegistryContractInfo *wasmx.ContractInfo `json:"role_registry_contract_info"`
 	CodeRegistryAddress      wasmx.Bech32String  `json:"code_registry_address"`
 	CodeRegistryID           uint64              `json:"code_registry_id"`
 	CodeRegistryCodeInfo     *wasmx.CodeInfo     `json:"code_registry_code_info"`
