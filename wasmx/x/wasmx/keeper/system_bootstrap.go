@@ -78,19 +78,21 @@ func (k *Keeper) GetSystemBootstrapData(ctx_ sdk.Context) (*types.SystemBootstra
 	return &data, nil
 }
 
-func (k *Keeper) GetRoleContractAddress(ctx sdk.Context) mcodec.AccAddressPrefixed {
+func (k *Keeper) MustGetSystemBootstrap(ctx sdk.Context) *types.SystemBootstrap {
 	data := k.GetSystemBootstrap(ctx)
 	if data == nil {
 		panic("cannot find system bootstrap data")
 	}
+	return data
+}
+
+func (k *Keeper) GetRoleContractAddress(ctx sdk.Context) mcodec.AccAddressPrefixed {
+	data := k.MustGetSystemBootstrap(ctx)
 	return data.RoleAddress
 }
 
 func (k *Keeper) GetCodeRegistryAddress(ctx sdk.Context) mcodec.AccAddressPrefixed {
-	data := k.GetSystemBootstrap(ctx)
-	if data == nil {
-		panic("cannot find system bootstrap data")
-	}
+	data := k.MustGetSystemBootstrap(ctx)
 	return data.CodeRegistryAddress
 }
 
