@@ -201,15 +201,14 @@ func (suite *KeeperTestSuite) TestUpgradeCacheRolesContract() {
 	s.Require().NoError(err)
 	s.Require().NotNil(cached)
 	s.Require().Equal(newAddress.String(), cached.RoleAddress)
-	s.Require().Equal(codeId, cached.RoleRegistryId)
+	s.Require().Equal(contractInfo.CodeId, cached.RoleRegistryId)
 	s.Require().NotNil(cached.RoleRegistryCodeInfo)
 	s.Require().NotNil(cached.RoleRegistryContractInfo)
 
-	cachedCodeInfo := cached.CodeRegistryCodeInfo
-	cachedContractInfo := cached.CodeRegistryContractInfo
-	s.Require().True(bytes.Equal(codeInfo.CodeHash, cachedCodeInfo.CodeHash))
-	s.Require().True(bytes.Equal([]byte(codeInfo.CodeHash), cachedCodeInfo.CodeHash))
+	cachedCodeInfo := cached.RoleRegistryCodeInfo
+	cachedContractInfo := cached.RoleRegistryContractInfo
 	s.Require().Equal([]string(codeInfo.Deps), cachedCodeInfo.Deps)
+	s.Require().True(bytes.Equal([]byte(codeInfo.CodeHash), cachedCodeInfo.CodeHash), fmt.Sprintf(`expected %s, got %s`, hex.EncodeToString(codeInfo.CodeHash), hex.EncodeToString(cachedCodeInfo.CodeHash)))
 	s.Require().True(bytes.Equal([]byte(codeInfo.InterpretedBytecodeDeployment), cachedCodeInfo.InterpretedBytecodeDeployment))
 	s.Require().True(bytes.Equal([]byte(codeInfo.InterpretedBytecodeRuntime), cachedCodeInfo.InterpretedBytecodeRuntime))
 	s.Require().Equal(codeInfo.MeteringOff, cachedCodeInfo.MeteringOff)

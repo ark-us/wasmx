@@ -208,6 +208,7 @@ func (k *Keeper) create(ctx sdk.Context, creator *mcodec.AccAddressPrefixed, was
 	if err != nil {
 		return 0, checksum, err
 	}
+	checksum = codeInfo.CodeHash
 	codeID, err = k.storeNewCodeInfo(ctx, codeInfo)
 	if err != nil {
 		return 0, checksum, err
