@@ -383,7 +383,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodes() {
 	gashex := "57296d07"
 	calld = gashex
 	qres = appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b974974", qres)
+	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b995c4e", qres)
 }
 
 func (suite *KeeperTestSuite) TestEwasmOpcodesGas() {
@@ -403,7 +403,7 @@ func (suite *KeeperTestSuite) TestEwasmOpcodesGas() {
 
 	calld := "57296d07"
 	qres := appA.WasmxQuery(sender, contractAddress, types.WasmxExecutionMessage{Data: appA.Hex2bz(calld)}, nil, nil)
-	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b974974", qres)
+	s.Require().Equal("000000000000000000000000000000000000000000000000000000003b995c4e", qres)
 }
 
 func (suite *KeeperTestSuite) TestEwasmSimpleStorage() {
@@ -688,9 +688,9 @@ func (suite *KeeperTestSuite) TestCallOutOfGas() {
 	value := "0000000000000000000000000000000000000000000000000000000000000005"
 	msgFibStore := types.WasmxExecutionMessage{Data: append(appA.Hex2bz(fibstorehex), appA.Hex2bz(value)...)}
 	// gas limit is chosen to be > than needed to run the antehandler but < than needed to execute the actual transaction
-	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 2_000_000, nil)
+	res, err := appA.ExecuteContractNoCheck(sender, contractAddress, msgFibStore, nil, nil, 1_300_000, nil)
 	// 1093970 - is executed just for the antehandler
-	// 2235235 successful execution
+	// 1590983 successful execution
 	s.Require().NoError(err)
 	s.Require().False(res.IsOK(), res.GetLog())
 	s.Require().True(res.IsErr(), res.GetLog())
