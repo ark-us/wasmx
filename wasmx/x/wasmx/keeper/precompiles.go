@@ -36,6 +36,10 @@ func (k *Keeper) BootstrapSystemContracts(
 	}
 
 	var rolesAddress mcodec.AccAddressPrefixed
+	var roleRegistryId uint64
+	var roleRegistryCodeInfo types.CodeInfo
+	var roleRegistryContractInfo types.ContractInfo
+
 	var registryAddress mcodec.AccAddressPrefixed
 	var registryId uint64
 	var registryCodeInfo types.CodeInfo
@@ -90,13 +94,27 @@ func (k *Keeper) BootstrapSystemContracts(
 			registryCodeInfo = codeInfo
 			registryContractInfo = contractInfo
 		}
+		if contract.Role != nil && contract.Role.Role == types.ROLE_ROLES {
+			roleRegistryId = codeID
+			roleRegistryCodeInfo = codeInfo
+			roleRegistryContractInfo = contractInfo
+		}
 
 		genesisRegistry.CodeInfos[i] = codeInfo
 		genesisRegistry.ContractInfos[i] = types.MsgSetContractInfoRequest{Address: contractAddress.Bytes(), ContractInfo: contractInfo}
 	}
 
 	// initialize SystemBootstrap
-	bootstrapData := &types.SystemBootstrap{RoleAddress: rolesAddress, CodeRegistryAddress: registryAddress, CodeRegistryId: registryId, CodeRegistryCodeInfo: &registryCodeInfo, CodeRegistryContractInfo: &registryContractInfo}
+	bootstrapData := &types.SystemBootstrap{
+		RoleAddress:              rolesAddress,
+		RoleRegistryId:           roleRegistryId,
+		RoleRegistryCodeInfo:     &roleRegistryCodeInfo,
+		RoleRegistryContractInfo: &roleRegistryContractInfo,
+		CodeRegistryAddress:      registryAddress,
+		CodeRegistryId:           registryId,
+		CodeRegistryCodeInfo:     &registryCodeInfo,
+		CodeRegistryContractInfo: &registryContractInfo,
+	}
 	err := k.SetSystemBootstrap(ctx, bootstrapData)
 	if err != nil {
 		return err

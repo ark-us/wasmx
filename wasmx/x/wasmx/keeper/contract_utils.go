@@ -111,6 +111,9 @@ func (k *Keeper) GetCodeInfo(ctx sdk.Context, codeId uint64) (*types.CodeInfo, e
 	if cache.CodeRegistryId == codeId {
 		return cache.CodeRegistryCodeInfo, nil
 	}
+	if codeId == cache.RoleRegistryId {
+		return cache.RoleRegistryCodeInfo, nil
+	}
 
 	registryAddr := cache.CodeRegistryAddress
 	msg := fmt.Sprintf(`{"GetCodeInfo":{"code_id":%d}}`, codeId)
@@ -138,6 +141,9 @@ func (k *Keeper) GetContractInfo(ctx sdk.Context, address mcodec.AccAddressPrefi
 	registryAddr := cache.CodeRegistryAddress
 	if registryAddr.String() == address.String() {
 		return cache.CodeRegistryContractInfo, nil
+	}
+	if address.String() == cache.RoleAddress.String() {
+		return cache.RoleRegistryContractInfo, nil
 	}
 
 	msg := fmt.Sprintf(`{"GetContractInfo":{"address":"%s"}}`, base64.StdEncoding.EncodeToString(address.Bytes()))
@@ -171,6 +177,9 @@ func (k *Keeper) ContractInstance(ctx sdk.Context, contractAddress mcodec.AccAdd
 	registryAddr := cache.CodeRegistryAddress
 	if registryAddr.String() == contractAddress.String() {
 		return cache.CodeRegistryContractInfo, cache.CodeRegistryCodeInfo, prefixStoreKey, nil
+	}
+	if contractAddress.String() == cache.RoleAddress.String() {
+		return cache.RoleRegistryContractInfo, cache.RoleRegistryCodeInfo, prefixStoreKey, nil
 	}
 
 	msg := fmt.Sprintf(`{"GetContractInstance":{"address":"%s"}}`, base64.StdEncoding.EncodeToString(contractAddress.Bytes()))
