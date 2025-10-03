@@ -44,7 +44,6 @@ func (m MultipliedGasMeter) GasConsumed() storetypes.Gas {
 // consume gas in wasm VM units
 func (m MultipliedGasMeter) ConsumeGas(gas storetypes.Gas, descriptor string) {
 	descriptor = fmt.Sprintf("wasmx: %s", descriptor)
-	fmt.Println("--MultipliedGasMeter.ConsumeGas--", descriptor, gas)
 	sdkgas := m.GasRegister.FromWasmVMGas(gas)
 	m.originalMeter.ConsumeGas(sdkgas, descriptor)
 }
