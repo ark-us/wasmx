@@ -144,7 +144,9 @@ func (k *Keeper) GetContractDependencyInner(ctx sdk.Context, addr mcodec.AccAddr
 	}
 
 	// shortcut for roles contract, to avoid cycle
-	if k.GetRoleContractAddress(ctx).String() == addr.String() {
+	rolesaddr := k.GetRoleContractAddress(ctx).String()
+	fmt.Println("--GetContractDependencyInner--", addr.String(), rolesaddr, rolesaddr == addr.String())
+	if rolesaddr == addr.String() {
 		cdep.Role = types.ROLE_ROLES
 		cdep.RoleLabel = contractInfo.Label
 		return cdep, nil

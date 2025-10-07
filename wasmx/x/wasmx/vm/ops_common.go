@@ -15,11 +15,13 @@ import (
 
 func GetContractDependency(ctx *Context, addr mcodec.AccAddressPrefixed) *types.ContractDependency {
 	depContext, ok := ctx.ContractRouter[addr.String()]
+	fmt.Println("--GetContractDependency.ContractRouter.cache--", addr.String(), ok, depContext.ContractInfo.Role != types.ROLE_LIBRARY)
 	if ok {
 		if depContext.ContractInfo.Role != types.ROLE_LIBRARY {
 			return depContext.ContractInfo
 		}
 	}
+	fmt.Println("--GetContractDependency.ContractRouter.nocache--", addr.String())
 	dep, err := ctx.CosmosHandler.GetContractDependency(ctx.Ctx, addr)
 	if err != nil {
 		return nil
@@ -207,7 +209,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		StorageType:   toStorageType,
 		StoreKey:      storeKey,
 	}
-
+	// TODO we should have this info already?
 	role := ctx.CosmosHandler.GetRoleByContractAddress(ctx.Ctx, req.To)
 	if role != nil {
 		destContractInfo.Role = role.Role
@@ -259,12 +261,14 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 	newrouter[tostr] = newctx
 
 	if appWithHooksEnabled {
+		fmt.Println("--WasmxCall.BeginSubCall--")
 		err := appWithHooks.BeginSubCall(newctx.Ctx, newctx.CurrentSubCallLevel, newctx.CurrentSubCallId, req.IsQuery)
 		if err != nil {
 			errmsg := fmt.Sprintf("BeginSubCall error: %s", err.Error())
 			return int32(1), []byte(errmsg)
 		}
 	}
+	fmt.Println("--WasmxCall.Execute--")
 	_, err := newctx.Execute()
 	var success int32
 	returnData := newctx.ReturnData
@@ -284,6 +288,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		}
 	}
 	if appWithHooksEnabled {
+		fmt.Println("--WasmxCall.EndSubCall--")
 		err2 := appWithHooks.EndSubCall(newctx.Ctx, newctx.CurrentSubCallLevel, newctx.CurrentSubCallId, req.IsQuery, err)
 		if err2 != nil {
 			newctx.Logger(newctx.Ctx).Debug("EndSubCall error: "+err2.Error(), "data", hex.EncodeToString(newctx.ReturnData))

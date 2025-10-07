@@ -182,6 +182,7 @@ func (k KeeperAuth) SetAccountPrefixed(goCtx context.Context, acc mcodec.Account
 	if err != nil {
 		return err
 	}
+	// TODO make this a GOCORE_MODULE_ADDRESS - GOCORE_ADDR_AUTH
 	_, err = k.WasmxKeeper.Execute(ctx, modaddr, modaddr, execmsg, nil, nil, false)
 	if err != nil {
 		return err

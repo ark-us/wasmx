@@ -916,6 +916,10 @@ github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20251002153952-bda13055f957 h1:5
 github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20251002153952-bda13055f957/go.mod h1:xockbhPJll8lOl8K/unHQXK6nhUlVt3AZwXdPM9dDaI=
 github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20251003130622-449957441ffa h1:+m41ycxLsiADSPrrY3iDlTwnTwxHeJNgV34mqua3O0o=
 github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20251003130622-449957441ffa/go.mod h1:xockbhPJll8lOl8K/unHQXK6nhUlVt3AZwXdPM9dDaI=
+github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20251004120310-6de0fd0582b4 h1:sHTYaFmoSfAcWSVKrnR/+j8BgmSw8BGXKJq5VzYyD0k=
+github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20251004120310-6de0fd0582b4/go.mod h1:xockbhPJll8lOl8K/unHQXK6nhUlVt3AZwXdPM9dDaI=
+github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20251007161911-57e22b2d0aac h1:rb7S32Ywq3BbvdGzYabD2h+xRxihV8KRxjBfyBQpZKI=
+github.com/loredanacirstea/cosmos-sdk v0.50.7-0.20251007161911-57e22b2d0aac/go.mod h1:xockbhPJll8lOl8K/unHQXK6nhUlVt3AZwXdPM9dDaI=
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20250425153656-ca9792061eb7 h1:8If7LoLY6UnAZ7Nhi0pFSLtsHGml7W8kcfExo8HFDnA=
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20250425153656-ca9792061eb7/go.mod h1:N2BcH1OXHUtnMWvcAHpXNZCzymhLcbOFV5d0y1tlCOs=
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20250930184820-a24c1f11e77e h1:CbG+vCGb7u1gLMluaIP3BEGpb9X8pwubaryx50LP0rg=
@@ -926,6 +930,10 @@ github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20251002153952-bda13055f957
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20251002153952-bda13055f957/go.mod h1:N2BcH1OXHUtnMWvcAHpXNZCzymhLcbOFV5d0y1tlCOs=
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20251003130622-449957441ffa h1:C3xLoAsVBcQUrwZDWbFrL4JIjLvKybB4uv8CIKfPtpw=
 github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20251003130622-449957441ffa/go.mod h1:N2BcH1OXHUtnMWvcAHpXNZCzymhLcbOFV5d0y1tlCOs=
+github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20251004120310-6de0fd0582b4 h1:0maBXRP5biOBBqzs+M94mg9ep3EGAnBE6f3kzejkdXQ=
+github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20251004120310-6de0fd0582b4/go.mod h1:N2BcH1OXHUtnMWvcAHpXNZCzymhLcbOFV5d0y1tlCOs=
+github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20251007161911-57e22b2d0aac h1:dt/JTH8qJ1KpHjH2j9z6TQMZ5LsVpERWlyL7UXvTMLw=
+github.com/loredanacirstea/cosmos-sdk/store v1.1.1-0.20251007161911-57e22b2d0aac/go.mod h1:N2BcH1OXHUtnMWvcAHpXNZCzymhLcbOFV5d0y1tlCOs=
 github.com/lufeee/execinquery v1.2.1/go.mod h1:EC7DrEKView09ocscGHC+apXMIaorh4xqSxS/dy8SbM=
 github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0/go.mod h1:zJYVVT2jmtg6P3p1VtQj7WsuWi/y4VnjVBn7F8KPB3I=
 github.com/lyft/protoc-gen-star/v2 v2.0.4-0.20230330145011-496ad1ac90a4/go.mod h1:amey7yeodaJhXSbf/TlLvWiqQfLOSpEk//mLlc+axEk=
