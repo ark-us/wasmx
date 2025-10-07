@@ -15,8 +15,9 @@ import (
 
 func GetContractDependency(ctx *Context, addr mcodec.AccAddressPrefixed) *types.ContractDependency {
 	depContext, ok := ctx.ContractRouter[addr.String()]
-	fmt.Println("--GetContractDependency.ContractRouter.cache--", addr.String(), ok, depContext.ContractInfo.Role != types.ROLE_LIBRARY)
+	fmt.Println("--GetContractDependency.ContractRouter.cache--", addr.String(), ok)
 	if ok {
+		fmt.Println("--GetContractDependency.ContractRouter.cache--", addr.String(), ok, depContext.ContractInfo.Role != types.ROLE_LIBRARY)
 		if depContext.ContractInfo.Role != types.ROLE_LIBRARY {
 			return depContext.ContractInfo
 		}
