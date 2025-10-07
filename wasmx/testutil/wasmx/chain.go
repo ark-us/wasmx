@@ -200,7 +200,7 @@ func (suite *KeeperTestSuite) TearDownChains() {
 	level0Chain := suite.GetChain(mcfg.LEVEL0_CHAIN_ID)
 	mapps, err := level0Chain.App.GetMultiChainApp()
 	suite.Require().NoError(err)
-	apps := mapps.GetApps()
+	apps := mapps.GetAppsUnsafe()
 	for _, appi := range apps {
 		app := appi.(mcfg.MythosApp)
 		app.Teardown()

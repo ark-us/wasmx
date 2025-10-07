@@ -104,7 +104,10 @@ func (k *Keeper) GetNextCodeId(ctx sdk.Context) (codeId uint64, err error) {
 }
 
 func (k *Keeper) GetCodeInfo(ctx sdk.Context, codeId uint64) (*types.CodeInfo, error) {
-	cache := k.GetSystemBootstrap(ctx)
+	cache, err := k.GetSystemBootstrap(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if cache == nil {
 		return nil, fmt.Errorf("cannot find system bootstrap data")
 	}
@@ -134,7 +137,10 @@ func (k *Keeper) GetCodeInfo(ctx sdk.Context, codeId uint64) (*types.CodeInfo, e
 }
 
 func (k *Keeper) GetContractInfo(ctx sdk.Context, address mcodec.AccAddressPrefixed) (*types.ContractInfo, error) {
-	cache := k.GetSystemBootstrap(ctx)
+	cache, err := k.GetSystemBootstrap(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if cache == nil {
 		return nil, fmt.Errorf("cannot find system bootstrap data")
 	}
@@ -170,7 +176,10 @@ func (k *Keeper) GetCode(checksum types.Checksum, deps []string) (types.WasmCode
 func (k *Keeper) ContractInstance(ctx sdk.Context, contractAddress mcodec.AccAddressPrefixed) (*types.ContractInfo, *types.CodeInfo, []byte, error) {
 	prefixStoreKey := types.GetContractStorePrefix(contractAddress.Bytes())
 
-	cache := k.GetSystemBootstrap(ctx)
+	cache, err := k.GetSystemBootstrap(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	if cache == nil {
 		return nil, nil, nil, fmt.Errorf("cannot find system bootstrap data")
 	}

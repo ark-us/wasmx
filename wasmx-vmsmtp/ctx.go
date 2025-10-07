@@ -7,8 +7,8 @@ import (
 
 func WithSmtpEmptyContext(ctx context.Context) context.Context {
 	vctx := &SmtpContext{
-		DbConnections:     map[string]*SmtpOpenConnection{},
-		ServerConnections: map[string]*SmtpServerConnection{},
+		dbConnections:     map[string]*SmtpOpenConnection{},
+		serverConnections: map[string]*SmtpServerConnection{},
 	}
 	return context.WithValue(ctx, SmtpContextKey, vctx)
 }

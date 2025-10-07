@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -16,19 +17,47 @@ type ExecutionMetaInfoContextKey string
 const ExecutionMetaInfoKey ExecutionMetaInfoContextKey = "ExecutionMetaInfo"
 
 type ExecutionMetaInfo struct {
-	Data     map[string]interface{}
-	TempData map[string]interface{}
+	data        map[string]interface{}
+	mtxData     sync.Mutex
+	tempData    map[string]interface{}
+	mtxTempData sync.Mutex
+}
+
+func (m *ExecutionMetaInfo) GetData(key string) (interface{}, bool) {
+	m.mtxData.Lock()
+	defer m.mtxData.Unlock()
+	v, found := m.data[key]
+	return v, found
+}
+
+func (m *ExecutionMetaInfo) SetData(key string, value interface{}) {
+	m.mtxData.Lock()
+	defer m.mtxData.Unlock()
+	m.data[key] = value
+}
+
+func (m *ExecutionMetaInfo) GetTempData(key string) (interface{}, bool) {
+	m.mtxTempData.Lock()
+	defer m.mtxTempData.Unlock()
+	v, found := m.tempData[key]
+	return v, found
+}
+
+func (m *ExecutionMetaInfo) SetTempData(key string, value interface{}) {
+	m.mtxTempData.Lock()
+	defer m.mtxTempData.Unlock()
+	m.tempData[key] = value
 }
 
 func NewExecutionMetaInfo(data map[string]interface{}) *ExecutionMetaInfo {
 	return &ExecutionMetaInfo{
-		Data:     data,
-		TempData: map[string]interface{}{},
+		data:     data,
+		tempData: map[string]interface{}{},
 	}
 }
 
 func WithExecutionMetaInfoEmpty(ctx context.Context) (context.Context, *ExecutionMetaInfo) {
-	data := &ExecutionMetaInfo{Data: map[string]interface{}{}, TempData: map[string]interface{}{}}
+	data := &ExecutionMetaInfo{data: map[string]interface{}{}, tempData: map[string]interface{}{}}
 	return context.WithValue(ctx, ExecutionMetaInfoKey, data), data
 }
 
@@ -56,7 +85,7 @@ func SetExecutionMetaInfo(ctx context.Context, cdc codec.Codec, metainfo map[str
 		if err != nil {
 			return err
 		}
-		data.Data[key] = msg
+		data.SetData(key, msg)
 	}
 	return nil
 }
@@ -79,7 +108,9 @@ func GetExecutionMetaInfoEncoded(ctx context.Context, cdc codec.Codec) (map[stri
 	if err != nil {
 		return metainfo, err
 	}
-	for key, value := range data.Data {
+	data.mtxData.Lock()
+	defer data.mtxData.Unlock()
+	for key, value := range data.data {
 		sdkmsg := value.(sdk.Msg)
 		anymsg, err := codectypes.NewAnyWithValue(sdkmsg)
 		if err != nil {
@@ -98,6 +129,8 @@ func ResetExecutionMetaInfo(ctx context.Context) {
 	datai := ctx.Value(ExecutionMetaInfoKey)
 	data, ok := (datai).(*ExecutionMetaInfo)
 	if ok && data != nil {
-		data.Data = map[string]interface{}{}
+		data.mtxData.Lock()
+		defer data.mtxData.Unlock()
+		data.data = map[string]interface{}{}
 	}
 }

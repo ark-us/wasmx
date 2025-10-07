@@ -135,7 +135,8 @@ func (am AppModule) EndTransaction(ctx context.Context, txmode sdk.ExecMode, gIn
 	if txmode == sdk.ExecModeFinalize {
 		shouldCommit = true
 	}
-	for _, conn := range vctx.DbConnections {
+	conns, cleanup := vctx.GetConnectionsUnsafe()
+	for _, conn := range conns {
 		if conn.OpenSavepointTx == nil {
 			continue
 		}
@@ -161,6 +162,7 @@ func (am AppModule) EndTransaction(ctx context.Context, txmode sdk.ExecMode, gIn
 		conn.OpenSavepointTx = nil
 		conn.resetSavePoints()
 	}
+	cleanup()
 	return nil
 }
 
@@ -170,7 +172,8 @@ func (am AppModule) BeginSubCall(ctx context.Context, level uint32, index uint32
 		return err
 	}
 	aeid := am.app.GetActionExecutor().GetCounter()
-	for _, conn := range vctx.DbConnections {
+	conns, cleanup := vctx.GetConnectionsUnsafe()
+	for _, conn := range conns {
 		if conn.OpenSavepointTx == nil {
 			continue
 		}
@@ -182,6 +185,7 @@ func (am AppModule) BeginSubCall(ctx context.Context, level uint32, index uint32
 			return fmt.Errorf("cannot add savepoint: %s, %s", savepoint, err.Error())
 		}
 	}
+	cleanup()
 	return nil
 }
 
@@ -192,7 +196,8 @@ func (am AppModule) EndSubCall(_ context.Context, level uint32, index uint32, is
 		return err
 	}
 	aeid := am.app.GetActionExecutor().GetCounter()
-	for _, conn := range vctx.DbConnections {
+	conns, cleanup := vctx.GetConnectionsUnsafe()
+	for _, conn := range conns {
 		if conn.OpenSavepointTx == nil {
 			continue
 		}
@@ -210,6 +215,7 @@ func (am AppModule) EndSubCall(_ context.Context, level uint32, index uint32, is
 		}
 		conn.removeSavePoint(savepoint)
 	}
+	cleanup()
 	return nil
 }
 

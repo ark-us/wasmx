@@ -3,6 +3,7 @@ package types
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
@@ -18,11 +19,25 @@ type BackgroundProcess struct {
 }
 
 type BackgroundProcesses struct {
-	Processes map[string]*BackgroundProcess
+	processes    map[string]*BackgroundProcess
+	mtxProcesses sync.Mutex
+}
+
+func (v *BackgroundProcesses) GetProcess(key string) (*BackgroundProcess, bool) {
+	v.mtxProcesses.Lock()
+	defer v.mtxProcesses.Unlock()
+	value, found := v.processes[key]
+	return value, found
+}
+
+func (v *BackgroundProcesses) SetProcess(key string, value *BackgroundProcess) {
+	v.mtxProcesses.Lock()
+	defer v.mtxProcesses.Unlock()
+	v.processes[key] = value
 }
 
 func ContextWithBackgroundProcesses(ctx context.Context) context.Context {
-	procc := &BackgroundProcesses{Processes: map[string]*BackgroundProcess{}}
+	procc := &BackgroundProcesses{processes: map[string]*BackgroundProcess{}}
 	return context.WithValue(ctx, BackgroundProcessesContextKey, procc)
 }
 
@@ -31,7 +46,7 @@ func AddBackgroundProcesses(ctx context.Context, proc *BackgroundProcess) error 
 	if err != nil {
 		return err
 	}
-	procc.Processes[proc.Label] = proc
+	procc.SetProcess(proc.Label, proc)
 	return nil
 }
 

@@ -115,3 +115,9 @@ resp = host.FinalizeBlock(finalizeReq, metainfo)
 * Mythos does not create subchains - see `HOOK_NEW_SUBCHAIN` in `DEFAULT_HOOKS_NONC` - the consensus contract does not create subchains. Subchains are created by level0 consensus, and the negotiation is done by the lobby contract between nodes, when they announce themselves as available to create a subchain.
 * `<basename>_<level>_<evm_id>-<fork>`, e.g. `ptestp_1_1001-1`, `level2_2_1002-1`, `qtestq_1_1003-1`, `level2_2_1004-1`, `level3_3_1005-1`
 * subchains of higher levels should have longer block times, they are used to store checkpoint hashes of lower level chains
+
+## Global Contexts
+
+We have extensions for adding information to the global context. E.g. `vmp2p.WithP2PEmptyContext(ctx)`, `networktypes.ContextWithMultiChainContext` etc. These extensions must:
+* take into consideration the multichain architecture - e.g. use a mapping on chainId
+* use locks for all `map`s, lower case for the `map` field name and create getter & setter functions

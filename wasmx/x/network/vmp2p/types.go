@@ -76,9 +76,9 @@ type P2PContext struct {
 	PubSub                  *pubsub.PubSub
 	Mdns                    MdnsService
 	mtxProtocolContexts     sync.Mutex
-	ProtocolContexts        map[string]*ProtocolContext // indexed by protocol ID
+	protocolContexts        map[string]*ProtocolContext // indexed by protocol ID
 	mtxCustomMessageHandler sync.Mutex
-	CustomMessageHandler    map[string]func(netmsg P2PMessage, contractAddress string, senderAddress string)
+	customMessageHandler    map[string]func(netmsg P2PMessage, contractAddress string, senderAddress string)
 	ssctx                   *StateSyncContext
 }
 
@@ -251,7 +251,7 @@ func (p *ProtocolContext) deleteStream(peer string) {
 func (p *P2PContext) getProtocolContext(protocolID string) *ProtocolContext {
 	p.mtxProtocolContexts.Lock()
 	defer p.mtxProtocolContexts.Unlock()
-	pctx, found := p.ProtocolContexts[protocolID]
+	pctx, found := p.protocolContexts[protocolID]
 	if !found {
 		return nil
 	}
@@ -261,20 +261,20 @@ func (p *P2PContext) getProtocolContext(protocolID string) *ProtocolContext {
 func (p *P2PContext) setProtocolContext(protocolID string, pctx *ProtocolContext) {
 	p.mtxProtocolContexts.Lock()
 	defer p.mtxProtocolContexts.Unlock()
-	p.ProtocolContexts[protocolID] = pctx
+	p.protocolContexts[protocolID] = pctx
 }
 
 func (p *P2PContext) getCustomMessageHandler(protocolID string) (func(netmsg P2PMessage, contractAddress string, senderAddress string), bool) {
 	p.mtxCustomMessageHandler.Lock()
 	defer p.mtxCustomMessageHandler.Unlock()
-	handler, found := p.CustomMessageHandler[protocolID]
+	handler, found := p.customMessageHandler[protocolID]
 	return handler, found
 }
 
 func (p *P2PContext) setCustomMessageHandler(protocolID string, handler func(netmsg P2PMessage, contractAddress string, senderAddress string)) {
 	p.mtxCustomMessageHandler.Lock()
 	defer p.mtxCustomMessageHandler.Unlock()
-	p.CustomMessageHandler[protocolID] = handler
+	p.customMessageHandler[protocolID] = handler
 }
 
 func (p *P2PContext) GetPeers(protocolID string) ([]string, error) {
@@ -351,14 +351,14 @@ func (p *P2PContext) DeleteChatRoom(protocolID string, topic string) error {
 }
 
 func (p *P2PContext) AddCustomHandler(name string, handler func(netmsg P2PMessage, contractAddress string, senderAddress string)) {
-	if p.CustomMessageHandler == nil {
-		p.CustomMessageHandler = map[string]func(netmsg P2PMessage, contractAddress string, senderAddress string){}
+	if p.customMessageHandler == nil {
+		p.customMessageHandler = map[string]func(netmsg P2PMessage, contractAddress string, senderAddress string){}
 	}
 	p.setCustomMessageHandler(name, handler)
 }
 
 func (p *P2PContext) GetCustomHandler(name string) func(netmsg P2PMessage, contractAddress string, senderAddress string) {
-	if p.CustomMessageHandler == nil {
+	if p.customMessageHandler == nil {
 		return nil
 	}
 	handler, ok := p.getCustomMessageHandler(name)
@@ -369,7 +369,7 @@ func (p *P2PContext) GetCustomHandler(name string) func(netmsg P2PMessage, contr
 }
 
 func WithP2PEmptyContext(ctx context.Context) context.Context {
-	p2pctx := &P2PContext{ProtocolContexts: map[string]*ProtocolContext{}}
+	p2pctx := &P2PContext{protocolContexts: map[string]*ProtocolContext{}}
 	return context.WithValue(ctx, P2PContextKey, p2pctx)
 }
 

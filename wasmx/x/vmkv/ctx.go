@@ -6,7 +6,7 @@ import (
 )
 
 func WithKvDbEmptyContext(ctx context.Context) context.Context {
-	vctx := &KvDbContext{DbConnections: map[string]*KvOpenConnection{}}
+	vctx := &KvDbContext{dbConnections: map[string]*KvOpenConnection{}}
 	return context.WithValue(ctx, KvDbContextKey, vctx)
 }
 

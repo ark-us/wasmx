@@ -217,7 +217,7 @@ func (h *WasmxCosmosHandler) FinalizeBlockResultHandler(ctx sdk.Context, resp *a
 	return h.Keeper.FinalizeBlockResultHandler(ctx, resp)
 }
 
-func (h *WasmxCosmosHandler) UpdateSystemCache(ctx sdk.Context, req *types.SystemBootstrap) error {
+func (h *WasmxCosmosHandler) UpdateSystemCache(ctx sdk.Context, req *types.SystemBootstrapPerChain) error {
 	return h.Keeper.UpdateSystemCache(ctx, req)
 }
 

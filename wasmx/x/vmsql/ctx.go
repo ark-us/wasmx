@@ -6,7 +6,7 @@ import (
 )
 
 func WithSqlEmptyContext(ctx context.Context) context.Context {
-	vctx := &SqlContext{DbConnections: map[string]*SqlOpenConnection{}}
+	vctx := &SqlContext{dbConnections: map[string]*SqlOpenConnection{}}
 	return context.WithValue(ctx, SqlContextKey, vctx)
 }
 

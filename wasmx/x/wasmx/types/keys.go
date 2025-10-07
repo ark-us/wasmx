@@ -50,6 +50,6 @@ func GetContractStorePrefix(addr sdk.AccAddress) []byte {
 }
 
 // GetCacheSystemBootstrapPrefix returns the store prefix for the system cache information for bootstrapping
-func GetCacheSystemBootstrapPrefix() []byte {
-	return KeyCacheSystemBootstrap
+func GetCacheSystemBootstrapPrefix(chainId string) []byte {
+	return append(KeyCacheSystemBootstrap, []byte(chainId)...)
 }

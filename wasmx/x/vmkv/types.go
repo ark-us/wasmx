@@ -101,31 +101,37 @@ func (v *KvOpenConnection) getCurrentStore() storetypes.KVStore {
 
 type KvDbContext struct {
 	mtx           sync.Mutex
-	DbConnections map[string]*KvOpenConnection
+	dbConnections map[string]*KvOpenConnection
+}
+
+// unsafe because they need to be unlocked after using the connections
+func (p *KvDbContext) GetConnectionsUnsafe() (map[string]*KvOpenConnection, func()) {
+	p.mtx.Lock()
+	return p.dbConnections, p.mtx.Unlock
 }
 
 func (p *KvDbContext) GetConnection(id string) (*KvOpenConnection, bool) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	db, found := p.DbConnections[id]
+	db, found := p.dbConnections[id]
 	return db, found
 }
 
 func (p *KvDbContext) SetConnection(id string, connection string, db dbm.DB, closed chan struct{}) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	_, found := p.DbConnections[id]
+	_, found := p.dbConnections[id]
 	if found {
 		return fmt.Errorf("cannot overwrite kv db connection: %s", id)
 	}
-	p.DbConnections[id] = &KvOpenConnection{Db: db, Connection: connection, Closed: closed, StoreKeys: []string{}, tempStoresMap: map[string]storetypes.CacheKVStore{}}
+	p.dbConnections[id] = &KvOpenConnection{Db: db, Connection: connection, Closed: closed, StoreKeys: []string{}, tempStoresMap: map[string]storetypes.CacheKVStore{}}
 	return nil
 }
 
 func (p *KvDbContext) DeleteConnection(id string) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	delete(p.DbConnections, id)
+	delete(p.dbConnections, id)
 }
 
 type KvConnectionRequest struct {

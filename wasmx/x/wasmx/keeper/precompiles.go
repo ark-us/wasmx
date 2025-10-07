@@ -105,7 +105,7 @@ func (k *Keeper) BootstrapSystemContracts(
 	}
 
 	// initialize SystemBootstrap
-	bootstrapData := &types.SystemBootstrap{
+	bootstrapData := &types.SystemBootstrapPerChain{
 		RoleAddress:              rolesAddress,
 		RoleRegistryId:           roleRegistryId,
 		RoleRegistryCodeInfo:     &roleRegistryCodeInfo,

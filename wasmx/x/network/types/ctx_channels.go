@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	sync "sync"
 
 	"golang.org/x/sync/errgroup"
 
@@ -16,20 +17,25 @@ const MultiChainContextKey ContextKey = "multichain-context"
 
 type MultiChainContext struct {
 	// chainId => channel
-	ResultChannels map[string]*chan MsgExecuteAtomicTxResponse
+	resultChannels    map[string]*chan MsgExecuteAtomicTxResponse
+	mtxResultChannels sync.Mutex
 
 	// chainId => channel
-	InternalCallChannels map[string]*chan MsgExecuteCrossChainCallRequestIndexed
+	internalCallChannels    map[string]*chan MsgExecuteCrossChainCallRequestIndexed
+	mtxInternalCallChannels sync.Mutex
 
 	// chainId => channel
-	InternalCallResultChannels map[string]*chan MsgExecuteCrossChainCallResponseIndexed
+	internalCallResultChannels    map[string]*chan MsgExecuteCrossChainCallResponseIndexed
+	mtxInternalCallResultChannels sync.Mutex
 
 	ChainIds            []string
 	CurrentAtomicTxHash []byte
 	// chain ids set when executing the atomic tx
-	CurrentAtomicTxChainIds []string
-	CurrentSubTxIndex       map[string]int
-	CurrentInternalCrossTx  map[string]int
+	CurrentAtomicTxChainIds   []string
+	currentSubTxIndex         map[string]int
+	mtxCurrentSubTxIndex      sync.Mutex
+	currentInternalCrossTx    map[string]int
+	mtxCurrentInternalCrossTx sync.Mutex
 
 	// TODO if we support multichain, we will advance in lock step, 1 crosschain call at a time, for each chain, so we will have a common subtx & crosstx indexes
 	// a chain cannot go more than 1 crosschaincall in advance to other chains - a lock step advancement of the atomic tx across all participating chains
@@ -39,33 +45,43 @@ type MultiChainContext struct {
 }
 
 func (mcctx *MultiChainContext) GetCurrentInternalCrossTx(chainId string) int {
-	index, ok := mcctx.CurrentInternalCrossTx[chainId]
+	mcctx.mtxCurrentInternalCrossTx.Lock()
+	defer mcctx.mtxCurrentInternalCrossTx.Unlock()
+	index, ok := mcctx.currentInternalCrossTx[chainId]
 	if !ok {
-		mcctx.CurrentInternalCrossTx[chainId] = 0
+		mcctx.currentInternalCrossTx[chainId] = 0
 		return 0
 	}
 	return index
 }
 
 func (mcctx *MultiChainContext) SetCurrentInternalCrossTx(chainId string, index int) {
-	mcctx.CurrentInternalCrossTx[chainId] = index
+	mcctx.mtxCurrentInternalCrossTx.Lock()
+	defer mcctx.mtxCurrentInternalCrossTx.Unlock()
+	mcctx.currentInternalCrossTx[chainId] = index
 }
 
 func (mcctx *MultiChainContext) GetCurrentSubTxIndex(chainId string) int {
-	index, ok := mcctx.CurrentSubTxIndex[chainId]
+	mcctx.mtxCurrentSubTxIndex.Lock()
+	defer mcctx.mtxCurrentSubTxIndex.Unlock()
+	index, ok := mcctx.currentSubTxIndex[chainId]
 	if !ok {
-		mcctx.CurrentSubTxIndex[chainId] = 0
+		mcctx.currentSubTxIndex[chainId] = 0
 		return 0
 	}
 	return index
 }
 
 func (mcctx *MultiChainContext) SetCurrentSubTxIndex(chainId string, index int) {
-	mcctx.CurrentSubTxIndex[chainId] = index
+	mcctx.mtxCurrentSubTxIndex.Lock()
+	defer mcctx.mtxCurrentSubTxIndex.Unlock()
+	mcctx.currentSubTxIndex[chainId] = index
 }
 
 func (mcctx *MultiChainContext) GetResultChannel(chainId string) (*chan MsgExecuteAtomicTxResponse, error) {
-	mcchannel, ok := mcctx.ResultChannels[chainId]
+	mcctx.mtxResultChannels.Lock()
+	defer mcctx.mtxResultChannels.Unlock()
+	mcchannel, ok := mcctx.resultChannels[chainId]
 	if !ok {
 		return nil, fmt.Errorf("channel not found for chain_id: %s", chainId)
 	}
@@ -73,7 +89,9 @@ func (mcctx *MultiChainContext) GetResultChannel(chainId string) (*chan MsgExecu
 }
 
 func (mcctx *MultiChainContext) SetResultChannel(chainId string, value *chan MsgExecuteAtomicTxResponse) error {
-	mcctx.ResultChannels[chainId] = value
+	mcctx.mtxResultChannels.Lock()
+	defer mcctx.mtxResultChannels.Unlock()
+	mcctx.resultChannels[chainId] = value
 	if !slices.Contains(mcctx.ChainIds, chainId) {
 		mcctx.ChainIds = append(mcctx.ChainIds, chainId)
 	}
@@ -81,7 +99,9 @@ func (mcctx *MultiChainContext) SetResultChannel(chainId string, value *chan Msg
 }
 
 func (mcctx *MultiChainContext) GetInternalCallChannel(chainId string) (*chan MsgExecuteCrossChainCallRequestIndexed, error) {
-	mcchannel, ok := mcctx.InternalCallChannels[chainId]
+	mcctx.mtxInternalCallChannels.Lock()
+	defer mcctx.mtxInternalCallChannels.Unlock()
+	mcchannel, ok := mcctx.internalCallChannels[chainId]
 	if !ok {
 		return nil, fmt.Errorf("channel not found for chain_id: %s", chainId)
 	}
@@ -89,12 +109,16 @@ func (mcctx *MultiChainContext) GetInternalCallChannel(chainId string) (*chan Ms
 }
 
 func (mcctx *MultiChainContext) SetInternalCallChannel(chainId string, value *chan MsgExecuteCrossChainCallRequestIndexed) error {
-	mcctx.InternalCallChannels[chainId] = value
+	mcctx.mtxInternalCallChannels.Lock()
+	defer mcctx.mtxInternalCallChannels.Unlock()
+	mcctx.internalCallChannels[chainId] = value
 	return nil
 }
 
 func (mcctx *MultiChainContext) GetInternalCallResultChannel(chainId string) (*chan MsgExecuteCrossChainCallResponseIndexed, error) {
-	mcchannel, ok := mcctx.InternalCallResultChannels[chainId]
+	mcctx.mtxInternalCallResultChannels.Lock()
+	defer mcctx.mtxInternalCallResultChannels.Unlock()
+	mcchannel, ok := mcctx.internalCallResultChannels[chainId]
 	if !ok {
 		return nil, fmt.Errorf("channel not found for chain_id: %s", chainId)
 	}
@@ -102,31 +126,45 @@ func (mcctx *MultiChainContext) GetInternalCallResultChannel(chainId string) (*c
 }
 
 func (mcctx *MultiChainContext) SetInternalCallResultChannel(chainId string, value *chan MsgExecuteCrossChainCallResponseIndexed) error {
-	mcctx.InternalCallResultChannels[chainId] = value
+	mcctx.mtxInternalCallResultChannels.Lock()
+	defer mcctx.mtxInternalCallResultChannels.Unlock()
+	mcctx.internalCallResultChannels[chainId] = value
 	return nil
 }
 
 func (mcctx *MultiChainContext) CloseChannels() error {
-	for _, channel := range mcctx.ResultChannels {
+	mcctx.mtxResultChannels.Lock()
+	defer mcctx.mtxResultChannels.Unlock()
+
+	mcctx.mtxInternalCallChannels.Lock()
+	defer mcctx.mtxInternalCallChannels.Unlock()
+
+	mcctx.mtxInternalCallResultChannels.Lock()
+	defer mcctx.mtxInternalCallResultChannels.Unlock()
+
+	for _, channel := range mcctx.resultChannels {
 		close(*channel)
 	}
-	for _, channel := range mcctx.InternalCallChannels {
+	for _, channel := range mcctx.internalCallChannels {
 		close(*channel)
 	}
-	for _, channel := range mcctx.InternalCallResultChannels {
+	for _, channel := range mcctx.internalCallResultChannels {
 		close(*channel)
 	}
+	mcctx.resultChannels = map[string]*chan MsgExecuteAtomicTxResponse{}
+	mcctx.internalCallChannels = map[string]*chan MsgExecuteCrossChainCallRequestIndexed{}
+	mcctx.internalCallResultChannels = map[string]*chan MsgExecuteCrossChainCallResponseIndexed{}
 	return nil
 }
 
 func ContextWithMultiChainContext(g *errgroup.Group, ctx context.Context, logger log.Logger) context.Context {
 	mcctx := &MultiChainContext{
-		ResultChannels:             make(map[string]*chan MsgExecuteAtomicTxResponse, 0),
-		InternalCallChannels:       make(map[string]*chan MsgExecuteCrossChainCallRequestIndexed, 0),
-		InternalCallResultChannels: make(map[string]*chan MsgExecuteCrossChainCallResponseIndexed, 0),
+		resultChannels:             make(map[string]*chan MsgExecuteAtomicTxResponse, 0),
+		internalCallChannels:       make(map[string]*chan MsgExecuteCrossChainCallRequestIndexed, 0),
+		internalCallResultChannels: make(map[string]*chan MsgExecuteCrossChainCallResponseIndexed, 0),
 		CurrentAtomicTxHash:        make([]byte, 0),
-		CurrentSubTxIndex:          make(map[string]int, 0),
-		CurrentInternalCrossTx:     make(map[string]int, 0),
+		currentSubTxIndex:          make(map[string]int, 0),
+		currentInternalCrossTx:     make(map[string]int, 0),
 	}
 	ctx = context.WithValue(ctx, MultiChainContextKey, mcctx)
 	// close channels when parent context closes

@@ -72,31 +72,37 @@ func (conn *SqlOpenConnection) resetSavePoints() {
 
 type SqlContext struct {
 	mtx           sync.Mutex
-	DbConnections map[string]*SqlOpenConnection
+	dbConnections map[string]*SqlOpenConnection
+}
+
+// unsafe because they need to be unlocked after using the connections
+func (p *SqlContext) GetConnectionsUnsafe() (map[string]*SqlOpenConnection, func()) {
+	p.mtx.Lock()
+	return p.dbConnections, p.mtx.Unlock
 }
 
 func (p *SqlContext) GetConnection(id string) (*SqlOpenConnection, bool) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	db, found := p.DbConnections[id]
+	db, found := p.dbConnections[id]
 	return db, found
 }
 
 func (p *SqlContext) SetConnection(id string, connection string, db *sql.DB, closed chan struct{}) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	_, found := p.DbConnections[id]
+	_, found := p.dbConnections[id]
 	if found {
 		return fmt.Errorf("cannot overwrite sql connection: %s", id)
 	}
-	p.DbConnections[id] = &SqlOpenConnection{Db: db, Connection: connection, Closed: closed, savePointMap: make(map[string]bool, 0)}
+	p.dbConnections[id] = &SqlOpenConnection{Db: db, Connection: connection, Closed: closed, savePointMap: make(map[string]bool, 0)}
 	return nil
 }
 
 func (p *SqlContext) DeleteConnection(id string) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	delete(p.DbConnections, id)
+	delete(p.dbConnections, id)
 }
 
 type SqlConnectionRequest struct {

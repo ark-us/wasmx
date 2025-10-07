@@ -91,57 +91,58 @@ type ServerConnection struct {
 }
 
 type ImapContext struct {
-	mtx               sync.Mutex
-	DbConnections     map[string]*ImapOpenConnection
-	ServerConnections map[string]*ServerConnection
+	dbConnections        map[string]*ImapOpenConnection
+	mtxDbConnections     sync.Mutex
+	serverConnections    map[string]*ServerConnection
+	mtxServerConnections sync.Mutex
 }
 
 func (p *ImapContext) GetConnection(id string) (*ImapOpenConnection, bool) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	db, found := p.DbConnections[id]
+	p.mtxDbConnections.Lock()
+	defer p.mtxDbConnections.Unlock()
+	db, found := p.dbConnections[id]
 	return db, found
 }
 
 func (p *ImapContext) SetConnection(id string, conn *ImapOpenConnection) error {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	_, found := p.DbConnections[id]
+	p.mtxDbConnections.Lock()
+	defer p.mtxDbConnections.Unlock()
+	_, found := p.dbConnections[id]
 	if found {
 		return fmt.Errorf("cannot overwrite IMAP connection: %s", id)
 	}
-	p.DbConnections[id] = conn
+	p.dbConnections[id] = conn
 	return nil
 }
 
 func (p *ImapContext) DeleteConnection(id string) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	delete(p.DbConnections, id)
+	p.mtxDbConnections.Lock()
+	defer p.mtxDbConnections.Unlock()
+	delete(p.dbConnections, id)
 }
 
 func (p *ImapContext) GetServerConnection(id string) (*ServerConnection, bool) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	db, found := p.ServerConnections[id]
+	p.mtxServerConnections.Lock()
+	defer p.mtxServerConnections.Unlock()
+	db, found := p.serverConnections[id]
 	return db, found
 }
 
 func (p *ImapContext) SetServerConnection(id string, conn *ServerConnection) error {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	_, found := p.ServerConnections[id]
+	p.mtxServerConnections.Lock()
+	defer p.mtxServerConnections.Unlock()
+	_, found := p.serverConnections[id]
 	if found {
 		return fmt.Errorf("cannot overwrite IMAP connection: %s", id)
 	}
-	p.ServerConnections[id] = conn
+	p.serverConnections[id] = conn
 	return nil
 }
 
 func (p *ImapContext) DeleteServerConnection(id string) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	delete(p.ServerConnections, id)
+	p.mtxServerConnections.Lock()
+	defer p.mtxServerConnections.Unlock()
+	delete(p.serverConnections, id)
 }
 
 type ConnectionAuthType string

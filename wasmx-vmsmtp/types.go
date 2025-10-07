@@ -57,57 +57,58 @@ type SmtpServerConnection struct {
 }
 
 type SmtpContext struct {
-	mtx               sync.Mutex
-	DbConnections     map[string]*SmtpOpenConnection
-	ServerConnections map[string]*SmtpServerConnection
+	dbConnections        map[string]*SmtpOpenConnection
+	mtxDbConnections     sync.Mutex
+	serverConnections    map[string]*SmtpServerConnection
+	mtxServerConnections sync.Mutex
 }
 
 func (p *SmtpContext) GetConnection(id string) (*SmtpOpenConnection, bool) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	db, found := p.DbConnections[id]
+	p.mtxDbConnections.Lock()
+	defer p.mtxDbConnections.Unlock()
+	db, found := p.dbConnections[id]
 	return db, found
 }
 
 func (p *SmtpContext) SetConnection(id string, conn *SmtpOpenConnection) error {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	_, found := p.DbConnections[id]
+	p.mtxDbConnections.Lock()
+	defer p.mtxDbConnections.Unlock()
+	_, found := p.dbConnections[id]
 	if found {
 		return fmt.Errorf("cannot overwrite SMTP client connection: %s", id)
 	}
-	p.DbConnections[id] = conn
+	p.dbConnections[id] = conn
 	return nil
 }
 
 func (p *SmtpContext) DeleteConnection(id string) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	delete(p.DbConnections, id)
+	p.mtxDbConnections.Lock()
+	defer p.mtxDbConnections.Unlock()
+	delete(p.dbConnections, id)
 }
 
 func (p *SmtpContext) GetServerConnection(id string) (*SmtpServerConnection, bool) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	db, found := p.ServerConnections[id]
+	p.mtxServerConnections.Lock()
+	defer p.mtxServerConnections.Unlock()
+	db, found := p.serverConnections[id]
 	return db, found
 }
 
 func (p *SmtpContext) SetServerConnection(id string, conn *SmtpServerConnection) error {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	_, found := p.ServerConnections[id]
+	p.mtxServerConnections.Lock()
+	defer p.mtxServerConnections.Unlock()
+	_, found := p.serverConnections[id]
 	if found {
 		return fmt.Errorf("cannot overwrite SMTP server connection: %s", id)
 	}
-	p.ServerConnections[id] = conn
+	p.serverConnections[id] = conn
 	return nil
 }
 
 func (p *SmtpContext) DeleteServerConnection(id string) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-	delete(p.ServerConnections, id)
+	p.mtxServerConnections.Lock()
+	defer p.mtxServerConnections.Unlock()
+	delete(p.serverConnections, id)
 }
 
 type ConnectionAuthType string

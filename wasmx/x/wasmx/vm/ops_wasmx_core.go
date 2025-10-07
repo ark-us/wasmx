@@ -396,7 +396,7 @@ func coreWasmxWriteToBackgroundProcess(_context interface{}, rnh memc.RuntimeHan
 		returns[0] = ptr
 		return returns, nil
 	}
-	proc, ok := procc.Processes[contractAddress.String()]
+	proc, ok := procc.GetProcess(contractAddress.String())
 	if !ok {
 		resp.Error = "process not existent"
 		ptr, err := prepareResponse(ctx, rnh, &resp)
@@ -460,7 +460,7 @@ func coreWasmxReadFromBackgroundProcess(_context interface{}, rnh memc.RuntimeHa
 		returns[0] = ptr
 		return returns, nil
 	}
-	proc, ok := procc.Processes[contractAddress.String()]
+	proc, ok := procc.GetProcess(contractAddress.String())
 	if !ok {
 		resp.Error = "process not existent"
 		ptr, err := prepareResponse(ctx, rnh, &resp)
@@ -639,7 +639,7 @@ func coreUpdateSystemCache(_context interface{}, rnh memc.RuntimeHandler, params
 	if err != nil {
 		return nil, err
 	}
-	var req types.SystemBootstrap
+	var req types.SystemBootstrapPerChain
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
 		return nil, err

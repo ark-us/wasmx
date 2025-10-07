@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	menc "github.com/loredanacirstea/wasmx/encoding"
 )
@@ -12,7 +13,9 @@ type ContextKey string
 const MultiChainAppKey ContextKey = "MultiChainApp"
 
 type MultiChainApp struct {
-	Apps     map[string]interface{}
+	apps    map[string]interface{}
+	mtxApps sync.Mutex
+
 	ChainIds []string
 	NewApp   func(chainId string, chainCfg *menc.ChainConfig) MythosApp
 	APICtx   APICtxI
@@ -26,12 +29,15 @@ func (m *MultiChainApp) SetAppCreator(appCreator func(chainId string, chainCfg *
 	m.NewApp = appCreator
 }
 
-func (m *MultiChainApp) GetApps() map[string]interface{} {
-	return m.Apps
+// use GetAppsUnsafe only in testing, otherwise set lock
+func (m *MultiChainApp) GetAppsUnsafe() map[string]interface{} {
+	return m.apps
 }
 
 func (m *MultiChainApp) GetApp(chainId string) (interface{}, error) {
-	app, ok := m.Apps[chainId]
+	m.mtxApps.Lock()
+	defer m.mtxApps.Unlock()
+	app, ok := m.apps[chainId]
 	if !ok {
 		return nil, fmt.Errorf("app not found for chainId: %s", chainId)
 	}
@@ -39,19 +45,21 @@ func (m *MultiChainApp) GetApp(chainId string) (interface{}, error) {
 }
 
 func (m *MultiChainApp) SetApp(chainId string, app interface{}) {
-	m.Apps[chainId] = app
+	m.mtxApps.Lock()
+	defer m.mtxApps.Unlock()
+	m.apps[chainId] = app
 	m.ChainIds = append(m.ChainIds, chainId)
 }
 
 func NewMultiChainApp(apps map[string]interface{}, chainIds []string) *MultiChainApp {
 	return &MultiChainApp{
-		Apps:     apps,
+		apps:     apps,
 		ChainIds: chainIds,
 	}
 }
 
 func WithMultiChainAppEmpty(ctx context.Context) (context.Context, *MultiChainApp) {
-	mapp := &MultiChainApp{Apps: map[string]interface{}{}, ChainIds: []string{}}
+	mapp := &MultiChainApp{apps: map[string]interface{}{}, ChainIds: []string{}}
 	return context.WithValue(ctx, MultiChainAppKey, mapp), mapp
 }
 
