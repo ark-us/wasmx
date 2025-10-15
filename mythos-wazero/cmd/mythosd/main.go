@@ -6,6 +6,8 @@ import (
 
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 
+	vmimap "github.com/loredanacirstea/wasmx-vmimap"
+	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
 	runtime "github.com/loredanacirstea/wasmx-wazero"
 
 	"github.com/loredanacirstea/wasmx/app"
@@ -15,7 +17,10 @@ import (
 	"github.com/loredanacirstea/wasmx/x/network/vmcrosschain"
 	"github.com/loredanacirstea/wasmx/x/network/vmmc"
 	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
+	"github.com/loredanacirstea/wasmx/x/vmhttpclient"
+	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
 	"github.com/loredanacirstea/wasmx/x/vmkv"
+	"github.com/loredanacirstea/wasmx/x/vmoauth2client"
 	"github.com/loredanacirstea/wasmx/x/vmsql"
 )
 
@@ -29,11 +34,11 @@ func init() {
 	vmsql.Setup()
 	vmpostgresql.Setup()
 	vmkv.Setup()
-	// vmimap.Setup()
-	// vmsmtp.Setup()
-	// vmhttpclient.Setup()
-	// vmhttpserver.Setup()
-	// vmoauth2client.Setup()
+	vmimap.Setup()
+	vmsmtp.Setup()
+	vmhttpclient.Setup()
+	vmhttpserver.Setup()
+	vmoauth2client.Setup()
 }
 
 func main() {

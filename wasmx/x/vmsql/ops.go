@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
@@ -47,7 +48,10 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		}
 	}
 	// TODO req.Connection - should we restrict this path and make it relative to our DataDirectory? or introduce a list of allowed directories that WASMX can modify and make sure the path is within these directories.
-	db, err := sql.Open(req.Driver, req.Connection)
+
+	// connStr := getConnectionStr(req.Connection, ctx.DataDir)
+	connStr := getConnectionStr(connId, ctx.DataDir)
+	db, err := sql.Open(req.Driver, connStr)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -67,7 +71,7 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		case <-closedChannel:
 			// when close signal is received from Close() API
 			// database is already closed, so we exit this goroutine
-			ctx.Ctx.Logger().Info(fmt.Sprintf("database connection closed: %s", connId))
+			ctx.Ctx.Logger().Info(fmt.Sprintf("sql database connection closed: %s", connId))
 			return nil
 		}
 	})
@@ -365,7 +369,6 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Println("--prepareResponse--", string(responsebz))
 	return rnh.AllocateWriteMem(responsebz)
 }
 
@@ -426,4 +429,8 @@ func parseSqlQueryParams(params []SqlQueryParam) []interface{} {
 
 func buildConnectionId(chainId string, id string, ctx *Context) string {
 	return fmt.Sprintf("%s_%s_%s", chainId, ctx.Env.Contract.Address.String(), id)
+}
+
+func getConnectionStr(connId string, dataDir string) string {
+	return filepath.Join(dataDir, connId+".db")
 }

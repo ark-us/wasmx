@@ -16,10 +16,9 @@ require (
 
 require (
 	cosmossdk.io/math v1.5.3 // indirect
-	github.com/loredanacirstea/wasmx-utils v0.0.0 // indirect
+	github.com/loredanacirstea/wasmx-env-utils v0.0.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
-	github.com/loredanacirstea/wasmx-env-utils v0.0.0 // indirect
 )
 
 replace github.com/loredanacirstea/wasmx-env-sql => ../wasmx-env-sql

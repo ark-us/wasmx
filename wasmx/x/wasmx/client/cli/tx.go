@@ -67,6 +67,7 @@ func GetTxCmd(wasmVmMeta memc.IWasmVmMeta, ac address.Codec, appCreator multicha
 		InstantiateContractCmd(wasmVmMeta, ac, appCreator),
 		InstantiateContract2Cmd(wasmVmMeta, ac, appCreator),
 		ExecuteContractCmd(wasmVmMeta, ac, appCreator),
+		ExecuteInternalContractCmd(wasmVmMeta, ac, appCreator),
 		NewProposalExecuteContractCmd(wasmVmMeta, ac, appCreator),
 	)
 	return txCmd
@@ -340,6 +341,48 @@ func ExecuteContractCmd(wasmVmMeta memc.IWasmVmMeta, _ address.Codec, appCreator
 		Short:   "Execute a command on a wasm contract",
 		Aliases: []string{"run", "call", "exec", "ex", "e"},
 		Args:    cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			mcctx, err := multichain.MultiChainCtxByChainIdWithAppMsgs(wasmVmMeta, clientCtx, cmd.Flags(), []signing.CustomGetSigner{}, appCreator)
+			if err != nil {
+				return err
+			}
+			txf, err := tx.NewFactoryCLI(mcctx.ClientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+			toAddr_, err := mcctx.CustomAddrCodec.StringToAddressPrefixedUnsafe(args[0])
+			if err != nil {
+				return err
+			}
+			toAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(toAddr_.Bytes())
+			msg, err := parseExecuteArgs(mcctx.CustomAddrCodec, toAddr, args[1], mcctx.ClientCtx.GetFromAddress(), cmd.Flags())
+			if err != nil {
+				return err
+			}
+			if err := msg.ValidateBasic(); err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxWithFactory(mcctx.ClientCtx, txf, &msg)
+		},
+		SilenceUsage: true,
+	}
+
+	cmd.Flags().String(flagAmount, "", "Coins to send to the contract along with command")
+	multichain.AddMultiChainFlagsToCmd(cmd)
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+func ExecuteInternalContractCmd(wasmVmMeta memc.IWasmVmMeta, _ address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "execute-internal [contract_addr_bech32] [json_encoded_send_args] --amount [coins,optional]",
+		Short: "Execute a command on an internal wasm contract",
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {

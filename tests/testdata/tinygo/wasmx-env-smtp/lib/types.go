@@ -3,7 +3,7 @@ package smtp
 import (
 	"time"
 
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
 )
 
 type TlsConfig struct {
