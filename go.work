@@ -34,7 +34,6 @@ use (
 	./tests/testdata/tinygo/simple_storage
 	./tests/testdata/tinygo/imaptest
 	./tests/testdata/tinygo/smtptest
-	./tests/testdata/tinygo/kayrosbot
 )
 
 replace (
