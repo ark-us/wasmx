@@ -30,7 +30,7 @@ func Instantiate() {
 
 func main() {
 	databz := wasmx.GetCallData()
-	// fmt.Println("---databz----!!!!!!", string(databz))
+	fmt.Println("---databz----!!!!!!", string(databz))
 	calld := &Calldata{}
 	err := json.Unmarshal(databz, calld)
 	if err != nil {
@@ -107,7 +107,7 @@ func main() {
 //go:wasm-module emailchain
 //export smtp_update
 func SmtpUpdate() {
-	fmt.Println("---SmtpUpdate----!!!!!!")
+	// Note: fmt.Println can cause nil pointer dereference in reentry context
 	databz := wasmx.GetCallData()
 	calld := &ReentryCalldata{}
 	err := json.Unmarshal(databz, calld)

@@ -24,6 +24,9 @@ func (suite *KeeperTestSuite) TestEmailKayrosBot() {
 	if !suite.runEmailServer {
 		suite.T().Skipf("Skipping email server test: TestEmailKayrosBot")
 	}
+	defer os.Remove("emailchain.db")
+	defer os.Remove("emailchain.db-shm")
+	defer os.Remove("emailchain.db-wal")
 	wasmbin := tinygo.EmailChain
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)

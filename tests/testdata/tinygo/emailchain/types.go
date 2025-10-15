@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
-	"github.com/loredanacirstea/wasmx-env"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	imap "github.com/loredanacirstea/wasmx-env-imap"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap"
 	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"

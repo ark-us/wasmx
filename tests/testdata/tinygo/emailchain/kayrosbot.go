@@ -137,6 +137,7 @@ func GenerateProofFilename(timestamp int64) string {
 
 // HandleKayrosBot processes incoming emails to the bot and sends a reply with Kayros proof
 func HandleKayrosBot(req *IncomingEmailRequest) error {
+	fmt.Println("--HandleKayrosBot--")
 	// Extract subject from email
 	subject := ""
 	subjectHeaders, err := extractHeaders(req.EmailRaw, []string{"Subject"})

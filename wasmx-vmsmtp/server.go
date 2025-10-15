@@ -234,12 +234,14 @@ func startGoRoutine(
 }
 
 func (ctx *Context) HandleIncomingEmail(s Session) {
+	fmt.Println("--HandleIncomingEmail--")
 	if s.From == nil || s.To == nil || s.EmailRaw == nil {
 		return
 	}
 	s.Timestamp = time.Now().UTC().Unix()
 	msg := &ReentryCalldata{
-		IncomingEmail: &s}
+		IncomingEmail: &s,
+	}
 
 	msgbz, err := json.Marshal(msg)
 	if err != nil {

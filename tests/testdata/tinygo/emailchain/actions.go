@@ -174,6 +174,7 @@ func CreateAccount(req *CreateAccountRequest) {
 }
 
 func IncomingEmail(req *IncomingEmailRequest) {
+	fmt.Println("---emailchain.IncomingEmail----")
 	if len(req.From) == 0 {
 		wasmx.Revert([]byte("incoming email: empty from"))
 	}
@@ -220,7 +221,7 @@ func IncomingEmail(req *IncomingEmailRequest) {
 				fmt.Println(err)
 			}
 		}
-
+		fmt.Println("---emailchain.IsBotEmail----", req.To, IsBotEmail(req.To))
 		// Check if email is for Kayros bot and handle it
 		if IsBotEmail(req.To) {
 			err := HandleKayrosBot(req)
