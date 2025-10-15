@@ -4,7 +4,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/loredanacirstea/emailchain/imap/imapnum"
+	"github.com/loredanacirstea/emailchain/lib/imap/imapnum"
 )
 
 type MailboxAttr string

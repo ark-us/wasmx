@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"encoding/json"
@@ -8,10 +8,10 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	imap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
-	imap "github.com/loredanacirstea/wasmx-env-imap"
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
-	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
 
 	"github.com/loredanacirstea/mailverif/arc"
 	"github.com/loredanacirstea/mailverif/dkim"

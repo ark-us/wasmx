@@ -35,7 +35,9 @@ func (suite *KeeperTestSuite) TestEmailKayrosBot() {
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
 	// Store the emailchain contract and instantiate it
+	fmt.Println("----TestEmailKayrosBot.StoreCode----")
 	codeId := appA.StoreCode(sender, wasmbin, nil)
+	fmt.Println("----TestEmailKayrosBot.InstantiateCode----")
 	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "emailchain", nil)
 
 	// set a role to have access to protected APIs

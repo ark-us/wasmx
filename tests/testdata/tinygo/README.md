@@ -30,7 +30,7 @@ cd imaptest && GOWORK=off tinygo build -o ../imaptest.wasm -no-debug -scheduler=
 
 cd smtptest && GOWORK=off tinygo build -o ../smtptest.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 
-cd emailchain && GOWORK=off tinygo build -o ../emailchain.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
+cd emailchain && GOWORK=off tinygo build -o ../emailchain.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd && cd ..
 
 cd mailsrv && GOWORK=off tinygo build -o ../mailsrv.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 

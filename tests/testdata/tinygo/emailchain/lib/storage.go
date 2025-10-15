@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"bufio"
@@ -12,8 +12,8 @@ import (
 
 	"github.com/loredanacirstea/mailverif/dkim"
 	"github.com/loredanacirstea/mailverif/utils"
-	imap "github.com/loredanacirstea/wasmx-env-imap"
-	sql "github.com/loredanacirstea/wasmx-env-sql"
+	imap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	sql "github.com/loredanacirstea/wasmx-env-sql/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 

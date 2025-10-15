@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"encoding/json"
@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	imap "github.com/loredanacirstea/emailchain/imap"
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
-	sql "github.com/loredanacirstea/wasmx-env-sql"
+	imap "github.com/loredanacirstea/emailchain/lib/imap"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	sql "github.com/loredanacirstea/wasmx-env-sql/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 

@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"

@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"bufio"
@@ -17,12 +17,12 @@ import (
 	"github.com/loredanacirstea/mailverif/dns"
 	"github.com/loredanacirstea/mailverif/forward"
 	"github.com/loredanacirstea/mailverif/utils"
-	sql "github.com/loredanacirstea/wasmx-env-sql"
+	sql "github.com/loredanacirstea/wasmx-env-sql/lib"
 
-	"github.com/loredanacirstea/emailchain/imap"
+	"github.com/loredanacirstea/emailchain/lib/imap"
 
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
-	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 

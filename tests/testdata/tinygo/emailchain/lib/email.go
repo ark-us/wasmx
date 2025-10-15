@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"bytes"
@@ -15,8 +15,8 @@ import (
 	"github.com/loredanacirstea/mailverif/dkim"
 	"github.com/loredanacirstea/mailverif/dns"
 	"github.com/loredanacirstea/mailverif/utils"
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
-	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp/lib"
 )
 
 // TODO remove me
