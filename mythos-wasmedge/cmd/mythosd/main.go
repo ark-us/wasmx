@@ -10,7 +10,31 @@ import (
 
 	"github.com/loredanacirstea/wasmx/app"
 	cmd "github.com/loredanacirstea/wasmx/cmdutils"
+
+	vmpostgresql "github.com/loredanacirstea/wasmx-vmpostgresql"
+	"github.com/loredanacirstea/wasmx/x/network/vmcrosschain"
+	"github.com/loredanacirstea/wasmx/x/network/vmmc"
+	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
+	"github.com/loredanacirstea/wasmx/x/vmkv"
+	"github.com/loredanacirstea/wasmx/x/vmsql"
 )
+
+func init() {
+	// enabled VM extensions for contracts
+	vmp2p.Setup()
+	vmmc.Setup()
+
+	// experimental WIP, do not enable in production:
+	vmcrosschain.Setup()
+	vmsql.Setup()
+	vmpostgresql.Setup()
+	vmkv.Setup()
+	// vmimap.Setup()
+	// vmsmtp.Setup()
+	// vmhttpclient.Setup()
+	// vmhttpserver.Setup()
+	// vmoauth2client.Setup()
+}
 
 func main() {
 	rootCmd, _ := cmd.NewRootCmd(&runtime.WasmEdgeVmMeta{}, app.DefaultNodeHome, nil)
