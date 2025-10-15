@@ -1,5 +1,8 @@
 # Architecture
 
+* contracts control everything
+* Golang host gives full unopinionated access (no restrictions on permissions or WASM entrypoints)
+
 ## Transaction CYCLES
 
 ### Deterministic Txs

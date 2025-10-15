@@ -68,7 +68,7 @@ func (k *Keeper) GetSystemBootstrapData(ctx_ sdk.Context) (*types.SystemBootstra
 	var data types.SystemBootstrapData
 	databz := store.Get(types.GetCacheSystemBootstrapPrefix(ctx_.ChainID()))
 	if databz == nil {
-		return nil, fmt.Errorf("system bootstrap data missing")
+		return nil, fmt.Errorf("system bootstrap data missing: %s", ctx_.ChainID())
 	}
 	k.Logger(ctx_).Info("load system cache: GetSystemBootstrapData", "chain_id", ctx_.ChainID(), "data", string(databz))
 	err := json.Unmarshal(databz, &data)
