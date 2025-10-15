@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"encoding/json"
@@ -8,14 +8,16 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
-	"github.com/loredanacirstea/wasmx-env"
-	imap "github.com/loredanacirstea/wasmx-env-imap"
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
-	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	imap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 
 	"github.com/loredanacirstea/mailverif/arc"
 	"github.com/loredanacirstea/mailverif/dkim"
 )
+
+const MODULE_NAME = "emailchain"
 
 const ConnectionId = "emailchain"
 
@@ -46,12 +48,13 @@ type ReentryCalldata struct {
 }
 
 type IncomingEmailRequest struct {
-	ConnectionId string
-	IpFrom       string   `json:"ipfrom"`
-	From         []string `json:"from"`
-	To           []string `json:"to"`
-	EmailRaw     []byte   `json:"email_raw"`
-	Timestamp    int64    `json:"timestamp"`
+	ConnectionId      string
+	IpFrom            string   `json:"ipfrom"`
+	From              []string `json:"from"`
+	To                []string `json:"to"`
+	EmailRaw          []byte   `json:"email_raw"`
+	Timestamp         int64    `json:"timestamp"`
+	AuthenticatedUser string   `json:"authenticated_user"` // Username from SMTP authentication
 }
 
 type ConnectRequest struct {
@@ -61,9 +64,11 @@ type ConnectRequest struct {
 }
 
 type StartServerRequest struct {
-	SignOptions SignOptions         `json:"options"`
-	Smtp        vmsmtp.ServerConfig `json:"smtp"`
-	Imap        vmimap.ServerConfig `json:"imap"`
+	SignOptions      SignOptions         `json:"options"`
+	Smtp             vmsmtp.ServerConfig `json:"smtp"`
+	Imap             vmimap.ServerConfig `json:"imap"`
+	Password         string              `json:"password"`
+	KayrosBotNoStore bool                `json:"kayrosbot_no_store"` // If true, don't store emails sent by Kayros bot
 }
 
 type CloseRequest struct {

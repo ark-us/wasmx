@@ -835,6 +835,17 @@ func initTestnetFilesInternal(
 				return err
 			}
 		}
+
+		// If mythos was not generated, copy the first level0 genesis as the default genesis.json
+		if !generateMythos {
+			// Copy first level0 genesis to root genesis.json
+			firstLevel0Genesis := strings.Replace(genFiles[0], ".json", "_"+chainId0+".json", 1)
+			rootGenesis := genFiles[0]
+			err := copyFile(firstLevel0Genesis, rootGenesis)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// cleanup mocks

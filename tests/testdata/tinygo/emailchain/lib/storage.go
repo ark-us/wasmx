@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"bufio"
@@ -12,8 +12,8 @@ import (
 
 	"github.com/loredanacirstea/mailverif/dkim"
 	"github.com/loredanacirstea/mailverif/utils"
-	imap "github.com/loredanacirstea/wasmx-env-imap"
-	sql "github.com/loredanacirstea/wasmx-env-sql"
+	imap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	sql "github.com/loredanacirstea/wasmx-env-sql/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -332,19 +332,15 @@ func extractEmail(raw []byte) (*Email, error) {
 			envelope.Bcc = v
 		case imap.HEADER_LOW_IN_REPLY_TO:
 			v := h.GetValueTrimmed()
-			fmt.Println("--HEADER_LOW_IN_REPLY_TO--", v)
 			inReplyTo := strings.Trim(v, "<>")
 			envelope.InReplyTo = []string{inReplyTo}
-			fmt.Println("--envelope.InReplyTo--", envelope.InReplyTo)
 		case imap.HEADER_LOW_REPLY_TO:
 			valuestr := h.GetValueTrimmed()
-			fmt.Println("--HEADER_LOW_REPLY_TO--", valuestr)
 			v, err := imap.ParseEmailAddresses(valuestr)
 			if err != nil {
 				return nil, err
 			}
 			envelope.ReplyTo = v
-			fmt.Println("--envelope.ReplyTo--", envelope.ReplyTo)
 		default:
 			continue
 		}

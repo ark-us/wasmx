@@ -152,6 +152,7 @@ func (k *Keeper) ActivateSystemContract(
 	registryAddress mcodec.AccAddressPrefixed,
 	rolesAddress mcodec.AccAddressPrefixed,
 ) error {
+	k.Logger(ctx).Info("activating system contract", "label", contract.Label, "code_id", codeID, "role", contract.Role)
 	var err error
 	k.SetSystemContract(ctx, contract)
 

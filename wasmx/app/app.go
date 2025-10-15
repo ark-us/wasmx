@@ -207,6 +207,9 @@ import (
 	srvconfig "github.com/loredanacirstea/wasmx/server/config"
 
 	vmpostgresql "github.com/loredanacirstea/wasmx-vmpostgresql"
+	"github.com/loredanacirstea/wasmx/x/network/vmcrosschain"
+	"github.com/loredanacirstea/wasmx/x/network/vmmc"
+	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
 	"github.com/loredanacirstea/wasmx/x/vmkv"
 	"github.com/loredanacirstea/wasmx/x/vmsql"
 )
@@ -246,6 +249,19 @@ func init() {
 	}
 
 	DefaultNodeHome = filepath.Join(userHomeDir, "."+cfg.Name)
+
+	// enabled VM extensions for contracts
+	vmp2p.Setup()
+	vmmc.Setup()
+	vmcrosschain.Setup()
+	vmsql.Setup()
+	vmpostgresql.Setup()
+	vmkv.Setup()
+	// vmimap.Setup()
+	// vmsmtp.Setup()
+	// vmhttpclient.Setup()
+	// vmhttpserver.Setup()
+	// vmoauth2client.Setup()
 }
 
 // App extends an ABCI application, but with most of its parameters exported.

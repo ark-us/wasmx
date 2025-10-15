@@ -26,6 +26,7 @@ type WasmxEngine struct {
 	goRoutineGroup  *errgroup.Group
 	goContextParent context.Context
 	DataDir         string
+	WasmxDir        string
 	SourcesDir      string
 	printDebug      bool
 	app             types.Application
@@ -38,6 +39,7 @@ func NewVM(
 	goRoutineGroup *errgroup.Group,
 	goContextParent context.Context,
 	dataDir string,
+	wasmxDir string,
 	sourcesDir string,
 	printDebug bool,
 	cacheSize uint32,
@@ -50,6 +52,7 @@ func NewVM(
 		goRoutineGroup:  goRoutineGroup,
 		goContextParent: goContextParent,
 		DataDir:         dataDir,
+		WasmxDir:        wasmxDir,
 		SourcesDir:      sourcesDir,
 		printDebug:      printDebug,
 		app:             app,
@@ -61,7 +64,7 @@ func NewVM(
 func (k *WasmxEngine) Create(wasmBytecode types.WasmCode) (types.Checksum, error) {
 	// get checksum and save wasm
 	checksum := k.checksum(wasmBytecode)
-	filepath := k.build_path(k.DataDir, checksum)
+	filepath := k.build_path(k.WasmxDir, checksum)
 
 	// Read and write permissions for the owner and read-only permissions for everyone else
 	err := utils.SafeWriteFile(filepath, wasmBytecode)
@@ -105,10 +108,10 @@ func (k *WasmxEngine) Instantiate(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeDeployment) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_INSTANTIATE, env, initMsg, store, cosmosHandler, gasMeter, contractInfo, nil, false, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_INSTANTIATE, env, initMsg, store, cosmosHandler, gasMeter, contractInfo, nil, false, false, k.app, k.WasmRuntime.NewWasmVm, k.DataDir)
 	} else {
 		// TODO gas
-		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_INSTANTIATE, env, initMsg, store, cosmosHandler, gasMeter, contractInfo, nil, false, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_INSTANTIATE, env, initMsg, store, cosmosHandler, gasMeter, contractInfo, nil, false, false, k.app, k.WasmRuntime.NewWasmVm, k.DataDir)
 	}
 	if err != nil {
 		return types.ContractResponse{}, 0, err
@@ -132,9 +135,9 @@ func (k *WasmxEngine) Execute(
 	var err error
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_EXECUTE, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_EXECUTE, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm, k.DataDir)
 	} else {
-		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_EXECUTE, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_EXECUTE, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm, k.DataDir)
 	}
 
 	if err != nil {
@@ -161,9 +164,9 @@ func (k *WasmxEngine) ExecuteEntryPoint(
 
 	// TODO if it has interpreter deps
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, contractEntryPoint, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, contractEntryPoint, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm, k.DataDir)
 	} else {
-		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, contractEntryPoint, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, contractEntryPoint, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, inBackground, k.app, k.WasmRuntime.NewWasmVm, k.DataDir)
 	}
 
 	if err != nil {
@@ -192,9 +195,9 @@ func (k *WasmxEngine) Reply(
 	}
 
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, false, k.app, k.WasmRuntime.NewWasmVm, k.DataDir)
 	} else {
-		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_REPLY, env, wrappedMsgBz, store, cosmosHandler, gasMeter, contractInfo, dependencies, false, false, k.app, k.WasmRuntime.NewWasmVm, k.DataDir)
 	}
 
 	if err != nil {
@@ -218,9 +221,9 @@ func (k *WasmxEngine) QueryExecute(
 	var data types.ContractResponse
 	var err error
 	if len(codeInfo.InterpretedBytecodeRuntime) > 0 || types.HasUtf8Dep(codeInfo.Deps) {
-		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, isdebug, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasmInterpreted(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, isdebug, false, k.app, k.WasmRuntime.NewWasmVm, k.DataDir)
 	} else {
-		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, isdebug, false, k.app, k.WasmRuntime.NewWasmVm)
+		data, err = vm.ExecuteWasm(k.wasmxAuthority, k.goRoutineGroup, k.goContextParent, ctx, k.Logger, types.ENTRY_POINT_QUERY, env, executeMsg, store, cosmosHandler, gasMeter, contractInfo, dependencies, isdebug, false, k.app, k.WasmRuntime.NewWasmVm, k.DataDir)
 	}
 	if err != nil {
 		return data, 0, err
@@ -245,7 +248,7 @@ func (k *WasmxEngine) Cleanup() {
 }
 
 func (k *WasmxEngine) Pin(ctx sdk.Context, checksum types.Checksum, compiledFolderPath string, meteringOff bool) error {
-	pinnedPath := k.build_path_pinned(k.DataDir, checksum)
+	pinnedPath := k.build_path_pinned(k.WasmxDir, checksum)
 	// if we do not find a precompiled contract in our cache, we compile it here
 	if compiledFolderPath != "" {
 		compiledPath := k.build_path(compiledFolderPath, checksum)
@@ -254,7 +257,7 @@ func (k *WasmxEngine) Pin(ctx sdk.Context, checksum types.Checksum, compiledFold
 			return nil
 		}
 	}
-	err := k.pin_code(ctx, k.build_path(k.DataDir, checksum), pinnedPath, meteringOff)
+	err := k.pin_code(ctx, k.build_path(k.WasmxDir, checksum), pinnedPath, meteringOff)
 	if err != nil {
 		return err
 	}
@@ -288,7 +291,7 @@ func (k *WasmxEngine) load_utf8(extension string, checksum types.Checksum) ([]by
 }
 
 func (k *WasmxEngine) load_wasm(checksum types.Checksum) (types.WasmCode, error) {
-	filepath := k.build_path(k.DataDir, checksum)
+	filepath := k.build_path(k.WasmxDir, checksum)
 	return os.ReadFile(filepath)
 }
 
@@ -306,11 +309,11 @@ func (k *WasmxEngine) build_path_utf8(dataDir string, checksum types.Checksum, e
 }
 
 func (k *WasmxEngine) BuildPathPinned(codeHash []byte) string {
-	return k.build_path_pinned(k.DataDir, codeHash)
+	return k.build_path_pinned(k.WasmxDir, codeHash)
 }
 
 func (k *WasmxEngine) BuildPath(codeHash []byte) string {
-	return k.build_path(k.DataDir, codeHash)
+	return k.build_path(k.WasmxDir, codeHash)
 }
 
 func (k *WasmxEngine) BuildPathUtf8(codeHash []byte, extension string) string {
