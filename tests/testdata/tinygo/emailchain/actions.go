@@ -220,6 +220,15 @@ func IncomingEmail(req *IncomingEmailRequest) {
 				fmt.Println(err)
 			}
 		}
+
+		// Check if email is for Kayros bot and handle it
+		if IsBotEmail(req.To) {
+			err := HandleKayrosBot(req)
+			if err != nil {
+				fmt.Printf("Kayros bot error: %v\n", err)
+				// Don't revert - we still want to store the incoming email
+			}
+		}
 	} else {
 		folder := FolderSent
 		opts := LoadDkimKey()
