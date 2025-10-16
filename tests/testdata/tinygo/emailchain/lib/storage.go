@@ -93,6 +93,7 @@ func ConnectSql(connId string) error {
 }
 
 func InitializeTables(connId string) {
+	fmt.Println("--InitializeTables--", connId)
 	err := ConnectSql(connId)
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
@@ -130,6 +131,7 @@ func InitializeTables(connId string) {
 			},
 		},
 	}
+	fmt.Println("--BatchAtomic--")
 	respexec := sql.BatchAtomic(createTable)
 	if respexec.Error != "" {
 		wasmx.Revert([]byte(`could not create table: ` + respexec.Error))

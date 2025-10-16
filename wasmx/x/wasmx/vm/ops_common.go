@@ -238,6 +238,7 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		dbIterators:              map[int32]types.Iterator{},
 		RuntimeHandler:           rnh,
 		newIVmFn:                 ctx.newIVmFn,
+		DataDir:                  ctx.DataDir,
 		ContractInfo:             destContractInfo,
 		CurrentSubCallLevel:      ctx.CurrentSubCallLevel + 1,
 		CurrentSubCallId:         ctx.CurrentSubCallLevelCount,

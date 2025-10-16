@@ -40,12 +40,6 @@ func Wasmx_httpclient_i64_1() {}
 //export wasmx_sql_i64_1
 func Wasmx_sql_i64_1() {}
 
-//go:wasm-module emailchain
-//export instantiate
-func Instantiate() {
-	lib.InitializeTables(lib.ConnectionId)
-}
-
 func main() {
 	entrypoint := os.Getenv("ENTRY_POINT")
 	fmt.Println("emailchain: ENTRY_POINT:", entrypoint)
@@ -67,6 +61,8 @@ func main() {
 		wasmx.Revert([]byte(err.Error()))
 	}
 	response := []byte{}
+
+	fmt.Println("---emailchain.enter")
 
 	if calld.Connect != nil {
 		resp := vmimap.Connect(&vmimap.ImapConnectionRequest{
@@ -112,13 +108,12 @@ func main() {
 		resp := lib.BuildAndSend(calld.BuildAndSend)
 		response, _ = json.Marshal(&resp)
 	} else if calld.StartServer != nil {
+		fmt.Println("--emailchain.StartServer.enter---")
 		lib.StartServer(calld.StartServer)
 	} else if calld.IncomingEmail != nil {
 		lib.IncomingEmail(calld.IncomingEmail)
 	} else if calld.RoleChanged != nil {
-		// TODO
-		// utils.OnlyRole(MODULE_NAME, roles.ROLE_ROLES, "RoleChanged")
-		// roleChanged(calld.RoleChanged);
+		wasmx.OnlyRole(lib.MODULE_NAME, wasmx.ROLE_ROLES, "RoleChanged")
 		lib.InitializeTables(lib.ConnectionId)
 	} else {
 		handled := ImapServerRequest(calld)

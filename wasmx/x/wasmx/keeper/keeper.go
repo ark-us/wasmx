@@ -104,6 +104,7 @@ func NewKeeper(
 	app types.Application,
 	wasmRuntime memc.IWasmVmMeta,
 ) *Keeper {
+	dataDir := filepath.Join(homeDir, "data")
 	contractsPath := filepath.Join(homeDir, types.ContractsDir)
 	err := createDirsIfNotExist(contractsPath)
 	if err != nil {
@@ -142,7 +143,7 @@ func NewKeeper(
 		panic(err)
 	}
 
-	wasmvm, err := NewVM(wasmxAuthority, goRoutineGroup, goContextParent, contractsPath, sourcesDir, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger, wasmRuntime)
+	wasmvm, err := NewVM(wasmxAuthority, goRoutineGroup, goContextParent, dataDir, contractsPath, sourcesDir, wasmConfig.ContractDebugMode, wasmConfig.MemoryCacheSize, app, GetLogger, wasmRuntime)
 	if err != nil {
 		panic(err)
 	}

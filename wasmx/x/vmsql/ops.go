@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
@@ -18,6 +19,7 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("--sql.Connect.requestbz--", string(requestbz))
 	var req SqlConnectionRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
@@ -33,6 +35,7 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	connId := buildConnectionId(ctx.Ctx.ChainID(), req.Id, ctx)
 
 	conn, found := vctx.GetConnection(connId)
+	fmt.Println("--GetConnection--", found, connId)
 	if found {
 		if conn.Connection == req.Connection {
 			// we test the connection with a ping
@@ -47,7 +50,12 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		}
 	}
 	// TODO req.Connection - should we restrict this path and make it relative to our DataDirectory? or introduce a list of allowed directories that WASMX can modify and make sure the path is within these directories.
-	db, err := sql.Open(req.Driver, req.Connection)
+
+	// connStr := getConnectionStr(req.Connection, ctx.DataDir)
+	connStr := getConnectionStr(connId, ctx.DataDir)
+	fmt.Println("--sql.connStr--", connStr)
+	db, err := sql.Open(req.Driver, connStr)
+	fmt.Println("--sql.Open--", err, req.Driver, connStr)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -229,6 +237,7 @@ func BatchAtomic(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("--sql.BatchAtomic--", string(requestbz))
 	var req SqlExecuteBatchRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
@@ -426,4 +435,8 @@ func parseSqlQueryParams(params []SqlQueryParam) []interface{} {
 
 func buildConnectionId(chainId string, id string, ctx *Context) string {
 	return fmt.Sprintf("%s_%s_%s", chainId, ctx.Env.Contract.Address.String(), id)
+}
+
+func getConnectionStr(connId string, dataDir string) string {
+	return filepath.Join(dataDir, connId+".db")
 }

@@ -15,7 +15,6 @@ import (
 	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
-	tinygo "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
 	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
@@ -24,21 +23,13 @@ func (suite *KeeperTestSuite) TestEmailKayrosBot() {
 	if !suite.runEmailServer {
 		suite.T().Skipf("Skipping email server test: TestEmailKayrosBot")
 	}
-	defer os.Remove("emailchain.db")
-	defer os.Remove("emailchain.db-shm")
-	defer os.Remove("emailchain.db-wal")
-	wasmbin := tinygo.EmailChain
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
-	// Store the emailchain contract and instantiate it
-	fmt.Println("----TestEmailKayrosBot.StoreCode----")
-	codeId := appA.StoreCode(sender, wasmbin, nil)
-	fmt.Println("----TestEmailKayrosBot.InstantiateCode----")
-	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "emailchain", nil)
+	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_EMAIL_HANDLER))
 
 	// set a role to have access to protected APIs
 	utils.RegisterRole(suite, appA, "emailprover", contractAddress, sender)
@@ -76,6 +67,7 @@ func (suite *KeeperTestSuite) TestEmailKayrosBot() {
 		},
 	}
 	data, err := json.Marshal(msg)
+	fmt.Println(string(data))
 	suite.Require().NoError(err)
 	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 	fmt.Println("started email server")
@@ -88,6 +80,7 @@ func (suite *KeeperTestSuite) TestEmailKayrosBot() {
 		},
 	}
 	data, err = json.Marshal(msg)
+	fmt.Println(string(data))
 	suite.Require().NoError(err)
 	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 

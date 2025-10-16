@@ -17,6 +17,8 @@ import (
 	"github.com/loredanacirstea/mailverif/dkim"
 )
 
+const MODULE_NAME = "emailchain"
+
 const ConnectionId = "emailchain"
 
 type Calldata struct {

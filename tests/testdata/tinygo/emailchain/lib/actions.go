@@ -43,6 +43,7 @@ const FolderSpam = "SPAM"
 const FolderArchive = "ARCHIVE"
 
 func StartServer(req *StartServerRequest) {
+	fmt.Println("--ServerStart--")
 	err := StoreDkimKey(req.SignOptions)
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
@@ -58,6 +59,7 @@ func StartServer(req *StartServerRequest) {
 		ConnectionId: PortSmtpDirectAddr,
 		ServerConfig: requiredSmtpDefaults(smtpCfg),
 	})
+	fmt.Println("--emailchain.smtp.ServerStart--", resp.Error)
 	if resp.Error != "" {
 		wasmx.Revert([]byte(resp.Error))
 	}
@@ -71,6 +73,7 @@ func StartServer(req *StartServerRequest) {
 		ConnectionId: PortSmtpClientTls,
 		ServerConfig: smtpCfg,
 	})
+	fmt.Println("--emailchain.smtp.ServerStart2--", resp.Error)
 	if resp.Error != "" {
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
 		wasmx.Revert([]byte(resp.Error))
@@ -98,6 +101,7 @@ func StartServer(req *StartServerRequest) {
 		ConnectionId: PortImapClientTls,
 		ServerConfig: req.Imap,
 	})
+	fmt.Println("--emailchain.imap.ServerStart--", resp.Error)
 	if resp2.Error != "" {
 		fmt.Println("---IMAP--", resp2.Error)
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})

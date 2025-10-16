@@ -415,7 +415,6 @@ func SendMail(_context interface{}, rnh memc.RuntimeHandler, params []interface{
 	msgreader := strings.NewReader(string(req.Email))
 	fmt.Println("--SendMail from,to--", req.From, req.To)
 
-
 	err = conn.Client.SendMail(req.From, req.To, msgreader)
 	if err != nil {
 		response.Error = err.Error()
@@ -453,6 +452,7 @@ func ServerStart(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("--smtp.ServerStart--", string(requestbz))
 	var req ServerStartRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {

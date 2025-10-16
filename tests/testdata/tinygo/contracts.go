@@ -22,7 +22,4 @@ var (
 
 	//go:embed smtptest.wasm
 	SmtpTestWrapSdk []byte
-
-	//go:embed emailchain.wasm
-	EmailChain []byte
 )

@@ -918,7 +918,7 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
-	// precompiles = append(precompiles, SpecialPrecompiles()...)
+	precompiles = append(precompiles, SpecialPrecompiles()...)
 
 	precompiles, err := FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
 	if err != nil {
@@ -1019,7 +1019,7 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
-	// precompiles = append(precompiles, SpecialPrecompiles()...)
+	precompiles = append(precompiles, SpecialPrecompiles()...)
 
 	precompiles, err = FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
 	if err != nil {
