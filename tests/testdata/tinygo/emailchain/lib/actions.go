@@ -170,7 +170,7 @@ func CreateAccount(req *CreateAccountRequest) {
 }
 
 func IncomingEmail(req *IncomingEmailRequest) {
-	wasmx.LoggerInfo(MODULE_NAME, `incoming email`)
+	wasmx.LoggerInfo(MODULE_NAME, "incoming email", []string{})
 	if len(req.From) == 0 {
 		wasmx.Revert([]byte("incoming email: empty from"))
 	}

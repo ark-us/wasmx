@@ -12,6 +12,7 @@ import (
 	"github.com/emersion/go-message/mail"
 	httpclient "github.com/loredanacirstea/wasmx-env-httpclient/lib"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 const (
@@ -139,7 +140,7 @@ func GenerateProofFilename(timestamp int64) string {
 
 // HandleKayrosBot processes incoming emails to the bot and sends a reply with Kayros proof
 func HandleKayrosBot(req *IncomingEmailRequest) error {
-	wasmx.LoggerInfo(MODULE_NAME, `kayrosbot handler`, []string{})
+	wasmx.LoggerInfo(MODULE_NAME, "kayrosbot handler", []string{})
 	// Extract subject, Message-ID, and References from email
 	subject := "Indexed by Kayros"
 	var messageID, references string
