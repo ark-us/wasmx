@@ -180,7 +180,9 @@ Note, strict routability for addresses is turned off in the config file.
 
 Example:
 	mythosd testnet init-files --network.initial-chains=mythos,level0 --v 4 --output-dir ./.testnets --starting-ip-address 192.168.10.2
-	mythosd testnet init-files --network.initial-chains=ondemand_single --v 1 --output-dir ./.testnets --starting-ip-address 192.168.10.2
+
+	mythosd testnet init-files --network.initial-chains=ondemand_single --v 1 --output-dir=$(pwd)/testnet --minimum-gas-prices="1000amyt" --nocors --libp2p --enable-eid=false --chain-id=mythos_7000-14
+
 	`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)

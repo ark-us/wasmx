@@ -1,5 +1,14 @@
 # Examples
 
+## Simplest blockchain with 1 node
+
+* for private chains, you cannot connect to other nodes
+* on-demand blocks
+
+```bash
+mythosd testnet init-files --network.initial-chains=ondemand_single --v 1 --output-dir=$(pwd)/testnet --minimum-gas-prices="1000amyt" --nocors --libp2p --enable-eid=false --chain-id=mythos_7000-14
+```
+
 ## Basic chain, 1 validator
 
 ```bash
