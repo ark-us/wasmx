@@ -19,7 +19,6 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--sql.Connect.requestbz--", string(requestbz))
 	var req SqlConnectionRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
@@ -35,7 +34,6 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 	connId := buildConnectionId(ctx.Ctx.ChainID(), req.Id, ctx)
 
 	conn, found := vctx.GetConnection(connId)
-	fmt.Println("--GetConnection--", found, connId)
 	if found {
 		if conn.Connection == req.Connection {
 			// we test the connection with a ping
@@ -53,9 +51,7 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 
 	// connStr := getConnectionStr(req.Connection, ctx.DataDir)
 	connStr := getConnectionStr(connId, ctx.DataDir)
-	fmt.Println("--sql.connStr--", connStr)
 	db, err := sql.Open(req.Driver, connStr)
-	fmt.Println("--sql.Open--", err, req.Driver, connStr)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -237,7 +233,6 @@ func BatchAtomic(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--sql.BatchAtomic--", string(requestbz))
 	var req SqlExecuteBatchRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {
@@ -374,7 +369,6 @@ func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Println("--prepareResponse--", string(responsebz))
 	return rnh.AllocateWriteMem(responsebz)
 }
 

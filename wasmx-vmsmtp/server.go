@@ -234,7 +234,6 @@ func startGoRoutine(
 }
 
 func (ctx *Context) HandleIncomingEmail(s Session) {
-	fmt.Println("--HandleIncomingEmail--")
 	if s.From == nil || s.To == nil || s.EmailRaw == nil {
 		return
 	}

@@ -93,7 +93,6 @@ func ConnectSql(connId string) error {
 }
 
 func InitializeTables(connId string) {
-	fmt.Println("--InitializeTables--", connId)
 	err := ConnectSql(connId)
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
@@ -131,7 +130,6 @@ func InitializeTables(connId string) {
 			},
 		},
 	}
-	fmt.Println("--BatchAtomic--")
 	respexec := sql.BatchAtomic(createTable)
 	if respexec.Error != "" {
 		wasmx.Revert([]byte(`could not create table: ` + respexec.Error))
@@ -334,19 +332,15 @@ func extractEmail(raw []byte) (*Email, error) {
 			envelope.Bcc = v
 		case imap.HEADER_LOW_IN_REPLY_TO:
 			v := h.GetValueTrimmed()
-			fmt.Println("--HEADER_LOW_IN_REPLY_TO--", v)
 			inReplyTo := strings.Trim(v, "<>")
 			envelope.InReplyTo = []string{inReplyTo}
-			fmt.Println("--envelope.InReplyTo--", envelope.InReplyTo)
 		case imap.HEADER_LOW_REPLY_TO:
 			valuestr := h.GetValueTrimmed()
-			fmt.Println("--HEADER_LOW_REPLY_TO--", valuestr)
 			v, err := imap.ParseEmailAddresses(valuestr)
 			if err != nil {
 				return nil, err
 			}
 			envelope.ReplyTo = v
-			fmt.Println("--envelope.ReplyTo--", envelope.ReplyTo)
 		default:
 			continue
 		}
