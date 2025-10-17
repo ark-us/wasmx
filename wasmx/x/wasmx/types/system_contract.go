@@ -1063,7 +1063,7 @@ func DefaultOnDemandSingleContracts(accBech32Codec mcodec.AccBech32Codec, feeCol
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
-	// precompiles = append(precompiles, SpecialPrecompiles()...)
+	precompiles = append(precompiles, SpecialPrecompiles()...)
 
 	precompiles, err := FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
 	if err != nil {
