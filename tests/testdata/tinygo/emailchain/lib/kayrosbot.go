@@ -36,17 +36,8 @@ type KayrosResponse struct {
 
 // KayrosProof represents the JSON file structure attached to emails
 type KayrosProof struct {
-	Data   EmailDataProof `json:"data"`
-	Kayros interface{}    `json:"kayros"`
-}
-
-// EmailDataProof represents the original email information
-type EmailDataProof struct {
-	From      []string `json:"from"`
-	To        []string `json:"to"`
-	Subject   string   `json:"subject,omitempty"`
-	Timestamp int64    `json:"timestamp"`
-	Hash      string   `json:"hash"`
+	Data   string      `json:"data"`
+	Kayros interface{} `json:"kayros"`
 }
 
 // IsBotEmail checks if the email is addressed to the bot
@@ -117,17 +108,10 @@ func QueryKayros(emailHash string) (interface{}, error) {
 }
 
 // CreateKayrosProof creates a proof structure combining email data and Kayros response
-func CreateKayrosProof(from []string, to []string, subject string, emailRaw []byte, timestamp int64, kayrosResp interface{}) *KayrosProof {
-	emailHash := HashEmail(emailRaw)
-
+func CreateKayrosProof(emailRaw []byte, kayrosResp interface{}) *KayrosProof {
 	return &KayrosProof{
-		Data: EmailDataProof{
-			From:      from,
-			To:        to,
-			Subject:   subject,
-			Timestamp: timestamp,
-			Hash:      emailHash,
-		},
+		// Data:   base64.StdEncoding.EncodeToString(emailRaw),
+		Data:   string(emailRaw),
 		Kayros: kayrosResp,
 	}
 }
@@ -180,7 +164,7 @@ func HandleKayrosBot(req *IncomingEmailRequest) error {
 	}
 
 	// Create proof structure
-	proof := CreateKayrosProof(req.From, req.To, subject, req.EmailRaw, req.Timestamp, kayrosResp)
+	proof := CreateKayrosProof(req.EmailRaw, kayrosResp)
 
 	// Marshal proof to JSON
 	proofJSON, err := json.MarshalIndent(proof, "", "  ")
