@@ -220,6 +220,17 @@ func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte,
 
 	date := time.Unix(timestamp, 0).UTC()
 
+	envelope := &vmimap.Envelope{
+		Subject:   "Fwd: " + subject,
+		From:      []vmimap.Address{from},
+		To:        to,
+		Date:      date,
+		InReplyTo: []string{messageID},
+	}
+
+	// Build headers
+	hdr := mail.Header{}
+
 	// Build References header: original References + original Message-ID
 	var replyReferences []string
 	if references != "" {
@@ -228,18 +239,11 @@ func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte,
 	if messageID != "" {
 		replyReferences = append(replyReferences, messageID)
 	}
-
-	envelope := &vmimap.Envelope{
-		Subject:    "Fwd: " + subject,
-		From:       []vmimap.Address{from},
-		To:         to,
-		Date:       date,
-		InReplyTo:  []string{messageID},
-		References: replyReferences,
+	if len(replyReferences) > 0 {
+		hdr.Set("References", strings.Join(replyReferences, " "))
 	}
 
-	// Build headers
-	headers, err := SerializeEnvelope2(envelope, mail.Header{})
+	headers, err := SerializeEnvelope2(envelope, hdr)
 	if err != nil {
 		return fmt.Errorf("failed to serialize envelope: %w", err)
 	}
