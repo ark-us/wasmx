@@ -80,6 +80,9 @@ var ADDR_STORAGE_CONTRACTS = "0x0000000000000000000000000000000000000061"
 var ADDR_DTYPE = "0x0000000000000000000000000000000000000062"
 var ADDR_EMAIL_HANDLER = "0x0000000000000000000000000000000000000063"
 
+var ADDR_ONDEMAND_SINGLE_LIBRARY = "0x0000000000000000000000000000000000000064"
+var ADDR_ONDEMAND_SINGLE = "0x0000000000000000000000000000000000000065"
+
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
 func StarterPrecompiles() SystemContracts {
@@ -570,6 +573,11 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 		panic("ConsensusPrecompiles: cannot marshal level0InitMsg message")
 	}
 
+	onDemandSingleInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"maxLevel","value":"0"},{"key":"blockTimeout","value":"blockTimeoutInternal"},{"key":"currentLevel","value":"0"},{"key":"membersCount","value":"1"},{"key":"blockTimeoutInternal","value":"3000"}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("ConsensusPrecompiles: cannot marshal onDemandSingleInitMsg message")
+	}
+
 	lobbyInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"instantiate":{"context":[{"key":"heartbeatTimeout","value":"5000"},{"key":"newchainTimeout","value":"20000"},{"key":"current_level","value":"0"},{"key":"min_validators_count","value":"%d"},{"key":"enable_eid_check","value":"%t"},{"key":"erc20CodeId","value":"%d"},{"key":"derc20CodeId","value":"%d"},{"key":"level_initial_balance","value":"10000000000000000000"}],"initialState":"uninitialized"}}`, minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId))})
 	if err != nil {
 		panic("ConsensusPrecompiles: cannot marshal lobbyInitMsg message")
@@ -716,6 +724,25 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LEVEL0_LIBRARY, ROLE_LIBRARY)},
 		},
 		{
+			Address:     ADDR_ONDEMAND_SINGLE_LIBRARY,
+			Label:       ONDEMAND_SINGLE_LIBRARY_v001,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        &SystemContractRole{Role: ROLE_LIBRARY, Label: ONDEMAND_SINGLE_LIBRARY_v001},
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_ONDEMAND_SINGLE,
+			Label:       ONDEMAND_SINGLE_v001,
+			InitMessage: onDemandSingleInitMsg,
+			Pinned:      false,
+			Role:        &SystemContractRole{Role: ROLE_CONSENSUS, Label: ONDEMAND_SINGLE_v001},
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_ONDEMAND_SINGLE_LIBRARY, ROLE_LIBRARY)},
+		},
+		{
 			Address:     ADDR_MULTICHAIN_REGISTRY_LOCAL,
 			Label:       MULTICHAIN_REGISTRY_LOCAL_v001,
 			InitMessage: mutichainLocalInitMsg,
@@ -832,16 +859,16 @@ func SpecialPrecompiles() SystemContracts {
 		panic("SpecialPrecompiles: cannot marshal init message")
 	}
 	return []SystemContract{
-		{
-			Address:     ADDR_DTYPE,
-			Label:       DTYPE_v001,
-			InitMessage: initMsg,
-			Pinned:      true,
-			MeteringOff: true,
-			Role:        &SystemContractRole{Role: ROLE_DTYPE, Label: ROLE_DTYPE, Primary: true},
-			StorageType: ContractStorageType_CoreConsensus,
-			Deps:        []string{},
-		},
+		// {
+		// 	Address:     ADDR_DTYPE,
+		// 	Label:       DTYPE_v001,
+		// 	InitMessage: initMsg,
+		// 	Pinned:      true,
+		// 	MeteringOff: true,
+		// 	Role:        &SystemContractRole{Role: ROLE_DTYPE, Label: ROLE_DTYPE, Primary: true},
+		// 	StorageType: ContractStorageType_CoreConsensus,
+		// 	Deps:        []string{},
+		// },
 		// TODO dtype nondeterministic version
 		{
 			Address:     ADDR_EMAIL_HANDLER,
@@ -995,6 +1022,50 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 	// precompiles = append(precompiles, SpecialPrecompiles()...)
 
 	precompiles, err = FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
+	if err != nil {
+		panic(err)
+	}
+	return precompiles
+}
+
+func DefaultOnDemandSingleContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string, bondBaseDenom string) SystemContracts {
+
+	precompiles := StarterPrecompiles()
+	precompiles = append(precompiles, SimplePrecompiles()...)
+	precompiles = append(precompiles, InterpreterPrecompiles()...)
+	precompiles = append(precompiles, BasePrecompiles()...)
+	precompiles = append(precompiles, EIDPrecompiles()...)
+	precompiles = append(precompiles, HookPrecompiles()...)
+	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32, bondBaseDenom)...)
+
+	erc20CodeId := int32(0)
+	derc20CodeId := int32(0)
+	for i, p := range precompiles {
+		if p.Label == ERC20_v001 {
+			erc20CodeId = int32(i + 1)
+		}
+	}
+	for i, p := range precompiles {
+		if p.Label == DERC20_v001 {
+			derc20CodeId = int32(i + 1)
+		}
+	}
+	if erc20CodeId == int32(0) || derc20CodeId == int32(0) {
+		panic(fmt.Sprintf("erc20 or derc20 contracts not found: erc20CodeId %d, derc20CodeId %d", erc20CodeId, derc20CodeId))
+	}
+
+	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
+	for i, val := range consensusPrecompiles {
+		if val.Label == ONDEMAND_SINGLE_v001 {
+			consensusPrecompiles[i].Role.Primary = true
+		}
+	}
+	precompiles = append(precompiles, consensusPrecompiles...)
+	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
+	precompiles = append(precompiles, ChatPrecompiles()...)
+	// precompiles = append(precompiles, SpecialPrecompiles()...)
+
+	precompiles, err := FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
 	if err != nil {
 		panic(err)
 	}

@@ -159,6 +159,9 @@ var (
 	//go:embed 64.wasmx_httpserver_registry_0.0.1.wasm
 	wasmx_httpserver_registry []byte
 
+	//go:embed 65.wasmx_ondemand_single_library.wasm
+	ondemand_single_library []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -295,6 +298,15 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 			panic(err)
 		}
 		wasmbin = []byte(Level0OnDemand001(libaddrstr))
+	case types.ONDEMAND_SINGLE_LIBRARY_v001:
+		wasmbin = ondemand_single_library
+	case types.ONDEMAND_SINGLE_v001:
+		libaddr := types.AccAddressFromHex(types.ADDR_ONDEMAND_SINGLE_LIBRARY)
+		libaddrstr, err := addrCodec.BytesToString(libaddr)
+		if err != nil {
+			panic(err)
+		}
+		wasmbin = []byte(OnDemandSingle(libaddrstr))
 	case types.MULTICHAIN_REGISTRY_v001:
 		wasmbin = multichain_registry
 	case types.MULTICHAIN_REGISTRY_LOCAL_v001:
