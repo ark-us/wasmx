@@ -43,7 +43,6 @@ const FolderSpam = "SPAM"
 const FolderArchive = "ARCHIVE"
 
 func StartServer(req *StartServerRequest) {
-	fmt.Println("--ServerStart--")
 	err := StoreDkimKey(req.SignOptions)
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
@@ -59,7 +58,6 @@ func StartServer(req *StartServerRequest) {
 		ConnectionId: PortSmtpDirectAddr,
 		ServerConfig: requiredSmtpDefaults(smtpCfg),
 	})
-	fmt.Println("--emailchain.smtp.ServerStart--", resp.Error)
 	if resp.Error != "" {
 		wasmx.Revert([]byte(resp.Error))
 	}
@@ -73,7 +71,6 @@ func StartServer(req *StartServerRequest) {
 		ConnectionId: PortSmtpClientTls,
 		ServerConfig: smtpCfg,
 	})
-	fmt.Println("--emailchain.smtp.ServerStart2--", resp.Error)
 	if resp.Error != "" {
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
 		wasmx.Revert([]byte(resp.Error))
@@ -101,9 +98,7 @@ func StartServer(req *StartServerRequest) {
 		ConnectionId: PortImapClientTls,
 		ServerConfig: req.Imap,
 	})
-	fmt.Println("--emailchain.imap.ServerStart--", resp.Error)
 	if resp2.Error != "" {
-		fmt.Println("---IMAP--", resp2.Error)
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientTls})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientStartTls})
@@ -117,7 +112,6 @@ func StartServer(req *StartServerRequest) {
 		ServerConfig: req.Imap,
 	})
 	if resp2.Error != "" {
-		fmt.Println("---IMAP--", resp2.Error)
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientTls})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientStartTls})
@@ -127,8 +121,6 @@ func StartServer(req *StartServerRequest) {
 }
 
 func CreateAccount(req *CreateAccountRequest) {
-	fmt.Println("--CreateAccount--", req.Username)
-
 	err := ConnectSql(ConnectionId)
 	if err != nil {
 		wasmx.Revert([]byte("CreateAccount: DB connection failed: " + err.Error()))
@@ -178,7 +170,7 @@ func CreateAccount(req *CreateAccountRequest) {
 }
 
 func IncomingEmail(req *IncomingEmailRequest) {
-	fmt.Println("---emailchain.IncomingEmail----")
+	wasmx.LoggerInfo(MODULE_NAME, `incoming email`)
 	if len(req.From) == 0 {
 		wasmx.Revert([]byte("incoming email: empty from"))
 	}
@@ -197,7 +189,7 @@ func IncomingEmail(req *IncomingEmailRequest) {
 				return
 			}
 			if len(owners) == 0 {
-				wasmx.Revert([]byte("invalid account"))
+				wasmx.Revert([]byte("invalid account: " + to))
 				return
 			}
 		}
@@ -225,7 +217,6 @@ func IncomingEmail(req *IncomingEmailRequest) {
 				fmt.Println(err)
 			}
 		}
-		fmt.Println("---emailchain.IsBotEmail----", req.To, IsBotEmail(req.To))
 		// Check if email is for Kayros bot and handle it
 		if IsBotEmail(req.To) {
 			err := HandleKayrosBot(req)

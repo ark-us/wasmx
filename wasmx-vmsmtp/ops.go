@@ -452,7 +452,6 @@ func ServerStart(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--smtp.ServerStart--", string(requestbz))
 	var req ServerStartRequest
 	err = json.Unmarshal(requestbz, &req)
 	if err != nil {

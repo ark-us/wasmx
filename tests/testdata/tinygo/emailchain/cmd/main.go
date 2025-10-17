@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 
 	lib "github.com/loredanacirstea/emailchain/lib"
@@ -42,7 +41,6 @@ func Wasmx_sql_i64_1() {}
 
 func main() {
 	entrypoint := os.Getenv("ENTRY_POINT")
-	fmt.Println("emailchain: ENTRY_POINT:", entrypoint)
 	// these entrypoints are internal by default
 	switch entrypoint {
 	case "smtp_update":
@@ -54,15 +52,12 @@ func main() {
 	}
 
 	databz := wasmx.GetCallData()
-	fmt.Println("---emailchain.databz----!!!!!!", string(databz))
 	calld := &lib.Calldata{}
 	err := json.Unmarshal(databz, calld)
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
 	response := []byte{}
-
-	fmt.Println("---emailchain.enter")
 
 	if calld.Connect != nil {
 		resp := vmimap.Connect(&vmimap.ImapConnectionRequest{
@@ -108,7 +103,6 @@ func main() {
 		resp := lib.BuildAndSend(calld.BuildAndSend)
 		response, _ = json.Marshal(&resp)
 	} else if calld.StartServer != nil {
-		fmt.Println("--emailchain.StartServer.enter---")
 		lib.StartServer(calld.StartServer)
 	} else if calld.IncomingEmail != nil {
 		lib.IncomingEmail(calld.IncomingEmail)

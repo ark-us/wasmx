@@ -16,7 +16,9 @@ import (
 
 const (
 	BotEmail      = "bot@dmail.provable.dev"
-	KayrosAPIURL  = "https://kayros.provable.dev/api/grpc/single-hash"
+	KayrosAPIURL  = "https://kayros.provable.dev"
+	KayrosAPIPOST = KayrosAPIURL + "/api/grpc/single-hash"
+	KayrosAPIGET  = KayrosAPIURL + "/api/database/record-by-hash?hash_item="
 	DataTypeEmail = "70726f7661626c655f656d61696c000000000000000000000000000000000000"
 )
 
@@ -83,7 +85,7 @@ func QueryKayros(emailHash string) (interface{}, error) {
 	httpReq := httpclient.HttpRequestWrap{
 		Request: httpclient.HttpRequest{
 			Method: "POST",
-			Url:    KayrosAPIURL,
+			Url:    KayrosAPIPOST,
 			Header: headers,
 			Data:   reqBodyBytes,
 		},
@@ -137,12 +139,22 @@ func GenerateProofFilename(timestamp int64) string {
 
 // HandleKayrosBot processes incoming emails to the bot and sends a reply with Kayros proof
 func HandleKayrosBot(req *IncomingEmailRequest) error {
-	fmt.Println("--emailchain.HandleKayrosBot--")
-	// Extract subject from email
-	subject := ""
-	subjectHeaders, err := extractHeaders(req.EmailRaw, []string{"Subject"})
-	if err == nil && len(subjectHeaders) > 0 {
-		subject = subjectHeaders[0]
+	wasmx.LoggerInfo(MODULE_NAME, `kayrosbot handler`, []string{})
+	// Extract subject, Message-ID, and References from email
+	subject := "Indexed by Kayros"
+	var messageID, references string
+
+	headerValues, err := extractHeaders(req.EmailRaw, []string{"Subject", "Message-ID", "References"})
+	if err == nil && len(headerValues) >= 1 {
+		if len(headerValues[0]) > 0 {
+			subject = headerValues[0]
+		}
+		if len(headerValues) >= 2 && len(headerValues[1]) > 0 {
+			messageID = headerValues[1]
+		}
+		if len(headerValues) >= 3 && len(headerValues[2]) > 0 {
+			references = headerValues[2]
+		}
 	}
 
 	// Hash the email
@@ -154,6 +166,16 @@ func HandleKayrosBot(req *IncomingEmailRequest) error {
 	if err != nil {
 		fmt.Printf("Bot: Kayros API error: %v\n", err)
 		return fmt.Errorf("kayros API query failed: %w", err)
+	}
+
+	// Extract computed_hash_hex from Kayros response
+	computedHash := ""
+	if kayrosData, ok := kayrosResp.(map[string]interface{}); ok {
+		if data, ok := kayrosData["data"].(map[string]interface{}); ok {
+			if hash, ok := data["computed_hash_hex"].(string); ok {
+				computedHash = hash
+			}
+		}
 	}
 
 	// Create proof structure
@@ -169,7 +191,7 @@ func HandleKayrosBot(req *IncomingEmailRequest) error {
 	filename := GenerateProofFilename(req.Timestamp)
 
 	// Build reply email with attachment
-	err = SendKayrosBotReply(req.From, filename, proofJSON, req.Timestamp)
+	err = SendKayrosBotReply(req.From, filename, proofJSON, req.Timestamp, subject, messageID, references, computedHash)
 	if err != nil {
 		return fmt.Errorf("failed to send reply: %w", err)
 	}
@@ -179,7 +201,7 @@ func HandleKayrosBot(req *IncomingEmailRequest) error {
 }
 
 // SendKayrosBotReply sends an email reply with the Kayros proof JSON attached
-func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte, timestamp int64) error {
+func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte, timestamp int64, subject string, messageID string, references string, computedHash string) error {
 	// Load DKIM signing options
 	opts := LoadDkimKey()
 	if opts == nil {
@@ -197,13 +219,23 @@ func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte,
 	to := vmimap.AddressesFromString(toAddresses)
 
 	date := time.Unix(timestamp, 0).UTC()
-	subject := "Indexed by Kayros"
+
+	// Build References header: original References + original Message-ID
+	var replyReferences []string
+	if references != "" {
+		replyReferences = append(replyReferences, references)
+	}
+	if messageID != "" {
+		replyReferences = append(replyReferences, messageID)
+	}
 
 	envelope := &vmimap.Envelope{
-		Subject: subject,
-		From:    []vmimap.Address{from},
-		To:      to,
-		Date:    date,
+		Subject:    "Fwd: " + subject,
+		From:       []vmimap.Address{from},
+		To:         to,
+		Date:       date,
+		InReplyTo:  []string{messageID},
+		References: replyReferences,
 	}
 
 	// Build headers
@@ -213,7 +245,16 @@ func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte,
 	}
 
 	// Email body text
-	bodyText := fmt.Sprintf("Indexed by Kayros. See attached %s", filename)
+	var bodyText string
+	if computedHash != "" {
+		bodyText = fmt.Sprintf(`Indexed by Kayros. See attached %s
+
+View on Kayros: %s%s
+`, filename, KayrosAPIGET, computedHash)
+	} else {
+		bodyText = fmt.Sprintf(`Failure to create proof. See attached %s for details.
+`, filename)
+	}
 
 	// Create email with attachment
 	// Use multipart/mixed for attachment
