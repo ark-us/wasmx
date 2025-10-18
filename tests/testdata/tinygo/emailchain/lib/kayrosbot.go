@@ -2,6 +2,7 @@ package lib
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -110,8 +111,7 @@ func QueryKayros(emailHash string) (interface{}, error) {
 // CreateKayrosProof creates a proof structure combining email data and Kayros response
 func CreateKayrosProof(emailRaw []byte, kayrosResp interface{}) *KayrosProof {
 	return &KayrosProof{
-		// Data:   base64.StdEncoding.EncodeToString(emailRaw),
-		Data:   string(emailRaw),
+		Data:   base64.StdEncoding.EncodeToString(emailRaw),
 		Kayros: kayrosResp,
 	}
 }
@@ -292,10 +292,12 @@ View stored record on Kayros: %s%s
 		wasmx.LoggerInfo(MODULE_NAME, "sent email to", []string{"to", to})
 	}
 
-	// Store sent email in bot's SENT folder
-	err = StoreEmail(BotEmail, []string{}, []byte(prepped), "", ConnectionId, FolderSent)
-	if err != nil {
-		errs = append(errs, fmt.Sprintf("store error: %v", err))
+	// Store sent email in bot's SENT folder (unless disabled)
+	if !LoadKayrosBotNoStore() {
+		err = StoreEmail(BotEmail, []string{}, []byte(prepped), "", ConnectionId, FolderSent)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("store error: %v", err))
+		}
 	}
 
 	if len(errs) > 0 {

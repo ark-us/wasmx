@@ -64,10 +64,11 @@ type ConnectRequest struct {
 }
 
 type StartServerRequest struct {
-	SignOptions SignOptions         `json:"options"`
-	Smtp        vmsmtp.ServerConfig `json:"smtp"`
-	Imap        vmimap.ServerConfig `json:"imap"`
-	Password    string              `json:"password"`
+	SignOptions      SignOptions         `json:"options"`
+	Smtp             vmsmtp.ServerConfig `json:"smtp"`
+	Imap             vmimap.ServerConfig `json:"imap"`
+	Password         string              `json:"password"`
+	KayrosBotNoStore bool                `json:"kayrosbot_no_store"` // If true, don't store emails sent by Kayros bot
 }
 
 type CloseRequest struct {

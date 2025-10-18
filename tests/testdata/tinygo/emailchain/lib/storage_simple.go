@@ -33,3 +33,19 @@ func LoadServerPassword() string {
 	bz := wasmx.StorageLoad([]byte(`server_password`))
 	return string(bz)
 }
+
+func StoreKayrosBotNoStore(noStore bool) {
+	var val byte
+	if noStore {
+		val = 1
+	}
+	wasmx.StorageStore([]byte(`kayrosbot_no_store`), []byte{val})
+}
+
+func LoadKayrosBotNoStore() bool {
+	bz := wasmx.StorageLoad([]byte(`kayrosbot_no_store`))
+	if len(bz) == 0 {
+		return false
+	}
+	return bz[0] == 1
+}

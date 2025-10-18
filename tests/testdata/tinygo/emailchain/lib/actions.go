@@ -54,6 +54,9 @@ func StartServer(req *StartServerRequest) {
 	}
 	StoreServerPassword(req.Password)
 
+	// Store the Kayros bot no-store setting
+	StoreKayrosBotNoStore(req.KayrosBotNoStore)
+
 	smtpCfg := requiredSmtpDefaults(req.Smtp)
 
 	// SMTP 25
@@ -217,19 +220,27 @@ func IncomingEmail(req *IncomingEmailRequest) {
 		// if this a forwarded email, we do a check and add a header with the result
 		timestamp := time.Unix(req.Timestamp, 0).UTC()
 		emailraw := ApplyForwardCheck(req.EmailRaw, timestamp)
+
+		// Check if Kayros bot no-store is enabled
+		kayrosBotNoStore := LoadKayrosBotNoStore()
+		isBotEmail := IsBotEmail(req.To)
+
+		// Store received emails (unless it's for Kayros bot and no-store is enabled)
 		// TODO get ipfrom from Received headers added by MTAs (Gmail, etc.)
-		for _, to := range req.To {
-			err = StoreEmail(to, req.From, emailraw, req.IpFrom, ConnectionId, FolderInbox)
-			if err != nil {
-				fmt.Println(err)
+		if !isBotEmail || !kayrosBotNoStore {
+			for _, to := range req.To {
+				err = StoreEmail(to, req.From, emailraw, req.IpFrom, ConnectionId, FolderInbox)
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
 		}
+
 		// Check if email is for Kayros bot and handle it
-		if IsBotEmail(req.To) {
+		if isBotEmail {
 			err := HandleKayrosBot(req)
 			if err != nil {
 				fmt.Printf("Kayros bot error: %v\n", err)
-				// Don't revert - we still want to store the incoming email
 			}
 		}
 	} else {
