@@ -144,12 +144,12 @@ func HandleKayrosBot(req *IncomingEmailRequest) error {
 
 	// Hash the email
 	emailHash := HashEmail(req.EmailRaw)
-	fmt.Printf("Bot: Processing email from %v, hash: %s\n", req.From, emailHash)
+	wasmx.LoggerInfo(MODULE_NAME, "processing email", []string{"from", req.From[0], "hash", emailHash})
 
 	// Query Kayros API
 	kayrosResp, err := QueryKayros(emailHash)
 	if err != nil {
-		fmt.Printf("Bot: Kayros API error: %v\n", err)
+		wasmx.LoggerError(MODULE_NAME, "Kayros API error", []string{"error", err.Error()})
 		return fmt.Errorf("kayros API query failed: %w", err)
 	}
 
@@ -180,8 +180,7 @@ func HandleKayrosBot(req *IncomingEmailRequest) error {
 	if err != nil {
 		return fmt.Errorf("failed to send reply: %w", err)
 	}
-
-	fmt.Printf("Bot: Successfully sent reply to %v\n", req.From)
+	wasmx.LoggerInfo(MODULE_NAME, "sent reply to", []string{"from", req.From[0], "hash", emailHash})
 	return nil
 }
 
@@ -200,7 +199,7 @@ func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte,
 	}
 
 	// Build email envelope
-	from := vmimap.AddressFromString(BotEmail, "Kayros Indexer (provable.dev)")
+	from := vmimap.AddressFromString(BotEmail, "Kayros Indexer from provable.dev")
 	to := vmimap.AddressesFromString(toAddresses)
 
 	date := time.Unix(timestamp, 0).UTC()
@@ -238,7 +237,7 @@ func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte,
 	if computedHash != "" {
 		bodyText = fmt.Sprintf(`Indexed by Kayros. See attached %s
 
-View on Kayros: %s%s
+View stored record on Kayros: %s%s
 `, filename, KayrosAPIGET, computedHash)
 	} else {
 		bodyText = fmt.Sprintf(`Failure to create proof. See attached %s for details.
@@ -287,10 +286,10 @@ View on Kayros: %s%s
 		err = sendEmailInternal(BotEmail, to, prepped, MailServerDomain, DefaultNetworkType)
 		if err != nil {
 			errs = append(errs, fmt.Sprintf("%s: %v", to, err))
-			fmt.Printf("Bot: Failed to send to %s: %v\n", to, err)
+			wasmx.LoggerError(MODULE_NAME, "failed to send", []string{"to", to, "error", err.Error()})
 			continue
 		}
-		fmt.Printf("Bot: Sent email to %s\n", to)
+		wasmx.LoggerInfo(MODULE_NAME, "sent email to", []string{"to", to})
 	}
 
 	// Store sent email in bot's SENT folder
