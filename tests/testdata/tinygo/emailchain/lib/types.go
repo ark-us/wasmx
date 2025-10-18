@@ -48,12 +48,13 @@ type ReentryCalldata struct {
 }
 
 type IncomingEmailRequest struct {
-	ConnectionId string
-	IpFrom       string   `json:"ipfrom"`
-	From         []string `json:"from"`
-	To           []string `json:"to"`
-	EmailRaw     []byte   `json:"email_raw"`
-	Timestamp    int64    `json:"timestamp"`
+	ConnectionId      string
+	IpFrom            string   `json:"ipfrom"`
+	From              []string `json:"from"`
+	To                []string `json:"to"`
+	EmailRaw          []byte   `json:"email_raw"`
+	Timestamp         int64    `json:"timestamp"`
+	AuthenticatedUser string   `json:"authenticated_user"` // Username from SMTP authentication
 }
 
 type ConnectRequest struct {
@@ -66,6 +67,7 @@ type StartServerRequest struct {
 	SignOptions SignOptions         `json:"options"`
 	Smtp        vmsmtp.ServerConfig `json:"smtp"`
 	Imap        vmimap.ServerConfig `json:"imap"`
+	Password    string              `json:"password"`
 }
 
 type CloseRequest struct {

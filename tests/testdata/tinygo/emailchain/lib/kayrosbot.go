@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	BotEmail      = "bot@dmail.provable.dev"
+	BotEmail      = "kayros1@dmail.provable.dev"
 	KayrosAPIURL  = "https://kayros.provable.dev"
 	KayrosAPIPOST = KayrosAPIURL + "/api/grpc/single-hash"
 	KayrosAPIGET  = KayrosAPIURL + "/api/database/record-by-hash?hash_item="
@@ -200,7 +200,7 @@ func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte,
 	}
 
 	// Build email envelope
-	from := vmimap.AddressFromString(BotEmail, "Kayros Bot")
+	from := vmimap.AddressFromString(BotEmail, "Kayros Indexer (provable.dev)")
 	to := vmimap.AddressesFromString(toAddresses)
 
 	date := time.Unix(timestamp, 0).UTC()

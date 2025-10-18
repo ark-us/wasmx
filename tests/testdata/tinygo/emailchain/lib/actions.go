@@ -47,6 +47,13 @@ func StartServer(req *StartServerRequest) {
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
+
+	// Store the server password
+	if req.Password == "" {
+		wasmx.Revert([]byte("server password cannot be empty"))
+	}
+	StoreServerPassword(req.Password)
+
 	smtpCfg := requiredSmtpDefaults(req.Smtp)
 
 	// SMTP 25
@@ -226,13 +233,34 @@ func IncomingEmail(req *IncomingEmailRequest) {
 			}
 		}
 	} else {
+		// This is an email sent by an authenticated email client to our smtp server
+		// Validate authenticated user matches the sender
+		if req.AuthenticatedUser == "" {
+			wasmx.Revert([]byte("unauthorized: authentication required for sending emails"))
+			return
+		}
+		if req.AuthenticatedUser != req.From[0] {
+			wasmx.Revert([]byte("unauthorized: authenticated user (" + req.AuthenticatedUser + ") does not match sender (" + req.From[0] + ")"))
+			return
+		}
+
+		// Validate that the sender has an account on this server
+		owners, err := GetAccount(req.From[0])
+		if err != nil {
+			wasmx.Revert([]byte("HandleEmail: failed to check sender account: " + err.Error()))
+			return
+		}
+		if len(owners) == 0 {
+			wasmx.Revert([]byte("unauthorized: sender account not found: " + req.From[0]))
+			return
+		}
+
 		folder := FolderSent
 		opts := LoadDkimKey()
 		if opts == nil {
 			fmt.Println("no dkim keys")
 			folder = FolderDraft
 		} else {
-			// this is an email sent by an email client to our smtp server
 			errs := SendRawEmail(req.From[0], req.To, req.EmailRaw, *opts)
 			if err != nil {
 				fmt.Println(errs)

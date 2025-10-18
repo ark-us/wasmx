@@ -24,3 +24,12 @@ func LoadDkimKey() *SignOptions {
 	}
 	return v
 }
+
+func StoreServerPassword(password string) {
+	wasmx.StorageStore([]byte(`server_password`), []byte(password))
+}
+
+func LoadServerPassword() string {
+	bz := wasmx.StorageLoad([]byte(`server_password`))
+	return string(bz)
+}

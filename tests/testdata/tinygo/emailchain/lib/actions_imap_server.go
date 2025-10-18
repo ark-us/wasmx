@@ -13,24 +13,30 @@ import (
 )
 
 func HandleLogin(req *LoginRequest) ([]byte, error) {
-	if req.Password != "123456" {
-		wasmx.Revert([]byte(`unauthorized`))
+	// Connect to database to check if username exists
+	err := ConnectSql(ConnectionId)
+	if err != nil {
+		wasmx.Revert([]byte("HandleLogin: DB connection failed: " + err.Error()))
 	}
-	// err := ConnectSql(ConnectionId)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// params, err := paramsMarshal([]sql.SqlQueryParam{
-	// 	{Type: "text", Value: req.Username},
-	// })
-	// resp := sql.Execute(&sql.SqlExecuteRequest{
-	// 	Id:     ConnectionId,
-	// 	Query:  `INSERT OR IGNORE INTO owners (address) VALUES (?);`,
-	// 	Params: params,
-	// })
-	// if resp.Error != "" {
-	// 	return nil, fmt.Errorf(resp.Error)
-	// }
+
+	// Validate username exists in database
+	owners, err := GetAccount(req.Username)
+	if err != nil {
+		wasmx.Revert([]byte("HandleLogin: failed to check account: " + err.Error()))
+	}
+	if len(owners) == 0 {
+		wasmx.Revert([]byte("unauthorized: invalid username"))
+	}
+
+	// Validate password against stored server password
+	storedPassword := LoadServerPassword()
+	if storedPassword == "" {
+		wasmx.Revert([]byte("unauthorized: server password not configured"))
+	}
+	if req.Password != storedPassword {
+		wasmx.Revert([]byte("unauthorized: invalid password"))
+	}
+
 	return nil, nil
 }
 

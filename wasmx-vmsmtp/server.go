@@ -58,18 +58,21 @@ func (b *backend) NewSession(conn *smtp.Conn) (smtp.Session, error) {
 }
 
 type Session struct {
-	ConnectionId string
-	IpFrom       string   `json:"ipfrom"`
-	From         []string `json:"from"`
-	To           []string `json:"to"`
-	EmailRaw     []byte   `json:"email_raw"`
-	Timestamp    int64    `json:"timestamp"`
-	ctx          *Context
-	conn         *smtp.Conn
+	ConnectionId      string
+	IpFrom            string   `json:"ipfrom"`
+	From              []string `json:"from"`
+	To                []string `json:"to"`
+	EmailRaw          []byte   `json:"email_raw"`
+	Timestamp         int64    `json:"timestamp"`
+	AuthenticatedUser string   `json:"authenticated_user"` // Username from authentication (empty if unauthenticated)
+	ctx               *Context
+	conn              *smtp.Conn
 }
 
 type AuthSession struct {
 	Session
+	authenticated bool
+	username      string
 }
 
 func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
@@ -98,6 +101,30 @@ func (s *Session) Logout() error {
 }
 
 // support AuthSession
+// Override Mail to require authentication
+func (s *AuthSession) Mail(from string, opts *smtp.MailOptions) error {
+	if !s.authenticated {
+		return smtp.ErrAuthRequired
+	}
+	return s.Session.Mail(from, opts)
+}
+
+// Override Rcpt to require authentication
+func (s *AuthSession) Rcpt(to string, opts *smtp.RcptOptions) error {
+	if !s.authenticated {
+		return smtp.ErrAuthRequired
+	}
+	return s.Session.Rcpt(to, opts)
+}
+
+// Override Data to require authentication
+func (s *AuthSession) Data(r io.Reader) error {
+	if !s.authenticated {
+		return smtp.ErrAuthRequired
+	}
+	return s.Session.Data(r)
+}
+
 // Implement AuthMechanisms
 func (s *AuthSession) AuthMechanisms() []string {
 	return []string{"PLAIN"}
@@ -116,6 +143,10 @@ func (s *AuthSession) Auth(mech string) (sasl.Server, error) {
 			if err != nil {
 				return fmt.Errorf("invalid credentials: %w", err)
 			}
+			// Mark session as authenticated and store username
+			s.authenticated = true
+			s.username = username
+			s.Session.AuthenticatedUser = username
 			return nil
 		}), nil
 	case sasl.OAuthBearer:

@@ -4,11 +4,31 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
-// TODO implement me
 func HandleSmtpLogin(req *LoginRequest) ([]byte, error) {
-	if req.Password != "123456" {
-		wasmx.Revert([]byte(`unauthorized`))
+	// Connect to database to check if username exists
+	err := ConnectSql(ConnectionId)
+	if err != nil {
+		wasmx.Revert([]byte("HandleSmtpLogin: DB connection failed: " + err.Error()))
 	}
+
+	// Validate username exists in database
+	owners, err := GetAccount(req.Username)
+	if err != nil {
+		wasmx.Revert([]byte("HandleSmtpLogin: failed to check account: " + err.Error()))
+	}
+	if len(owners) == 0 {
+		wasmx.Revert([]byte("unauthorized: invalid username"))
+	}
+
+	// Validate password against stored server password
+	storedPassword := LoadServerPassword()
+	if storedPassword == "" {
+		wasmx.Revert([]byte("unauthorized: server password not configured"))
+	}
+	if req.Password != storedPassword {
+		wasmx.Revert([]byte("unauthorized: invalid password"))
+	}
+
 	return nil, nil
 }
 
