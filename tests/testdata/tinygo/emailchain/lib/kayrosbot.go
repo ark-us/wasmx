@@ -122,6 +122,22 @@ func GenerateProofFilename(timestamp int64) string {
 	return fmt.Sprintf("kayros_proof_%s.json", t.Format("20060102_150405"))
 }
 
+// unfoldHeader removes folding whitespace from email headers
+// Email headers can be folded across multiple lines using \r\n followed by whitespace
+func unfoldHeader(value string) string {
+	// Replace \r\n followed by whitespace with a single space
+	value = strings.ReplaceAll(value, "\r\n ", " ")
+	value = strings.ReplaceAll(value, "\r\n\t", " ")
+	// Also handle just \n (some implementations are sloppy)
+	value = strings.ReplaceAll(value, "\n ", " ")
+	value = strings.ReplaceAll(value, "\n\t", " ")
+	// Remove any remaining \r\n
+	value = strings.ReplaceAll(value, "\r\n", " ")
+	value = strings.ReplaceAll(value, "\n", " ")
+	value = strings.ReplaceAll(value, "\r", " ")
+	return strings.TrimSpace(value)
+}
+
 // HandleKayrosBot processes incoming emails to the bot and sends a reply with Kayros proof
 func HandleKayrosBot(req *IncomingEmailRequest) error {
 	wasmx.LoggerInfo(MODULE_NAME, "kayrosbot handler", []string{})
@@ -132,13 +148,13 @@ func HandleKayrosBot(req *IncomingEmailRequest) error {
 	headerValues, err := extractHeaders(req.EmailRaw, []string{"Subject", "Message-ID", "References"})
 	if err == nil && len(headerValues) >= 1 {
 		if len(headerValues[0]) > 0 {
-			subject = headerValues[0]
+			subject = unfoldHeader(headerValues[0])
 		}
 		if len(headerValues) >= 2 && len(headerValues[1]) > 0 {
-			messageID = headerValues[1]
+			messageID = unfoldHeader(headerValues[1])
 		}
 		if len(headerValues) >= 3 && len(headerValues[2]) > 0 {
-			references = headerValues[2]
+			references = unfoldHeader(headerValues[2])
 		}
 	}
 
