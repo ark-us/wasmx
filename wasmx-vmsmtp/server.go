@@ -24,7 +24,7 @@ type backend struct {
 func (b *backend) NewSession(conn *smtp.Conn) (smtp.Session, error) {
 	// TODO implement reject policy by contract
 	// conn.Reject()
-	fmt.Println("smtpbackend.NewSession", conn.Hostname(), conn.Server().Addr, conn.Server().Network)
+	// fmt.Println("smtpbackend.NewSession", conn.Hostname(), conn.Server().Addr, conn.Server().Network)
 
 	c := conn.Conn()
 	// fmt.Println("--smtpbackend.NewSession Conn.LocalAddr--", c.LocalAddr(), c.LocalAddr().Network(), c.LocalAddr().String())

@@ -63,6 +63,7 @@ func StartServer(req *StartServerRequest) {
 	// smtpCfg.Addr = fmt.Sprintf("%s:%s", smtpCfg.Domain, PortSmtpDirectAddr)
 	smtpCfg.Addr = fmt.Sprintf("%s:%s", "", PortSmtpDirectAddr)
 	smtpCfg.StartTLS = true
+	// prevents your server from being an "open relay" (can't forward spam)
 	smtpCfg.EnableAuth = false
 	resp := vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{
 		ConnectionId: PortSmtpDirectAddr,
