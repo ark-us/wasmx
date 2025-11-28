@@ -95,12 +95,14 @@ func ValidateAccessTokenMock(_context interface{}, rnh memc.RuntimeHandler, para
 
 func RefreshAccessTokenMock(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	response := &RefreshAccessTokenResponse{
-		Error:       "",
-		AccessToken: "mock_new_access_token_1234567890",
-		ClientID:    "mock_client_id",
-		UserID:      "mock_user_id",
-		Scopes:      []string{"read", "write"},
-		ExpiresAt:   time.Now().Add(1 * time.Hour).Unix(),
+		Error:            "",
+		AccessToken:      "mock_new_access_token_1234567890",
+		RefreshToken:     "mock_new_refresh_token_0987654321",
+		ClientID:         "mock_client_id",
+		UserID:           "mock_user_id",
+		Scopes:           []string{"read", "write"},
+		ExpiresAt:        time.Now().Add(1 * time.Hour).Unix(),
+		RefreshExpiresAt: 0, // Non-expiring
 	}
 	return prepareResponse(rnh, response)
 }

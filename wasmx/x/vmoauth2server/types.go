@@ -226,12 +226,14 @@ type RefreshAccessTokenRequest struct {
 }
 
 type RefreshAccessTokenResponse struct {
-	Error        string   `json:"error"`
-	AccessToken  string   `json:"access_token"`
-	ClientID     string   `json:"client_id"`
-	UserID       string   `json:"user_id"`
-	Scopes       []string `json:"scopes"`
-	ExpiresAt    int64    `json:"expires_at"`
+	Error            string   `json:"error"`
+	AccessToken      string   `json:"access_token"`
+	RefreshToken     string   `json:"refresh_token"`      // New rotated refresh token
+	ClientID         string   `json:"client_id"`
+	UserID           string   `json:"user_id"`
+	Scopes           []string `json:"scopes"`
+	ExpiresAt        int64    `json:"expires_at"`         // Access token expiry
+	RefreshExpiresAt int64    `json:"refresh_expires_at"` // Refresh token expiry (0 if non-expiring)
 }
 
 // RevokeTokenRequest revokes an access or refresh token
