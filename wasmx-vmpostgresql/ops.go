@@ -441,3 +441,60 @@ func parseSqlQueryParams(params []SqlQueryParam) []interface{} {
 func buildConnectionId(chainId string, id string, ctx *Context) string {
 	return fmt.Sprintf("%s_%s_%s", chainId, ctx.Env.Contract.Address.String(), id)
 }
+
+// Exported helper functions for use by other packages (e.g., vmoauth2server)
+
+// ExecutePgQuery executes a query with automatic transaction/savepoint management.
+// This is a reusable helper that other packages can use to execute PostgreSQL queries.
+func ExecutePgQuery(sqlCtx *SqlContext, conn *SqlOpenConnection, ctx *Context, query string, params []interface{}) error {
+	// Use the existing transaction if available, otherwise start one
+	if conn.OpenSavepointTx == nil {
+		err := beginDbTx(conn, ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err := conn.OpenSavepointTx.Tx().Exec(ctx.Ctx, query, params...)
+	return err
+}
+
+// ExecutePgQueryWithRowCount executes a query and returns the number of rows affected.
+// This is a reusable helper that other packages can use to execute PostgreSQL queries
+// and track how many rows were affected.
+func ExecutePgQueryWithRowCount(sqlCtx *SqlContext, conn *SqlOpenConnection, ctx *Context, query string, params []interface{}) (int64, error) {
+	// Use the existing transaction if available, otherwise start one
+	if conn.OpenSavepointTx == nil {
+		err := beginDbTx(conn, ctx)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	commandTag, err := conn.OpenSavepointTx.Tx().Exec(ctx.Ctx, query, params...)
+	if err != nil {
+		return 0, err
+	}
+	return commandTag.RowsAffected(), nil
+}
+
+// QueryPgDatabase queries the database and returns results as JSON.
+// This is a reusable helper that other packages can use to query PostgreSQL
+// and get results in JSON format.
+func QueryPgDatabase(sqlCtx *SqlContext, conn *SqlOpenConnection, ctx *Context, query string, params []interface{}) ([]byte, error) {
+	// Use the existing transaction if available, otherwise start one
+	if conn.OpenSavepointTx == nil {
+		err := beginDbTx(conn, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	rows, err := conn.OpenSavepointTx.Tx().Query(ctx.Ctx, query, params...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return RowsToJSON(rows)
+}

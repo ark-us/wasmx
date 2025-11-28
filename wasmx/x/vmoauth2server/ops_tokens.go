@@ -2,11 +2,10 @@ package vmoauth2server
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
-	"github.com/loredanacirstea/wasmx/wasmx-vmpostgresql"
+	vmpostgresql "github.com/loredanacirstea/wasmx-vmpostgresql"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
@@ -275,6 +274,12 @@ func RefreshAccessToken(_context interface{}, rnh memc.RuntimeHandler, params []
 		json.Unmarshal([]byte(scopesStr), &scopes)
 	}
 
+	// Get refresh token expiry for rotation
+	var oldRefreshExpiresAt interface{} = nil
+	if expiresAtVal, ok := result["expires_at"]; ok && expiresAtVal != nil {
+		oldRefreshExpiresAt = int64(expiresAtVal.(float64))
+	}
+
 	// Generate new access token
 	newAccessToken, err := GenerateSecureToken(AccessTokenLength)
 	if err != nil {
@@ -282,44 +287,80 @@ func RefreshAccessToken(_context interface{}, rnh memc.RuntimeHandler, params []
 		return prepareResponse(rnh, response)
 	}
 
-	expiresAt := time.Now().Add(time.Duration(req.ExpiresInSeconds) * time.Second).Unix()
-	createdAt := time.Now().Unix()
-	scopesJSON, _ := json.Marshal(scopes)
-
-	insertQuery := `
-		INSERT INTO oauth2_access_tokens
-		(token, client_id, user_id, scopes, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`
-
-	insertParams := []vmpostgresql.SqlQueryParam{
-		{Value: newAccessToken},
-		{Value: clientID},
-		{Value: userID},
-		{Value: string(scopesJSON)},
-		{Value: expiresAt},
-		{Value: createdAt},
-	}
-
-	err = executePgQuery(ctx, instance.ConnectionID, insertQuery, insertParams)
+	// Generate new refresh token (rotation for security)
+	newRefreshToken, err := GenerateSecureToken(RefreshTokenLength)
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
 	}
 
-	// Update refresh token to link to new access token
-	updateQuery := "UPDATE oauth2_refresh_tokens SET access_token = $1 WHERE token = $2"
-	updateParams := []vmpostgresql.SqlQueryParam{
-		{Value: newAccessToken},
-		{Value: req.RefreshToken},
-	}
-	executePgQuery(ctx, instance.ConnectionID, updateQuery, updateParams)
+	accessExpiresAt := time.Now().Add(time.Duration(req.ExpiresInSeconds) * time.Second).Unix()
+	createdAt := time.Now().Unix()
+	scopesJSON, _ := json.Marshal(scopes)
 
+	// CRITICAL: Delete old refresh token first (prevent replay attacks)
+	deleteQuery := "DELETE FROM oauth2_refresh_tokens WHERE token = $1"
+	deleteParams := []vmpostgresql.SqlQueryParam{{Value: req.RefreshToken}}
+	err = executePgQuery(ctx, instance.ConnectionID, deleteQuery, deleteParams)
+	if err != nil {
+		response.Error = "failed to invalidate old refresh token: " + err.Error()
+		return prepareResponse(rnh, response)
+	}
+
+	// Insert new access token
+	insertAccessQuery := `
+		INSERT INTO oauth2_access_tokens
+		(token, client_id, user_id, scopes, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+
+	insertAccessParams := []vmpostgresql.SqlQueryParam{
+		{Value: newAccessToken},
+		{Value: clientID},
+		{Value: userID},
+		{Value: string(scopesJSON)},
+		{Value: accessExpiresAt},
+		{Value: createdAt},
+	}
+
+	err = executePgQuery(ctx, instance.ConnectionID, insertAccessQuery, insertAccessParams)
+	if err != nil {
+		response.Error = err.Error()
+		return prepareResponse(rnh, response)
+	}
+
+	// Insert new refresh token (rotation)
+	insertRefreshQuery := `
+		INSERT INTO oauth2_refresh_tokens
+		(token, client_id, user_id, scopes, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+
+	insertRefreshParams := []vmpostgresql.SqlQueryParam{
+		{Value: newRefreshToken},
+		{Value: clientID},
+		{Value: userID},
+		{Value: string(scopesJSON)},
+		{Value: oldRefreshExpiresAt},
+		{Value: createdAt},
+	}
+
+	err = executePgQuery(ctx, instance.ConnectionID, insertRefreshQuery, insertRefreshParams)
+	if err != nil {
+		response.Error = "failed to create new refresh token: " + err.Error()
+		return prepareResponse(rnh, response)
+	}
+
+	// Prepare response with both new tokens
 	response.AccessToken = newAccessToken
+	response.RefreshToken = newRefreshToken
 	response.ClientID = clientID
 	response.UserID = userID
 	response.Scopes = scopes
-	response.ExpiresAt = expiresAt
+	response.ExpiresAt = accessExpiresAt
+	if oldRefreshExpiresAt != nil {
+		response.RefreshExpiresAt = oldRefreshExpiresAt.(int64)
+	}
 
 	return prepareResponse(rnh, response)
 }
@@ -351,14 +392,32 @@ func RevokeToken(_context interface{}, rnh memc.RuntimeHandler, params []interfa
 		return prepareResponse(rnh, response)
 	}
 
+	queryParams := []vmpostgresql.SqlQueryParam{{Value: req.Token}}
+	var totalDeleted int64 = 0
+
 	// Try to delete from access tokens
 	query1 := "DELETE FROM oauth2_access_tokens WHERE token = $1"
-	queryParams := []vmpostgresql.SqlQueryParam{{Value: req.Token}}
-	executePgQuery(ctx, instance.ConnectionID, query1, queryParams)
+	rowsAffected1, err1 := executePgQueryWithRowCount(ctx, instance.ConnectionID, query1, queryParams)
+	if err1 != nil {
+		response.Error = "failed to revoke access token: " + err1.Error()
+		return prepareResponse(rnh, response)
+	}
+	totalDeleted += rowsAffected1
 
 	// Try to delete from refresh tokens
 	query2 := "DELETE FROM oauth2_refresh_tokens WHERE token = $1"
-	executePgQuery(ctx, instance.ConnectionID, query2, queryParams)
+	rowsAffected2, err2 := executePgQueryWithRowCount(ctx, instance.ConnectionID, query2, queryParams)
+	if err2 != nil {
+		response.Error = "failed to revoke refresh token: " + err2.Error()
+		return prepareResponse(rnh, response)
+	}
+	totalDeleted += rowsAffected2
+
+	// Verify that at least one token was actually revoked
+	if totalDeleted == 0 {
+		response.Error = "token not found"
+		return prepareResponse(rnh, response)
+	}
 
 	return prepareResponse(rnh, response)
 }
@@ -502,23 +561,34 @@ func CleanupExpiredTokens(_context interface{}, rnh memc.RuntimeHandler, params 
 	// Delete expired authorization codes
 	query1 := "DELETE FROM oauth2_authorization_codes WHERE expires_at < $1"
 	queryParams1 := []vmpostgresql.SqlQueryParam{{Value: now}}
-	executePgQuery(ctx, instance.ConnectionID, query1, queryParams1)
+	deletedAuthCodes, err := executePgQueryWithRowCount(ctx, instance.ConnectionID, query1, queryParams1)
+	if err != nil {
+		response.Error = "failed to cleanup authorization codes: " + err.Error()
+		return prepareResponse(rnh, response)
+	}
 
 	// Delete expired access tokens
 	query2 := "DELETE FROM oauth2_access_tokens WHERE expires_at < $1"
 	queryParams2 := []vmpostgresql.SqlQueryParam{{Value: now}}
-	executePgQuery(ctx, instance.ConnectionID, query2, queryParams2)
+	deletedAccessTokens, err := executePgQueryWithRowCount(ctx, instance.ConnectionID, query2, queryParams2)
+	if err != nil {
+		response.Error = "failed to cleanup access tokens: " + err.Error()
+		return prepareResponse(rnh, response)
+	}
 
 	// Delete expired refresh tokens (only those with expiration set)
 	query3 := "DELETE FROM oauth2_refresh_tokens WHERE expires_at IS NOT NULL AND expires_at < $1"
 	queryParams3 := []vmpostgresql.SqlQueryParam{{Value: now}}
-	executePgQuery(ctx, instance.ConnectionID, query3, queryParams3)
+	deletedRefreshTokens, err := executePgQueryWithRowCount(ctx, instance.ConnectionID, query3, queryParams3)
+	if err != nil {
+		response.Error = "failed to cleanup refresh tokens: " + err.Error()
+		return prepareResponse(rnh, response)
+	}
 
-	// Note: In a real implementation, we would capture the rows affected count
-	// For now, we'll just return success
-	response.DeletedAuthCodes = 0
-	response.DeletedAccessTokens = 0
-	response.DeletedRefreshTokens = 0
+	// Return actual counts
+	response.DeletedAuthCodes = deletedAuthCodes
+	response.DeletedAccessTokens = deletedAccessTokens
+	response.DeletedRefreshTokens = deletedRefreshTokens
 
 	return prepareResponse(rnh, response)
 }

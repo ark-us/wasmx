@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loredanacirstea/wasmx/wasmx-vmpostgresql"
+	vmpostgresql "github.com/loredanacirstea/wasmx-vmpostgresql"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
@@ -558,22 +558,33 @@ func executePgQuery(ctx *Context, connectionID string, query string, queryParams
 		params[i] = p.Value
 	}
 
-	// Use the existing transaction if available
-	if conn.OpenSavepointTx == nil {
-		batch, err := conn.Db.NewBatchWithError()
-		if err != nil {
-			return fmt.Errorf("cannot begin db transaction: %s", err.Error())
-		}
-		conn.OpenSavepointTx = batch
-		conn.setSavePoint("sp0")
-		_, err = batch.Tx().Exec(ctx.Ctx, "SAVEPOINT sp0")
-		if err != nil {
-			return fmt.Errorf("cannot add savepoint: %v", err)
-		}
+	// Use the exported helper from vmpostgresql package
+	pgCtx := &vmpostgresql.Context{Context: ctx.Context}
+	return vmpostgresql.ExecutePgQuery(sqlCtx, conn, pgCtx, query, params)
+}
+
+// executePgQueryWithRowCount executes a query and returns the number of rows affected
+func executePgQueryWithRowCount(ctx *Context, connectionID string, query string, queryParams []vmpostgresql.SqlQueryParam) (int64, error) {
+	sqlCtx, err := vmpostgresql.GetSqlContext(ctx.Context.GoContextParent)
+	if err != nil {
+		return 0, err
 	}
 
-	_, err = conn.OpenSavepointTx.Tx().Exec(ctx.Ctx, query, params...)
-	return err
+	connId := buildConnectionId(ctx.Ctx.ChainID(), connectionID, ctx.Env.Contract.Address.String())
+	conn, found := sqlCtx.GetConnection(connId)
+	if !found {
+		return 0, fmt.Errorf("postgresql connection not found: %s", connId)
+	}
+
+	// Convert query params to the format expected by PostgreSQL
+	params := make([]interface{}, len(queryParams))
+	for i, p := range queryParams {
+		params[i] = p.Value
+	}
+
+	// Use the exported helper from vmpostgresql package
+	pgCtx := &vmpostgresql.Context{Context: ctx.Context}
+	return vmpostgresql.ExecutePgQueryWithRowCount(sqlCtx, conn, pgCtx, query, params)
 }
 
 func queryPgDatabase(ctx *Context, connectionID string, query string, queryParams []vmpostgresql.SqlQueryParam) ([]byte, error) {
@@ -594,27 +605,9 @@ func queryPgDatabase(ctx *Context, connectionID string, query string, queryParam
 		params[i] = p.Value
 	}
 
-	// Use the existing transaction if available
-	if conn.OpenSavepointTx == nil {
-		batch, err := conn.Db.NewBatchWithError()
-		if err != nil {
-			return nil, fmt.Errorf("cannot begin db transaction: %s", err.Error())
-		}
-		conn.OpenSavepointTx = batch
-		conn.setSavePoint("sp0")
-		_, err = batch.Tx().Exec(ctx.Ctx, "SAVEPOINT sp0")
-		if err != nil {
-			return nil, fmt.Errorf("cannot add savepoint: %v", err)
-		}
-	}
-
-	rows, err := conn.OpenSavepointTx.Tx().Query(ctx.Ctx, query, params...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return vmpostgresql.RowsToJSON(rows)
+	// Use the exported helper from vmpostgresql package
+	pgCtx := &vmpostgresql.Context{Context: ctx.Context}
+	return vmpostgresql.QueryPgDatabase(sqlCtx, conn, pgCtx, query, params)
 }
 
 func buildConnectionId(chainId, contractAddress, connectionID string) string {

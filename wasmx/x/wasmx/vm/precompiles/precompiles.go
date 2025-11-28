@@ -171,6 +171,9 @@ var (
 	//go:embed 75.kayros_verifier_0.0.1.wasm
 	kayros_verifier_contract []byte
 
+	//go:embed 66.wasmx_mcp_0.0.1.wasm
+	wasmx_mcp []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -363,6 +366,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = wasmx_email
 	case types.HTTPSERVER_REGISTRY_v001:
 		wasmbin = wasmx_httpserver_registry
+	case types.MCP_v001:
+		wasmbin = wasmx_mcp
 	}
 	return wasmbin
 }

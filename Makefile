@@ -13,7 +13,8 @@ TINYGO_TARGETS := \
 	wasmx-kayrosp2p-lib:71.kayrosp2p_library.wasm \
 	wasmx-kayrosp2p-ondemand-lib:72.kayrosp2p_ondemand_library.wasm \
 	wasmx-kayros-verifier:75.kayros_verifier_0.0.1.wasm \
-	emailchain:63.wasmx_email_0.0.1.wasm
+	emailchain:63.wasmx_email_0.0.1.wasm \
+	mcp:66.wasmx_mcp_0.0.1.wasm
 
 # wasmx-gov:35.gov_0.0.1.wasm \
 # wasmx-gov-continuous:37.gov_cont_0.0.1.wasm \

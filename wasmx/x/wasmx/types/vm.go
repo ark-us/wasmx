@@ -292,6 +292,7 @@ var ROLE_METAREGISTRY = "metaregistry"
 
 var ROLE_DTYPE = "dtype"
 var ROLE_EMAIL_HANDLER = "email_handler"
+var ROLE_MCP_SERVER = "mcp_server"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
@@ -377,6 +378,7 @@ var LOBBY_v001 = "lobby_json_0.0.1"
 var METAREGISTRY_v001 = "metaregistry_json_0.0.1"
 var DTYPE_v001 = "dtype_0.0.1"
 var EMAIL_v001 = "email_0.0.1"
+var MCP_v001 = "mcp_0.0.1"
 var HTTPSERVER_REGISTRY_v001 = "httpserver_registry_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
