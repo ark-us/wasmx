@@ -71,6 +71,7 @@ import (
 	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
 	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
 	"github.com/loredanacirstea/wasmx/x/vmkv"
+	"github.com/loredanacirstea/wasmx/x/vmoauth2server"
 	"github.com/loredanacirstea/wasmx/x/vmsql"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
@@ -112,6 +113,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, initializeD
 	goctx = vmimap.WithImapEmptyContext(goctx)
 	goctx = vmsmtp.WithSmtpEmptyContext(goctx)
 	goctx = vmhttpserver.WithHttpServerEmptyContext(goctx)
+	goctx = vmoauth2server.WithOAuth2ServerEmptyContext(goctx)
 	wasmVmMeta.InitWasmRuntime(goctx, chainId)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", goctx)

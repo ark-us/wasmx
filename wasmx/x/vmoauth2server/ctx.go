@@ -16,3 +16,12 @@ func GetOAuth2ServerContext(ctx context.Context) (*OAuth2ServerContext, error) {
 	}
 	return oauth2Ctx, nil
 }
+
+func WithOAuth2ServerEmptyContext(ctx context.Context) context.Context {
+	vctx := &OAuth2ServerContext{Instances: map[string]*OAuth2ServerInstance{}}
+	return context.WithValue(ctx, OAuth2ServerContextKey, vctx)
+}
+
+func WithOAuth2ServerContext(ctx context.Context, vctx *OAuth2ServerContext) context.Context {
+	return context.WithValue(ctx, OAuth2ServerContextKey, vctx)
+}
