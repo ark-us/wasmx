@@ -871,16 +871,16 @@ func SpecialPrecompiles() SystemContracts {
 		// 	Deps:        []string{},
 		// },
 		// TODO dtype nondeterministic version
-		{
-			Address:     ADDR_EMAIL_HANDLER,
-			Label:       EMAIL_v001,
-			InitMessage: initMsg,
-			Pinned:      true,
-			MeteringOff: true,
-			Role:        &SystemContractRole{Role: ROLE_EMAIL_HANDLER, Label: ROLE_EMAIL_HANDLER, Primary: true},
-			StorageType: ContractStorageType_SingleConsensus,
-			Deps:        []string{},
-		},
+		// {
+		// 	Address:     ADDR_EMAIL_HANDLER,
+		// 	Label:       EMAIL_v001,
+		// 	InitMessage: initMsg,
+		// 	Pinned:      true,
+		// 	MeteringOff: true,
+		// 	Role:        &SystemContractRole{Role: ROLE_EMAIL_HANDLER, Label: ROLE_EMAIL_HANDLER, Primary: true},
+		// 	StorageType: ContractStorageType_SingleConsensus,
+		// 	Deps:        []string{},
+		// },
 		{
 			Address:     ADDR_MCP_SERVER,
 			Label:       MCP_v001,
@@ -889,7 +889,8 @@ func SpecialPrecompiles() SystemContracts {
 			MeteringOff: true,
 			Role:        &SystemContractRole{Role: ROLE_MCP_SERVER, Label: ROLE_MCP_SERVER, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
-			Deps:        []string{},
+			// StorageType: ContractStorageType_CoreConsensus,
+			Deps: []string{},
 		},
 	}
 }

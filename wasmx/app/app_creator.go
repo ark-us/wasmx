@@ -25,6 +25,7 @@ import (
 	"github.com/loredanacirstea/wasmx/x/network/vmp2p"
 	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
 	"github.com/loredanacirstea/wasmx/x/vmkv"
+	"github.com/loredanacirstea/wasmx/x/vmoauth2server"
 	"github.com/loredanacirstea/wasmx/x/vmsql"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
@@ -58,6 +59,7 @@ func NewAppCreator(
 	ctx = vmimap.WithImapEmptyContext(ctx)
 	ctx = vmsmtp.WithSmtpEmptyContext(ctx)
 	ctx = vmhttpserver.WithHttpServerEmptyContext(ctx)
+	ctx = vmoauth2server.WithOAuth2ServerEmptyContext(ctx)
 	// wasmVmMeta.InitWasmRuntime(ctx, chainId)
 	appOpts.Set("goroutineGroup", g)
 	appOpts.Set("goContextParent", ctx)

@@ -35,14 +35,13 @@ func handleOAuthAuthorize(req *httpserver.HttpRequestIncoming) httpserver.HttpRe
 		return sendTextResponse("Invalid response_type, must be 'code'", 400)
 	}
 
-	// Validate client (using OAuth2 server)
-	validateResp := oauth2server.ValidateClient(&oauth2server.ValidateClientRequest{
-		InstanceID:   OAUTH2_INSTANCE_ID,
-		ClientID:     clientID,
-		ClientSecret: params.ClientSecret,
+	// Check if client exists (don't validate secret in authorize endpoint)
+	getClientResp := oauth2server.GetClient(&oauth2server.GetClientRequest{
+		InstanceID: OAUTH2_INSTANCE_ID,
+		ClientID:   clientID,
 	})
 
-	if validateResp.Error != "" || !validateResp.Valid {
+	if getClientResp.Error != "" {
 		return sendTextResponse("Invalid client_id", 400)
 	}
 

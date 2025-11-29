@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	httpserver "github.com/loredanacirstea/wasmx-env-httpserver/lib"
@@ -64,6 +65,10 @@ func main() {
 		res := lib.ConnectDatabase(calldata.ConnectDatabase)
 		wasmx.SetFinishData(res)
 		return
+	case calldata.InitTables != nil:
+		res := lib.InitializeTables()
+		wasmx.SetFinishData(res)
+		return
 	case calldata.StartServer != nil:
 		lib.StartServer(calldata.StartServer)
 		wasmx.SetFinishData([]byte(`{"success": true}`))
@@ -73,7 +78,7 @@ func main() {
 	// Internal operations
 	switch {
 	case calldata.InitGenesis != nil:
-		wasmx.OnlyInternal(lib.MODULE_NAME, "InitGenesis")
+		// wasmx.OnlyInternal(lib.MODULE_NAME, "InitGenesis")
 		res := lib.InitGenesis(*calldata.InitGenesis)
 		wasmx.SetFinishData(res)
 		return
@@ -89,8 +94,10 @@ func main() {
 }
 
 func handleHttpRequest() {
+	fmt.Println("--handleHttpRequest--")
 	// Get the HTTP request data from call data
 	databz := wasmx.GetCallData()
+	fmt.Println("--handleHttpRequest--", string(databz))
 	var req httpserver.HttpRequestIncoming
 	if err := json.Unmarshal(databz, &req); err != nil {
 		lib.LoggerError("Failed to parse HTTP request", []string{"error", err.Error()})

@@ -18,6 +18,7 @@ import (
 
 	ut "github.com/loredanacirstea/mythos-tests/utils"
 	vmimap "github.com/loredanacirstea/wasmx-vmimap"
+	vmpostgresql "github.com/loredanacirstea/wasmx-vmpostgresql"
 	vmsmtp "github.com/loredanacirstea/wasmx-vmsmtp"
 	"github.com/loredanacirstea/wasmx/x/vmhttpclient"
 	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
@@ -32,6 +33,7 @@ func init() {
 	vmhttpserver.Setup()
 	vmoauth2client.Setup()
 	vmoauth2server.Setup()
+	vmpostgresql.Setup()
 }
 
 var (

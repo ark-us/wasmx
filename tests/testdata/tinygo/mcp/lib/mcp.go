@@ -45,8 +45,27 @@ func ConnectDatabase(req *ConnectDatabaseRequest) []byte {
 	return []byte(`{"success": true}`)
 }
 
-// InitializeTables creates PostgreSQL tables (can be called from RoleChanged hook)
+// InitializeTables connects to PostgreSQL and creates tables (can be called from RoleChanged hook)
 func InitializeTables() []byte {
+	// Get stored params to get database connection info
+	params := getParams()
+	if params == nil {
+		LoggerError("Failed to get params", nil)
+		return []byte(`{"error": "params not initialized"}`)
+	}
+
+	// Connect to PostgreSQL if not already connected
+	pgResp := postgresql.Connect(&postgresql.SqlConnectionRequest{
+		Connection: params.DbConnection,
+		DbName:     params.DbName,
+		Id:         POSTGRESQL_CONNECTION_ID,
+	})
+
+	if pgResp.Error != "" {
+		LoggerError("Failed to connect to PostgreSQL", []string{"error", pgResp.Error})
+		return []byte(fmt.Sprintf(`{"error": "%s"}`, pgResp.Error))
+	}
+
 	// Create user data table
 	createTableResp := postgresql.Execute(&postgresql.SqlExecuteRequest{
 		Id: POSTGRESQL_CONNECTION_ID,
@@ -65,7 +84,9 @@ func InitializeTables() []byte {
 	}
 
 	LoggerInfo("Database tables created", nil)
-	return []byte(`{"success": true}`)
+
+	// Initialize OAuth2 server now that database is connected
+	return InitializeOAuth2()
 }
 
 // InitializeOAuth2 sets up OAuth2 server and registers client
@@ -234,8 +255,14 @@ func validateToken(token string) (string, bool) {
 }
 
 func HandleHttpRequest(req *httpserver.HttpRequestIncoming) httpserver.HttpResponseWrap {
+	// Extract path from RequestURI (remove query string)
+	path := req.RequestURI
+	if idx := strings.Index(path, "?"); idx != -1 {
+		path = path[:idx]
+	}
+
 	// Route the request based on the URL path
-	switch req.RequestURI {
+	switch path {
 	case "/.well-known/oauth-authorization-server":
 		return handleOAuthMetadata(req)
 	case "/oauth/authorize":
@@ -294,7 +321,11 @@ func handleOAuthMetadata(req *httpserver.HttpRequestIncoming) httpserver.HttpRes
 	if req.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
 	}
-	host := req.Header.Get("Host")
+	// Use X-Forwarded-Host if available (for proxies like ngrok)
+	host := req.Header.Get("X-Forwarded-Host")
+	if host == "" {
+		host = req.Header.Get("Host")
+	}
 	baseURL := fmt.Sprintf("%s://%s", scheme, host)
 
 	metadata := map[string]interface{}{

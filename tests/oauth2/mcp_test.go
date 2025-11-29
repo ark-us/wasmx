@@ -13,7 +13,6 @@ import (
 
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
-	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 )
 
@@ -27,7 +26,7 @@ func (suite *KeeperTestSuite) TestMCPServer() {
 	contractAddress := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_MCP_SERVER))
 
 	// Set a role to have access to protected APIs
-	utils.RegisterRole(suite, appA, "mcp", contractAddress, sender)
+	// utils.RegisterRole(suite, appA, "mcp", contractAddress, sender)
 
 	// Initialize genesis with server parameters
 	initGenesisMsg := &InitGenesisCalldata{
@@ -35,8 +34,14 @@ func (suite *KeeperTestSuite) TestMCPServer() {
 			Params: ServerParams{
 				ClientID:     "test-mcp-client",
 				ClientSecret: "test-secret-12345",
-				RedirectURIs: []string{"http://localhost:3000/callback"},
+				RedirectURIs: []string{
+					"https://chat.openai.com/aip/callback",
+					"https://chatgpt.com/connector_platform_oauth_redirect",
+					"http://localhost:3000/callback",
+				},
 				Scopes:       []string{"read", "write", "tools"},
+				DbConnection: "host=localhost port=5432 user=postgres password=postgres sslmode=disable",
+				DbName:       "mcp_test",
 			},
 		},
 	}
@@ -46,18 +51,16 @@ func (suite *KeeperTestSuite) TestMCPServer() {
 	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
 	fmt.Println("Initialized MCP server genesis")
 
-	// Connect to database
-	connectDbMsg := &ConnectDatabaseCalldata{
-		ConnectDatabase: &ConnectDatabaseRequest{
-			Connection: "host=localhost port=5432 user=postgres password=postgres sslmode=disable",
-			DbName:     "mcp_test",
-		},
+	// Initialize everything: connect to database, create tables, initialize OAuth2
+	// Note: This would normally be called automatically by RoleChanged hook during bootstrap
+	initTablesMsg := &InitTablesCalldata{
+		InitTables: &InitTablesRequest{},
 	}
-	data, err = json.Marshal(connectDbMsg)
-	fmt.Println("ConnectDatabase:", string(data))
+	data, err = json.Marshal(initTablesMsg)
+	fmt.Println("InitializeTables:", string(data))
 	suite.Require().NoError(err)
 	appA.ExecuteContractWithGas(sender, contractAddress, types.WasmxExecutionMessage{Data: data}, nil, nil, 280000000, nil)
-	fmt.Println("Connected to database")
+	fmt.Println("Initialized tables and OAuth2")
 
 	// Start the MCP server
 	startServerMsg := &StartServerCalldata{
@@ -109,9 +112,17 @@ type StartServerRequest struct {
 	Address string `json:"address"`
 }
 
+type InitTablesCalldata struct {
+	InitTables *InitTablesRequest `json:"init_tables,omitempty"`
+}
+
+type InitTablesRequest struct{}
+
 type ServerParams struct {
 	ClientID     string   `json:"client_id"`
 	ClientSecret string   `json:"client_secret"`
 	RedirectURIs []string `json:"redirect_uris"`
 	Scopes       []string `json:"scopes"`
+	DbConnection string   `json:"db_connection"`
+	DbName       string   `json:"db_name"`
 }

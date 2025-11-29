@@ -16,6 +16,7 @@ type CallData struct {
 	InitGenesis      *InitGenesisRequest      `json:"init_genesis,omitempty"`
 	GetParams        *GetParamsRequest        `json:"get_params,omitempty"`
 	ConnectDatabase  *ConnectDatabaseRequest  `json:"connect_database,omitempty"`
+	InitTables       *InitTablesRequest       `json:"init_tables,omitempty"`
 	RoleChanged      *wasmx.RolesChangedHook  `json:"RoleChanged,omitempty"`
 }
 
@@ -34,11 +35,15 @@ type ConnectDatabaseRequest struct {
 	DbName     string `json:"db_name"`
 }
 
+type InitTablesRequest struct{}
+
 type ServerParams struct {
-	ClientID     string   `json:"client_id"`
-	ClientSecret string   `json:"client_secret"`
-	RedirectURIs []string `json:"redirect_uris"`
-	Scopes       []string `json:"scopes"`
+	ClientID         string   `json:"client_id"`
+	ClientSecret     string   `json:"client_secret"`
+	RedirectURIs     []string `json:"redirect_uris"`
+	Scopes           []string `json:"scopes"`
+	DbConnection     string   `json:"db_connection"`      // PostgreSQL connection string
+	DbName           string   `json:"db_name"`            // Database name
 }
 
 // MCP Protocol types

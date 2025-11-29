@@ -546,7 +546,7 @@ func executePgQuery(ctx *Context, connectionID string, query string, queryParams
 		return err
 	}
 
-	connId := buildConnectionId(ctx.Ctx.ChainID(), connectionID, ctx.Env.Contract.Address.String())
+	connId := buildConnectionId(ctx.Ctx.ChainID(), ctx.Env.Contract.Address.String(), connectionID)
 	conn, found := sqlCtx.GetConnection(connId)
 	if !found {
 		return fmt.Errorf("postgresql connection not found: %s", connId)
@@ -570,7 +570,7 @@ func executePgQueryWithRowCount(ctx *Context, connectionID string, query string,
 		return 0, err
 	}
 
-	connId := buildConnectionId(ctx.Ctx.ChainID(), connectionID, ctx.Env.Contract.Address.String())
+	connId := buildConnectionId(ctx.Ctx.ChainID(), ctx.Env.Contract.Address.String(), connectionID)
 	conn, found := sqlCtx.GetConnection(connId)
 	if !found {
 		return 0, fmt.Errorf("postgresql connection not found: %s", connId)
@@ -593,7 +593,7 @@ func queryPgDatabase(ctx *Context, connectionID string, query string, queryParam
 		return nil, err
 	}
 
-	connId := buildConnectionId(ctx.Ctx.ChainID(), connectionID, ctx.Env.Contract.Address.String())
+	connId := buildConnectionId(ctx.Ctx.ChainID(), ctx.Env.Contract.Address.String(), connectionID)
 	conn, found := sqlCtx.GetConnection(connId)
 	if !found {
 		return nil, fmt.Errorf("postgresql connection not found: %s", connId)
