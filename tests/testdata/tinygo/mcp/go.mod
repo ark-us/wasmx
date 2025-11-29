@@ -6,6 +6,7 @@ toolchain go1.24.4
 
 require (
 	github.com/loredanacirstea/wasmx-env v0.0.0
+	github.com/loredanacirstea/wasmx-env-core v0.0.0
 	github.com/loredanacirstea/wasmx-env-httpserver v0.0.0
 	github.com/loredanacirstea/wasmx-env-oauth2server v0.0.0
 	github.com/loredanacirstea/wasmx-env-postgresql v0.0.0
@@ -17,6 +18,8 @@ require (
 )
 
 replace github.com/loredanacirstea/wasmx-env v0.0.0 => ../wasmx-env
+
+replace github.com/loredanacirstea/wasmx-env-core v0.0.0 => ../wasmx-env-core
 
 replace github.com/loredanacirstea/wasmx-env-utils v0.0.0 => ../wasmx-env-utils
 

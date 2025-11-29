@@ -889,8 +889,7 @@ func SpecialPrecompiles() SystemContracts {
 			MeteringOff: true,
 			Role:        &SystemContractRole{Role: ROLE_MCP_SERVER, Label: ROLE_MCP_SERVER, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
-			// StorageType: ContractStorageType_CoreConsensus,
-			Deps: []string{},
+			Deps:        []string{},
 		},
 	}
 }

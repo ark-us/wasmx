@@ -308,3 +308,33 @@ func ExternalCall(req *CoreCallRequest, moduleName string) ([]byte, bool, error)
 
 	return response.Data, response.Success == 0, nil
 }
+
+func executeCliCommandWrap(bz []byte) []byte {
+	return utils.PackedPtrToBytes(executeCliCommand_(utils.BytesToPackedPtr(bz)))
+}
+
+func ExecuteCliCommand(command string, args []string, workDir string) (*ExecuteCliCommandResponse, error) {
+	req := ExecuteCliCommandRequest{
+		Command: command,
+		Args:    args,
+		WorkDir: workDir,
+	}
+
+	reqJSON, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	LoggerInfo("execute cli command: ", []string{"command", command, "args", fmt.Sprintf("%v", args)})
+
+	result := executeCliCommandWrap(reqJSON)
+
+	var response ExecuteCliCommandResponse
+	if err := json.Unmarshal(result, &response); err != nil {
+		return nil, err
+	}
+
+	LoggerInfo("execute cli command result: ", []string{"exit_code", fmt.Sprintf("%d", response.ExitCode), "error", response.Error})
+
+	return &response, nil
+}

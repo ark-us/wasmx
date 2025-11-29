@@ -126,3 +126,16 @@ type CoreCallResponse struct {
 	Success uint8  `json:"success"`
 	Data    []byte `json:"data"`
 }
+
+type ExecuteCliCommandRequest struct {
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
+	WorkDir string   `json:"work_dir,omitempty"`
+}
+
+type ExecuteCliCommandResponse struct {
+	Stdout   string `json:"stdout"`
+	Stderr   string `json:"stderr"`
+	ExitCode int    `json:"exit_code"`
+	Error    string `json:"error"`
+}
