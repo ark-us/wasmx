@@ -8,6 +8,7 @@ import (
 
 	httpserver "github.com/loredanacirstea/wasmx-env-httpserver/lib"
 	oauth2server "github.com/loredanacirstea/wasmx-env-oauth2server/lib"
+	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 )
 
 func handleOAuthAuthorize(req *httpserver.HttpRequestIncoming) httpserver.HttpResponseWrap {
@@ -384,6 +385,39 @@ func handleMCPToolsList(req *JSONRPCRequest, userID string) httpserver.HttpRespo
 				"properties": map[string]interface{}{},
 			},
 		},
+		{
+			"name":        "execute_cli",
+			"description": "Execute a CLI command (requires authentication)",
+			"inputSchema": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"command": map[string]string{
+						"type":        "string",
+						"description": "The command to execute (e.g., 'python3')",
+					},
+					"args": map[string]interface{}{
+						"type":        "array",
+						"description": "Command arguments",
+						"items": map[string]string{
+							"type": "string",
+						},
+					},
+					"work_dir": map[string]string{
+						"type":        "string",
+						"description": "Working directory for the command (optional)",
+					},
+				},
+				"required": []string{"command"},
+			},
+		},
+		{
+			"name":        "execute_py",
+			"description": "Execute the hello.py Python script that prints a random number (requires authentication)",
+			"inputSchema": map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
 	}
 
 	response := JSONRPCResponse{
@@ -415,6 +449,16 @@ func handleMCPToolsCall(req *JSONRPCRequest, userID string) httpserver.HttpRespo
 			return sendMCPErrorResponse(req.ID, -32002, "Authentication required")
 		}
 		return handleGetFavoriteColor(req, userID)
+	case "execute_cli":
+		if userID == "" {
+			return sendMCPErrorResponse(req.ID, -32003, "Authentication required")
+		}
+		return handleExecuteCli(req, userID, params.Arguments)
+	case "execute_py":
+		if userID == "" {
+			return sendMCPErrorResponse(req.ID, -32004, "Authentication required")
+		}
+		return handleExecutePy(req, userID)
 	default:
 		return sendMCPErrorResponse(req.ID, -32601, "Tool not found")
 	}
@@ -476,6 +520,113 @@ func handleGetFavoriteColor(req *JSONRPCRequest, userID string) httpserver.HttpR
 				{
 					"type": "text",
 					"text": message,
+				},
+			},
+		},
+	}
+	return sendMCPResponse(response)
+}
+
+func handleExecutePy(req *JSONRPCRequest, userID string) httpserver.HttpResponseWrap {
+	// Execute the hello.py script
+	scriptPath := "/Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/mcp/hello.py"
+	result, err := wasmxcore.ExecuteCliCommand("python3", []string{scriptPath}, "")
+	if err != nil {
+		return sendMCPErrorResponse(req.ID, -32000, fmt.Sprintf("Failed to execute Python script: %s", err.Error()))
+	}
+
+	// Build the response text with stdout, stderr, and exit code
+	var outputText string
+	if result.Error != "" {
+		outputText = fmt.Sprintf("Error: %s\n", result.Error)
+	}
+
+	if result.ExitCode != 0 {
+		outputText += fmt.Sprintf("Exit Code: %d\n", result.ExitCode)
+	}
+
+	if result.Stdout != "" {
+		outputText += result.Stdout
+	}
+
+	if result.Stderr != "" {
+		outputText += fmt.Sprintf("Stderr:\n%s\n", result.Stderr)
+	}
+
+	if outputText == "" {
+		outputText = "Python script executed successfully with no output"
+	}
+
+	response := JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      req.ID,
+		Result: map[string]interface{}{
+			"content": []map[string]interface{}{
+				{
+					"type": "text",
+					"text": outputText,
+				},
+			},
+		},
+	}
+	return sendMCPResponse(response)
+}
+
+func handleExecuteCli(req *JSONRPCRequest, userID string, args map[string]interface{}) httpserver.HttpResponseWrap {
+	command, ok := args["command"].(string)
+	if !ok || command == "" {
+		return sendMCPErrorResponse(req.ID, -32602, "Command parameter required")
+	}
+
+	// Parse args array if provided
+	var cmdArgs []string
+	if argsArray, ok := args["args"].([]interface{}); ok {
+		for _, arg := range argsArray {
+			if argStr, ok := arg.(string); ok {
+				cmdArgs = append(cmdArgs, argStr)
+			}
+		}
+	}
+
+	// Get optional work directory
+	workDir, _ := args["work_dir"].(string)
+
+	// Execute the CLI command using wasmx-env-core
+	result, err := wasmxcore.ExecuteCliCommand(command, cmdArgs, workDir)
+	if err != nil {
+		return sendMCPErrorResponse(req.ID, -32000, fmt.Sprintf("Failed to execute command: %s", err.Error()))
+	}
+
+	// Build the response text with stdout, stderr, and exit code
+	var outputText string
+	if result.Error != "" {
+		outputText = fmt.Sprintf("Error: %s\n", result.Error)
+	}
+
+	if result.ExitCode != 0 {
+		outputText += fmt.Sprintf("Exit Code: %d\n", result.ExitCode)
+	}
+
+	if result.Stdout != "" {
+		outputText += fmt.Sprintf("Stdout:\n%s\n", result.Stdout)
+	}
+
+	if result.Stderr != "" {
+		outputText += fmt.Sprintf("Stderr:\n%s\n", result.Stderr)
+	}
+
+	if outputText == "" {
+		outputText = "Command executed successfully with no output"
+	}
+
+	response := JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      req.ID,
+		Result: map[string]interface{}{
+			"content": []map[string]interface{}{
+				{
+					"type": "text",
+					"text": outputText,
 				},
 			},
 		},

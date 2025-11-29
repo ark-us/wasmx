@@ -49,3 +49,6 @@ func storageResetGlobal_(addressPtr int64) int64
 
 //go:wasmimport wasmxcore updateSystemCache
 func updateSystemCache_(reqPtr int64) int64
+
+//go:wasmimport wasmxcore executeCliCommand
+func executeCliCommand_(reqPtr int64) int64

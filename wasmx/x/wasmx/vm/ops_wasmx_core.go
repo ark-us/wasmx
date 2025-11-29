@@ -1,8 +1,10 @@
 package vm
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
@@ -649,6 +651,71 @@ func coreUpdateSystemCache(_context interface{}, rnh memc.RuntimeHandler, params
 		// TODO maybe we should shut down the system here, if the cache was not updated correctly
 		resp.Error = err.Error()
 	}
+	responsebz, err := json.Marshal(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return rnh.AllocateWriteMem(responsebz)
+}
+
+type ExecuteCliCommandRequest struct {
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
+	WorkDir string   `json:"work_dir,omitempty"`
+}
+
+type ExecuteCliCommandResponse struct {
+	Stdout   string `json:"stdout"`
+	Stderr   string `json:"stderr"`
+	ExitCode int    `json:"exit_code"`
+	Error    string `json:"error"`
+}
+
+func coreExecuteCliCommand(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	resp := ExecuteCliCommandResponse{ExitCode: -1}
+	
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		resp.Error = err.Error()
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+	
+	var req ExecuteCliCommandRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		resp.Error = err.Error()
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+	
+	// Execute the CLI command
+	cmd := exec.CommandContext(ctx.Ctx, req.Command, req.Args...)
+	if req.WorkDir != "" {
+		cmd.Dir = req.WorkDir
+	}
+	
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	
+	err = cmd.Run()
+	
+	resp.Stdout = stdout.String()
+	resp.Stderr = stderr.String()
+	
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			resp.ExitCode = exitErr.ExitCode()
+		} else {
+			resp.Error = err.Error()
+		}
+	} else {
+		resp.ExitCode = 0
+	}
+	
 	responsebz, err := json.Marshal(&resp)
 	if err != nil {
 		return nil, err
