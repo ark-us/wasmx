@@ -82,7 +82,7 @@ var ADDR_EMAIL_HANDLER = "0x0000000000000000000000000000000000000063"
 
 var ADDR_ONDEMAND_SINGLE_LIBRARY = "0x0000000000000000000000000000000000000064"
 var ADDR_ONDEMAND_SINGLE = "0x0000000000000000000000000000000000000065"
-var ADDR_MCP_SERVER = "0x0000000000000000000000000000000000000066"
+var ADDR_MCP_REGISTRY = "0x0000000000000000000000000000000000000066"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
@@ -882,12 +882,12 @@ func SpecialPrecompiles() SystemContracts {
 		// 	Deps:        []string{},
 		// },
 		{
-			Address:     ADDR_MCP_SERVER,
-			Label:       MCP_v001,
+			Address:     ADDR_MCP_REGISTRY,
+			Label:       MCP_REGISTRY_v001,
 			InitMessage: initMsg,
 			Pinned:      true,
 			MeteringOff: true,
-			Role:        &SystemContractRole{Role: ROLE_MCP_SERVER, Label: ROLE_MCP_SERVER, Primary: true},
+			Role:        &SystemContractRole{Role: ROLE_MCP_REGISTRY, Label: ROLE_MCP_REGISTRY, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
 		},

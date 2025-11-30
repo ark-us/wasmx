@@ -34,4 +34,6 @@ const (
 	ROLE_METAREGISTRY              = "metaregistry"
 	ROLE_FEE_COLLECTOR             = "fee_collector"
 	ROLE_DTYPE                     = "dtype"
+	ROLE_MCP_REGISTRY              = "mcp_registry"
+	ROLE_MCP                       = "mcp"
 )
