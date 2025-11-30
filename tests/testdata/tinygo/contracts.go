@@ -22,4 +22,10 @@ var (
 
 	//go:embed smtptest.wasm
 	SmtpTestWrapSdk []byte
+
+	//go:embed mcp-execute.wasm
+	MCPExecute []byte
+
+	//go:embed mcp-userdata.wasm
+	MCPUserdata []byte
 )

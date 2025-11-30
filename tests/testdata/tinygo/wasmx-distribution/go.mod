@@ -6,7 +6,7 @@ toolchain go1.24.4
 
 require github.com/loredanacirstea/wasmx-env v0.0.0
 
-require cosmossdk.io/math v1.5.3
+require cosmossdk.io/math v1.5.3 // indirect
 
 require github.com/loredanacirstea/wasmx-env-utils v0.0.0 // indirect
 

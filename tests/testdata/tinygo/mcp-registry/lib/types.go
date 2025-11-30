@@ -1,0 +1,156 @@
+package lib
+
+import (
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
+)
+
+const MODULE_NAME = "mcp-registry"
+
+// Storage keys
+const (
+	STORAGE_REGISTERED_CONTRACTS = "registered_contracts" // []string of addresses
+	STORAGE_CONTRACT_PREFIX      = "contract:"            // contract:{address} -> ContractRegistration
+	STORAGE_ROUTE_PREFIX         = "route:"               // route:{path} -> address
+	STORAGE_PARAMS               = "params"
+)
+
+// ContractRegistration stores metadata for each registered MCP contract
+type ContractRegistration struct {
+	Address       string              `json:"address"`
+	RoutePrefix   string              `json:"route_prefix"`    // e.g., "/tools/execute"
+	Tools         []MCPToolDefinition `json:"tools"`           // Tool definitions from contract
+	RegisteredAt  int64               `json:"registered_at"`   // Block height
+	LastUpdatedAt int64               `json:"last_updated_at"` // Block height
+	Active        bool                `json:"active"`          // Enable/disable
+}
+
+// MCPToolDefinition represents a tool from MCP protocol
+type MCPToolDefinition struct {
+	Name        string                 `json:"name"`        // Tool name (unique per contract)
+	Description string                 `json:"description"` // Human-readable description
+	InputSchema map[string]interface{} `json:"inputSchema"` // JSON Schema for input
+}
+
+// ToolsListEntry for aggregated /tools/list response
+type ToolsListEntry struct {
+	Name            string                 `json:"name"` // Prefixed: "contract.execute_py"
+	Description     string                 `json:"description"`
+	InputSchema     map[string]interface{} `json:"inputSchema"`
+	ContractAddress string                 `json:"-"` // Internal use only
+	RoutePrefix     string                 `json:"-"` // Internal use only
+}
+
+// CallData structure for registry contract
+type CallData struct {
+	// Registry operations
+	RegisterMCPContract   *RegisterMCPContractRequest   `json:"register_mcp_contract,omitempty"`
+	DeregisterMCPContract *DeregisterMCPContractRequest `json:"deregister_mcp_contract,omitempty"`
+	UpdateMCPTools        *UpdateMCPToolsRequest        `json:"update_mcp_tools,omitempty"`
+
+	// Query operations
+	GetRegisteredContracts *GetRegisteredContractsRequest `json:"get_registered_contracts,omitempty"`
+	GetContractInfo        *GetContractInfoRequest        `json:"get_contract_info,omitempty"`
+	GetAllTools            *GetAllToolsRequest            `json:"get_all_tools,omitempty"`
+
+	// Server management (from current MCP)
+	StartServer     *StartServerRequest     `json:"start_server,omitempty"`
+	InitGenesis     *InitGenesisRequest     `json:"init_genesis,omitempty"`
+	ConnectDatabase *ConnectDatabaseRequest `json:"connect_database,omitempty"`
+	InitTables      *InitTablesRequest      `json:"init_tables,omitempty"`
+	GetParams       *GetParamsRequest       `json:"get_params,omitempty"`
+	RoleChanged     *wasmx.RolesChangedHook `json:"RoleChanged,omitempty"`
+}
+
+// RegisterMCPContractRequest for registering a new MCP contract
+type RegisterMCPContractRequest struct {
+	ContractAddress string `json:"contract_address"` // Address of MCP contract
+	RoutePrefix     string `json:"route_prefix"`     // e.g., "/tools/execute"
+	ToolsJSON       string `json:"tools_json"`       // JSON array of MCPToolDefinition
+}
+
+// DeregisterMCPContractRequest for removing an MCP contract
+type DeregisterMCPContractRequest struct {
+	ContractAddress string `json:"contract_address"`
+}
+
+// UpdateMCPToolsRequest for updating tools for a registered contract
+type UpdateMCPToolsRequest struct {
+	ContractAddress string `json:"contract_address"`
+	ToolsJSON       string `json:"tools_json"` // Updated tools JSON
+}
+
+// GetRegisteredContractsRequest for querying all registered contracts
+type GetRegisteredContractsRequest struct{}
+
+// GetContractInfoRequest for querying info about a specific contract
+type GetContractInfoRequest struct {
+	ContractAddress string `json:"contract_address"`
+}
+
+// GetAllToolsRequest for getting aggregated tool list
+type GetAllToolsRequest struct{}
+
+// StartServerRequest for starting the HTTP server
+type StartServerRequest struct {
+	Address string `json:"address"`
+}
+
+// InitGenesisRequest for initializing genesis state
+type InitGenesisRequest struct {
+	Params           ServerParams                 `json:"params"`
+	InitialContracts []RegisterMCPContractRequest `json:"initial_contracts,omitempty"`
+}
+
+// GetParamsRequest for getting server parameters
+type GetParamsRequest struct{}
+
+// ConnectDatabaseRequest for connecting to PostgreSQL
+type ConnectDatabaseRequest struct {
+	Connection string `json:"connection"` // PostgreSQL connection string
+	DbName     string `json:"db_name"`
+}
+
+// InitTablesRequest for initializing database tables
+type InitTablesRequest struct{}
+
+// ServerParams stores server configuration
+type ServerParams struct {
+	ClientID     string   `json:"client_id"`
+	ClientSecret string   `json:"client_secret"`
+	RedirectURIs []string `json:"redirect_uris"`
+	Scopes       []string `json:"scopes"`
+	DbConnection string   `json:"db_connection"` // PostgreSQL connection string
+	DbName       string   `json:"db_name"`       // Database name
+}
+
+// MCP Protocol types (from current MCP)
+type JSONRPCRequest struct {
+	JSONRPC string      `json:"jsonrpc"`
+	ID      interface{} `json:"id,omitempty"`
+	Method  string      `json:"method"`
+	Params  interface{} `json:"params,omitempty"`
+}
+
+type JSONRPCResponse struct {
+	JSONRPC string      `json:"jsonrpc"`
+	ID      interface{} `json:"id,omitempty"`
+	Result  interface{} `json:"result,omitempty"`
+	Error   *RPCError   `json:"error,omitempty"`
+}
+
+type RPCError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type ToolCallParams struct {
+	Name      string                 `json:"name"`
+	Arguments map[string]interface{} `json:"arguments,omitempty"`
+}
+
+type TokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+}
