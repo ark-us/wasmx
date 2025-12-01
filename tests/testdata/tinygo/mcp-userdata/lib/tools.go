@@ -43,7 +43,9 @@ func setFavoriteColor(userID string, arguments map[string]interface{}) ExecuteTo
 		}
 	}
 
-	key := []byte(STORAGE_FAVORITE_COLOR_PREFIX + userID)
+	keyStr := STORAGE_FAVORITE_COLOR_PREFIX + userID
+
+	key := []byte(keyStr)
 	wasmx.StorageStore(key, []byte(color))
 
 	LoggerInfo("Favorite color set", []string{"user_id", userID, "color", color})
@@ -63,7 +65,9 @@ func getFavoriteColor(userID string, arguments map[string]interface{}) ExecuteTo
 		userID = "default-user"
 	}
 
-	key := []byte(STORAGE_FAVORITE_COLOR_PREFIX + userID)
+	keyStr := STORAGE_FAVORITE_COLOR_PREFIX + userID
+
+	key := []byte(keyStr)
 	data := wasmx.StorageLoad(key)
 
 	if len(data) == 0 {
@@ -96,11 +100,24 @@ func listItems(userID string, arguments map[string]interface{}) ExecuteToolRespo
 	key := []byte(STORAGE_ITEMS_PREFIX + userID)
 	data := wasmx.StorageLoad(key)
 
+	// If no items exist, initialize with default items
 	if len(data) == 0 {
+		defaultItems := []Item{
+			{Name: "water", Description: "H2O"},
+			{Name: "salt", Description: "NaCl"},
+			{Name: "pepper", Description: "Ground pepper"},
+		}
+
+		// Store the default items
+		itemsData, _ := json.Marshal(defaultItems)
+		wasmx.StorageStore(key, itemsData)
+
+		// Format default items list
+		text := "water, salt, pepper"
 		return ExecuteToolResponse{
 			Content: []ContentItem{{
 				Type: "text",
-				Text: fmt.Sprintf("No items found for user %s", userID),
+				Text: text,
 			}},
 			IsError: false,
 		}
@@ -117,10 +134,13 @@ func listItems(userID string, arguments map[string]interface{}) ExecuteToolRespo
 		}
 	}
 
-	// Format items list
-	text := fmt.Sprintf("Items for user %s:\n", userID)
+	// Format items list as simple comma-separated names
+	text := ""
 	for i, item := range items {
-		text += fmt.Sprintf("%d. %s - %s\n", i+1, item.Name, item.Description)
+		if i > 0 {
+			text += ", "
+		}
+		text += item.Name
 	}
 
 	return ExecuteToolResponse{

@@ -50,11 +50,46 @@ func handleOAuthAuthorize(req *httpserver.HttpRequestIncoming) httpserver.HttpRe
 		return sendTextResponse("Invalid client_id", 400)
 	}
 
-	// Create authorization code
+	// Check if user is logged in (session cookie)
+	sessionID := getSessionFromCookie(req)
+	if sessionID == "" {
+		// Redirect to login with return_to parameter
+		returnTo := req.Url // Full authorize URL
+		loginURL := "/login?return_to=" + url.QueryEscape(returnTo)
+		return httpserver.HttpResponseWrap{
+			Error: "",
+			Data: httpserver.HttpResponse{
+				StatusCode: 302,
+				Status:     "302 Found",
+				Header:     http.Header{"Location": []string{loginURL}},
+			},
+		}
+	}
+
+	// Validate session and get user ID
+	userID, err := validateSession(sessionID)
+	if err != nil {
+		// Session expired or invalid - redirect to login
+		returnTo := req.Url
+		loginURL := "/login?return_to=" + url.QueryEscape(returnTo)
+		return httpserver.HttpResponseWrap{
+			Error: "",
+			Data: httpserver.HttpResponse{
+				StatusCode: 302,
+				Status:     "302 Found",
+				Header:     http.Header{"Location": []string{loginURL}},
+			},
+		}
+	}
+
+	// TODO: Show consent screen here instead of auto-approving
+	// For now, auto-approve and create authorization code
+
+	// Create authorization code with actual user ID
 	codeResp := oauth2server.CreateAuthorizationCode(&oauth2server.CreateAuthorizationCodeRequest{
 		InstanceID:          OAUTH2_INSTANCE_ID,
 		ClientID:            clientID,
-		UserID:              "default-user",
+		UserID:              userID,
 		RedirectURI:         redirectURI,
 		Scopes:              params.Scopes,
 		CodeChallenge:       codeChallenge,
