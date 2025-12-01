@@ -7,14 +7,7 @@ import (
 	"strings"
 
 	httpserver "github.com/loredanacirstea/wasmx-env-httpserver/lib"
-	oauth2server "github.com/loredanacirstea/wasmx-env-oauth2server/lib"
-	postgresql "github.com/loredanacirstea/wasmx-env-postgresql/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
-)
-
-const (
-	OAUTH2_INSTANCE_ID       = "mcp-oauth"
-	POSTGRESQL_CONNECTION_ID = "mcp-db"
 )
 
 func InitGenesis(req InitGenesisRequest) []byte {
@@ -71,24 +64,7 @@ func InitGenesis(req InitGenesisRequest) []byte {
 	return []byte(`{"success": true}`)
 }
 
-func ConnectDatabase(req *ConnectDatabaseRequest) []byte {
-	// Connect to PostgreSQL
-	pgResp := postgresql.Connect(&postgresql.SqlConnectionRequest{
-		Connection: req.Connection,
-		DbName:     req.DbName,
-		Id:         POSTGRESQL_CONNECTION_ID,
-	})
-
-	if pgResp.Error != "" {
-		LoggerError("Failed to connect to PostgreSQL", []string{"error", pgResp.Error})
-		return []byte(fmt.Sprintf(`{"error": "%s"}`, pgResp.Error))
-	}
-
-	LoggerInfo("Database connected", nil)
-	return []byte(`{"success": true}`)
-}
-
-// InitializeTables connects to PostgreSQL and creates tables
+// InitializeTables initializes the MCP registry tables
 func InitializeTables() []byte {
 	// Get stored params to get database connection info
 	params := getParams()
@@ -97,58 +73,8 @@ func InitializeTables() []byte {
 		return []byte(`{"error": "params not initialized"}`)
 	}
 
-	// Connect to PostgreSQL if not already connected
-	pgResp := postgresql.Connect(&postgresql.SqlConnectionRequest{
-		Connection: params.DbConnection,
-		DbName:     params.DbName,
-		Id:         POSTGRESQL_CONNECTION_ID,
-	})
-
-	if pgResp.Error != "" {
-		LoggerError("Failed to connect to PostgreSQL", []string{"error", pgResp.Error})
-		return []byte(fmt.Sprintf(`{"error": "%s"}`, pgResp.Error))
-	}
-
-	LoggerInfo("Database connected for registry", nil)
-
-	// Initialize OAuth2 server
-	return InitializeOAuth2()
-}
-
-// InitializeOAuth2 sets up OAuth2 server and registers client
-func InitializeOAuth2() []byte {
-	// Initialize OAuth2 server
-	oauth2Resp := oauth2server.Initialize(&oauth2server.InitializeRequest{
-		InstanceID:   OAUTH2_INSTANCE_ID,
-		ConnectionID: POSTGRESQL_CONNECTION_ID,
-	})
-
-	if oauth2Resp.Error != "" {
-		LoggerError("Failed to initialize OAuth2 server", []string{"error", oauth2Resp.Error})
-		return []byte(fmt.Sprintf(`{"error": "%s"}`, oauth2Resp.Error))
-	}
-
-	// Register the OAuth client from params
-	params := getParams()
-	if params != nil {
-		registerResp := oauth2server.RegisterClient(&oauth2server.RegisterClientRequest{
-			InstanceID:   OAUTH2_INSTANCE_ID,
-			ClientID:     params.ClientID,
-			ClientSecret: params.ClientSecret,
-			RedirectURIs: params.RedirectURIs,
-			Scopes:       params.Scopes,
-			GrantTypes:   []string{"authorization_code", "refresh_token"},
-		})
-
-		if registerResp.Error != "" {
-			LoggerError("Failed to register OAuth client", []string{"error", registerResp.Error})
-			// Not fatal - client might already exist
-		} else {
-			LoggerInfo("OAuth client registered", []string{"client_id", params.ClientID})
-		}
-	}
-
-	LoggerInfo("OAuth2 initialized", nil)
+	// OAuth2 server is now a separate contract, no initialization needed here
+	LoggerInfo("MCP Registry tables initialized", nil)
 	return []byte(`{"success": true}`)
 }
 
@@ -218,16 +144,13 @@ func validateToken(token string) (string, bool) {
 		return "", false
 	}
 
-	resp := oauth2server.ValidateAccessToken(&oauth2server.ValidateAccessTokenRequest{
-		InstanceID: OAUTH2_INSTANCE_ID,
-		Token:      token,
-	})
-
-	if resp.Error != "" || !resp.Valid {
+	// Validate token via OAuth2 server contract
+	userID, err := callOAuth2ValidateAccessToken(token)
+	if err != nil {
 		return "", false
 	}
 
-	return resp.UserID, true
+	return userID, true
 }
 
 func HandleHttpRequest(req *httpserver.HttpRequestIncoming) httpserver.HttpResponseWrap {
@@ -344,6 +267,18 @@ func sendTextResponse(text string, statusCode int) httpserver.HttpResponseWrap {
 			Status:     fmt.Sprintf("%d", statusCode),
 			Header:     http.Header{"Content-Type": []string{"text/plain"}},
 			Data:       []byte(text),
+		},
+	}
+}
+
+func sendJSONResponseBytes(jsonData []byte, statusCode int) httpserver.HttpResponseWrap {
+	return httpserver.HttpResponseWrap{
+		Error: "",
+		Data: httpserver.HttpResponse{
+			StatusCode: statusCode,
+			Status:     fmt.Sprintf("%d OK", statusCode),
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Data:       jsonData,
 		},
 	}
 }

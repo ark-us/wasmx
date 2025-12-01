@@ -1,9 +1,11 @@
 package lib
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 
-	oauth2server "github.com/loredanacirstea/wasmx-env-oauth2server/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -26,26 +28,17 @@ func RegisterOAuthClient(req RegisterOAuthClientRequest) []byte {
 		Revert("at least one scope is required")
 	}
 
-	// Register client with OAuth2 server - it will generate client_id and client_secret
-	oauth2Resp := oauth2server.RegisterClient(&oauth2server.RegisterClientRequest{
-		InstanceID:   OAUTH2_INSTANCE_ID,
-		ClientID:     "", // Let OAuth2 server generate it
-		ClientSecret: "", // Let OAuth2 server generate it
-		RedirectURIs: req.RedirectURIs,
-		Scopes:       req.Scopes,
-		GrantTypes:   []string{"authorization_code", "refresh_token"},
-	})
-
-	if oauth2Resp.Error != "" {
-		Revert("failed to register OAuth client: " + oauth2Resp.Error)
-	}
+	// Generate client ID and secret
+	clientID := generateClientID(req.Name)
+	clientSecret := generateClientSecret()
 
 	// Get current block height
 	currentBlock := wasmx.GetCurrentBlock()
 
-	// Store client metadata
-	clientInfo := OAuthClientInfo{
-		ClientID:     oauth2Resp.ClientID,
+	// Store client
+	client := OAuthClient{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
 		Name:         req.Name,
 		Description:  req.Description,
 		RedirectURIs: req.RedirectURIs,
@@ -56,18 +49,18 @@ func RegisterOAuthClient(req RegisterOAuthClientRequest) []byte {
 		Active:       true,
 	}
 
-	storeOAuthClient(clientInfo)
-	addToOAuthClientList(oauth2Resp.ClientID)
+	storeOAuthClient(client)
+	addToOAuthClientList(clientID)
 
 	LoggerInfo("OAuth client registered", []string{
-		"client_id", oauth2Resp.ClientID,
+		"client_id", clientID,
 		"name", req.Name,
 	})
 
 	// Return response with credentials
 	response := RegisterOAuthClientResponse{
-		ClientID:     oauth2Resp.ClientID,
-		ClientSecret: oauth2Resp.ClientSecret,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
 		Name:         req.Name,
 		RedirectURIs: req.RedirectURIs,
 		Scopes:       req.Scopes,
@@ -86,47 +79,39 @@ func UpdateOAuthClient(req UpdateOAuthClientRequest) []byte {
 	}
 
 	// Get existing client
-	clientInfo := getOAuthClient(req.ClientID)
-	if clientInfo == nil {
+	client := getOAuthClient(req.ClientID)
+	if client == nil {
 		Revert("OAuth client not found")
 	}
 
 	// Update fields if provided
 	if req.Name != "" {
-		clientInfo.Name = req.Name
+		client.Name = req.Name
 	}
 	if req.Description != "" {
-		clientInfo.Description = req.Description
+		client.Description = req.Description
 	}
 	if len(req.RedirectURIs) > 0 {
-		clientInfo.RedirectURIs = req.RedirectURIs
+		client.RedirectURIs = req.RedirectURIs
 	}
 	if len(req.Scopes) > 0 {
-		clientInfo.Scopes = req.Scopes
+		client.Scopes = req.Scopes
 	}
 	if req.WebsiteURL != "" {
-		clientInfo.WebsiteURL = req.WebsiteURL
+		client.WebsiteURL = req.WebsiteURL
 	}
 	if req.LogoURL != "" {
-		clientInfo.LogoURL = req.LogoURL
+		client.LogoURL = req.LogoURL
 	}
 
-	// Update in OAuth2 server if redirect URIs or scopes changed
-	if len(req.RedirectURIs) > 0 || len(req.Scopes) > 0 {
-		// Note: OAuth2 server might not support updating, in which case we just update metadata
-		LoggerInfo("OAuth client metadata updated", []string{
-			"client_id", req.ClientID,
-		})
-	}
-
-	storeOAuthClient(*clientInfo)
+	storeOAuthClient(*client)
 
 	LoggerInfo("OAuth client updated", []string{
 		"client_id", req.ClientID,
-		"name", clientInfo.Name,
+		"name", client.Name,
 	})
 
-	data, _ := json.Marshal(clientInfo)
+	data, _ := json.Marshal(client)
 	return data
 }
 
@@ -139,17 +124,14 @@ func RevokeOAuthClient(req RevokeOAuthClientRequest) []byte {
 	}
 
 	// Get existing client
-	clientInfo := getOAuthClient(req.ClientID)
-	if clientInfo == nil {
+	client := getOAuthClient(req.ClientID)
+	if client == nil {
 		Revert("OAuth client not found")
 	}
 
 	// Mark as inactive
-	clientInfo.Active = false
-	storeOAuthClient(*clientInfo)
-
-	// Note: OAuth2 server might not support revoking clients
-	// We just mark it as inactive in our metadata
+	client.Active = false
+	storeOAuthClient(*client)
 
 	LoggerInfo("OAuth client revoked", []string{
 		"client_id", req.ClientID,
@@ -160,24 +142,50 @@ func RevokeOAuthClient(req RevokeOAuthClientRequest) []byte {
 
 // GetOAuthClient gets info about an OAuth client
 func GetOAuthClient(req GetOAuthClientRequest) []byte {
-	clientInfo := getOAuthClient(req.ClientID)
-	if clientInfo == nil {
+	client := getOAuthClient(req.ClientID)
+	if client == nil {
 		return []byte(`{"error": "client not found"}`)
 	}
 
-	data, _ := json.Marshal(clientInfo)
+	// Don't return client secret
+	clientResponse := struct {
+		ClientID     string   `json:"client_id"`
+		Name         string   `json:"name"`
+		Description  string   `json:"description"`
+		RedirectURIs []string `json:"redirect_uris"`
+		Scopes       []string `json:"scopes"`
+		WebsiteURL   string   `json:"website_url,omitempty"`
+		LogoURL      string   `json:"logo_url,omitempty"`
+		CreatedAt    int64    `json:"created_at"`
+		Active       bool     `json:"active"`
+	}{
+		ClientID:     client.ClientID,
+		Name:         client.Name,
+		Description:  client.Description,
+		RedirectURIs: client.RedirectURIs,
+		Scopes:       client.Scopes,
+		WebsiteURL:   client.WebsiteURL,
+		LogoURL:      client.LogoURL,
+		CreatedAt:    client.CreatedAt,
+		Active:       client.Active,
+	}
+
+	data, _ := json.Marshal(clientResponse)
 	return data
 }
 
 // ListOAuthClients lists all registered OAuth clients
 func ListOAuthClients(req ListOAuthClientsRequest) []byte {
 	clientIDs := getOAuthClientList()
-	clients := []OAuthClientInfo{}
+	clients := []OAuthClient{}
 
 	for _, clientID := range clientIDs {
-		clientInfo := getOAuthClient(clientID)
-		if clientInfo != nil {
-			clients = append(clients, *clientInfo)
+		client := getOAuthClient(clientID)
+		if client != nil {
+			// Don't include client secret in list
+			clientCopy := *client
+			clientCopy.ClientSecret = ""
+			clients = append(clients, clientCopy)
 		}
 	}
 
@@ -185,22 +193,38 @@ func ListOAuthClients(req ListOAuthClientsRequest) []byte {
 	return data
 }
 
+// Helper functions
+
+func generateClientID(name string) string {
+	randomBytes := make([]byte, 16)
+	rand.Read(randomBytes)
+	hash := sha256.Sum256(append([]byte(name), randomBytes...))
+	return "client_" + hex.EncodeToString(hash[:8])
+}
+
+func generateClientSecret() string {
+	randomBytes := make([]byte, 32)
+	rand.Read(randomBytes)
+	hash := sha256.Sum256(randomBytes)
+	return "secret_" + hex.EncodeToString(hash[:])
+}
+
 // Storage helpers for OAuth clients
 
-func storeOAuthClient(client OAuthClientInfo) {
+func storeOAuthClient(client OAuthClient) {
 	key := []byte(STORAGE_OAUTH_CLIENT_PREFIX + client.ClientID)
 	data, _ := json.Marshal(client)
 	wasmx.StorageStore(key, data)
 }
 
-func getOAuthClient(clientID string) *OAuthClientInfo {
+func getOAuthClient(clientID string) *OAuthClient {
 	key := []byte(STORAGE_OAUTH_CLIENT_PREFIX + clientID)
 	data := wasmx.StorageLoad(key)
 	if len(data) == 0 {
 		return nil
 	}
 
-	var client OAuthClientInfo
+	var client OAuthClient
 	if err := json.Unmarshal(data, &client); err != nil {
 		return nil
 	}
@@ -240,4 +264,9 @@ func removeFromOAuthClientList(clientID string) {
 	}
 	data, _ := json.Marshal(newList)
 	wasmx.StorageStore([]byte(STORAGE_OAUTH_CLIENTS), data)
+}
+
+func hasGovRole(caller wasmx.Bech32String) bool {
+	role := wasmx.GetRoleName(MODULE_NAME, caller)
+	return role == wasmx.ROLE_GOVERNANCE
 }
