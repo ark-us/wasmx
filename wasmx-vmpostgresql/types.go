@@ -107,9 +107,10 @@ func (p *SqlContext) DeleteConnection(id string) {
 }
 
 type SqlConnectionRequest struct {
-	Connection string `json:"connection"`
-	DbName     string `json:"db_name"`
-	Id         string `json:"id"`
+	Connection string                 `json:"connection"`
+	DbName     string                 `json:"db_name"`
+	Id         string                 `json:"id"`
+	Options    map[string]interface{} `json:"options,omitempty"`
 }
 
 type SqlConnectionResponse struct {
@@ -162,8 +163,9 @@ func (p *Params) UnmarshalJSON(data []byte) error {
 }
 
 type SqlCreateDatabase struct {
-	Connection string `json:"connection"`
-	DbName     string `json:"db_name"`
+	Connection string                 `json:"connection"`
+	DbName     string                 `json:"db_name"`
+	Options    map[string]interface{} `json:"options,omitempty"`
 }
 
 type SqlCreateDatabaseResponse struct {

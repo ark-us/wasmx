@@ -48,8 +48,7 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		}
 	}
 
-	// TODO options
-	db, err := dbm.NewPostgreSQLDbWithCtx(ctx.GoContextParent, req.DbName, req.Connection, nil)
+	db, err := dbm.NewPostgreSQLDbWithCtx(ctx.GoContextParent, req.DbName, req.Connection, buildPgOptions(req.Options))
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -360,7 +359,7 @@ func CreateDatabase(_context interface{}, rnh memc.RuntimeHandler, params []inte
 
 	// CREATE DATABASE cannot run inside a transaction block (SQLSTATE 25001)
 	response := &SqlCreateDatabaseResponse{Error: ""}
-	db, err := dbm.NewPostgreSQLDbWithCtx(ctx.GoContextParent, req.DbName, req.Connection, nil)
+	db, err := dbm.NewPostgreSQLDbWithCtx(ctx.GoContextParent, req.DbName, req.Connection, buildPgOptions(req.Options))
 	if err != nil {
 		response.Error = err.Error()
 		return prepareResponse(rnh, response)
@@ -373,6 +372,13 @@ func CreateDatabase(_context interface{}, rnh memc.RuntimeHandler, params []inte
 	}
 
 	return prepareResponse(rnh, response)
+}
+
+func buildPgOptions(options map[string]interface{}) dbm.Options {
+	if len(options) == 0 {
+		return nil
+	}
+	return dbm.OptionsMap(options)
 }
 
 func prepareResponse(rnh memc.RuntimeHandler, response interface{}) ([]interface{}, error) {
