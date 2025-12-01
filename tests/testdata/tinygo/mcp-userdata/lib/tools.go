@@ -32,7 +32,10 @@ func ExecuteTool(req ExecuteToolRequest) []byte {
 // setFavoriteColor sets the user's favorite color
 func setFavoriteColor(userID string, arguments map[string]interface{}) ExecuteToolResponse {
 	if userID == "" {
-		userID = "default-user"
+		return ExecuteToolResponse{
+			Content: []ContentItem{{Type: "text", Text: "Authentication required: no user_id provided"}},
+			IsError: true,
+		}
 	}
 
 	color, ok := arguments["color"].(string)
@@ -62,7 +65,10 @@ func setFavoriteColor(userID string, arguments map[string]interface{}) ExecuteTo
 // getFavoriteColor gets the user's favorite color
 func getFavoriteColor(userID string, arguments map[string]interface{}) ExecuteToolResponse {
 	if userID == "" {
-		userID = "default-user"
+		return ExecuteToolResponse{
+			Content: []ContentItem{{Type: "text", Text: "Authentication required: no user_id provided"}},
+			IsError: true,
+		}
 	}
 
 	keyStr := STORAGE_FAVORITE_COLOR_PREFIX + userID
@@ -94,7 +100,10 @@ func getFavoriteColor(userID string, arguments map[string]interface{}) ExecuteTo
 // listItems lists all items for a user
 func listItems(userID string, arguments map[string]interface{}) ExecuteToolResponse {
 	if userID == "" {
-		userID = "default-user"
+		return ExecuteToolResponse{
+			Content: []ContentItem{{Type: "text", Text: "Authentication required: no user_id provided"}},
+			IsError: true,
+		}
 	}
 
 	key := []byte(STORAGE_ITEMS_PREFIX + userID)

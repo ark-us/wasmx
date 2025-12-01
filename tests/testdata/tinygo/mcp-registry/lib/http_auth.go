@@ -3,7 +3,6 @@ package lib
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -165,23 +164,36 @@ func handleRegister(req *httpserver.HttpRequestIncoming) httpserver.HttpResponse
 	}
 
 	// POST - handle registration
-	var regReq RegisterUserRequest
+	var regReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Username string `json:"username,omitempty"`
+	}
 	if err := json.Unmarshal(req.Data, &regReq); err != nil {
 		return sendJSONResponse(map[string]string{"error": "Invalid request"}, 400)
 	}
 
-	result := RegisterUser(regReq)
+	result, err := callOAuth2RegisterUser(regReq.Email, regReq.Password, regReq.Username)
+	if err != nil {
+		return sendJSONResponseBytes(result, 400)
+	}
 	return sendJSONResponseBytes(result, 200)
 }
 
 // handleLoginSubmit handles POST /auth/login
 func handleLoginSubmit(req *httpserver.HttpRequestIncoming) httpserver.HttpResponseWrap {
-	var loginReq LoginRequest
+	var loginReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 	if err := json.Unmarshal(req.Data, &loginReq); err != nil {
 		return sendJSONResponse(map[string]string{"error": "Invalid request"}, 400)
 	}
 
-	result := Login(loginReq)
+	result, err := callOAuth2Login(loginReq.Email, loginReq.Password)
+	if err != nil {
+		return sendJSONResponseBytes(result, 400)
+	}
 	return sendJSONResponseBytes(result, 200)
 }
 
@@ -193,8 +205,10 @@ func handleLogout(req *httpserver.HttpRequestIncoming) httpserver.HttpResponseWr
 		return sendJSONResponse(map[string]string{"error": "No session"}, 400)
 	}
 
-	logoutReq := LogoutRequest{SessionID: sessionID}
-	result := Logout(logoutReq)
+	result, err := callOAuth2Logout(sessionID)
+	if err != nil {
+		return sendJSONResponseBytes(result, 400)
+	}
 	return sendJSONResponseBytes(result, 200)
 }
 
@@ -206,14 +220,16 @@ func handleGetCurrentUser(req *httpserver.HttpRequestIncoming) httpserver.HttpRe
 		return sendJSONResponse(map[string]string{"error": "No session"}, 401)
 	}
 
-	currentUserReq := GetCurrentUserRequest{SessionID: sessionID}
-	result := GetCurrentUser(currentUserReq)
+	result, err := callOAuth2GetCurrentUser(sessionID)
+	if err != nil {
+		return sendJSONResponseBytes(result, 401)
+	}
 	return sendJSONResponseBytes(result, 200)
 }
 
 // Helper: extract session ID from cookie header
 func getSessionFromCookie(req *httpserver.HttpRequestIncoming) string {
-	cookies := req.Headers["Cookie"]
+	cookies := req.Header.Values("Cookie")
 	if len(cookies) == 0 {
 		return ""
 	}

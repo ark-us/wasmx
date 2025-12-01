@@ -1,17 +1,13 @@
 package lib
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
-	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
-)
-
-const (
-	SESSION_DURATION_SECONDS = 86400 // 24 hours
 )
 
 // RegisterUser creates a new user account
@@ -42,7 +38,7 @@ func RegisterUser(req RegisterUserRequest) []byte {
 	currentBlock := wasmx.GetCurrentBlock()
 
 	// Create user account
-	user := UserAccount{
+	user := User{
 		UserID:       userID,
 		Email:        req.Email,
 		Username:     req.Username,
@@ -108,7 +104,7 @@ func Login(req LoginRequest) []byte {
 	expiresAt := createdAt + SESSION_DURATION_SECONDS
 
 	// Create session
-	session := SessionInfo{
+	session := Session{
 		SessionID: sessionID,
 		UserID:    user.UserID,
 		CreatedAt: createdAt,
@@ -201,18 +197,39 @@ func GetCurrentUser(req GetCurrentUserRequest) []byte {
 	return data
 }
 
+// ValidateSession checks if a session is valid and returns user info
+func ValidateSession(req ValidateSessionRequest) []byte {
+	userID, err := validateSessionInternal(req.SessionID)
+	if err != nil {
+		response := ValidateSessionResponse{
+			Valid: false,
+		}
+		data, _ := json.Marshal(response)
+		return data
+	}
+
+	response := ValidateSessionResponse{
+		Valid:  true,
+		UserID: userID,
+	}
+	data, _ := json.Marshal(response)
+	return data
+}
+
 // Helper functions
 
 func generateUserID(email string) string {
 	// Generate random bytes for user ID
-	randomBytes := wasmxcore.Random(16)
+	randomBytes := make([]byte, 16)
+	rand.Read(randomBytes)
 	hash := sha256.Sum256(append([]byte(email), randomBytes...))
 	return "user_" + hex.EncodeToString(hash[:8])
 }
 
 func generateSessionID(userID string) string {
 	// Generate random session ID
-	randomBytes := wasmxcore.Random(32)
+	randomBytes := make([]byte, 32)
+	rand.Read(randomBytes)
 	hash := sha256.Sum256(append([]byte(userID), randomBytes...))
 	return "sess_" + hex.EncodeToString(hash[:])
 }
@@ -226,20 +243,20 @@ func hashPassword(password string) string {
 
 // Storage helpers for users
 
-func storeUser(user UserAccount) {
+func storeUser(user User) {
 	key := []byte(STORAGE_USER_PREFIX + user.UserID)
 	data, _ := json.Marshal(user)
 	wasmx.StorageStore(key, data)
 }
 
-func getUser(userID string) *UserAccount {
+func getUser(userID string) *User {
 	key := []byte(STORAGE_USER_PREFIX + userID)
 	data := wasmx.StorageLoad(key)
 	if len(data) == 0 {
 		return nil
 	}
 
-	var user UserAccount
+	var user User
 	if err := json.Unmarshal(data, &user); err != nil {
 		return nil
 	}
@@ -251,7 +268,7 @@ func storeEmailMapping(email, userID string) {
 	wasmx.StorageStore(key, []byte(userID))
 }
 
-func getUserByEmail(email string) *UserAccount {
+func getUserByEmail(email string) *User {
 	key := []byte(STORAGE_USER_EMAIL_PREFIX + email)
 	userIDBytes := wasmx.StorageLoad(key)
 	if len(userIDBytes) == 0 {
@@ -286,20 +303,20 @@ func addToUserList(userID string) {
 
 // Storage helpers for sessions
 
-func storeSession(session SessionInfo) {
+func storeSession(session Session) {
 	key := []byte(STORAGE_SESSION_PREFIX + session.SessionID)
 	data, _ := json.Marshal(session)
 	wasmx.StorageStore(key, data)
 }
 
-func getSession(sessionID string) *SessionInfo {
+func getSession(sessionID string) *Session {
 	key := []byte(STORAGE_SESSION_PREFIX + sessionID)
 	data := wasmx.StorageLoad(key)
 	if len(data) == 0 {
 		return nil
 	}
 
-	var session SessionInfo
+	var session Session
 	if err := json.Unmarshal(data, &session); err != nil {
 		return nil
 	}
@@ -346,8 +363,8 @@ func removeFromSessionList(sessionID string) {
 	wasmx.StorageStore([]byte(STORAGE_SESSIONS), data)
 }
 
-// validateSession checks if a session is valid and returns the user_id
-func validateSession(sessionID string) (string, error) {
+// validateSessionInternal checks if a session is valid and returns the user_id
+func validateSessionInternal(sessionID string) (string, error) {
 	if sessionID == "" {
 		return "", fmt.Errorf("session_id is required")
 	}

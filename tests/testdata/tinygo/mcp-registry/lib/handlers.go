@@ -9,7 +9,6 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	httpserver "github.com/loredanacirstea/wasmx-env-httpserver/lib"
-	oauth2server "github.com/loredanacirstea/wasmx-env-oauth2server/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -40,16 +39,6 @@ func handleOAuthAuthorize(req *httpserver.HttpRequestIncoming) httpserver.HttpRe
 		return sendTextResponse("Invalid response_type, must be 'code'", 400)
 	}
 
-	// Check if client exists
-	getClientResp := oauth2server.GetClient(&oauth2server.GetClientRequest{
-		InstanceID: OAUTH2_INSTANCE_ID,
-		ClientID:   clientID,
-	})
-
-	if getClientResp.Error != "" {
-		return sendTextResponse("Invalid client_id", 400)
-	}
-
 	// Check if user is logged in (session cookie)
 	sessionID := getSessionFromCookie(req)
 	if sessionID == "" {
@@ -66,8 +55,8 @@ func handleOAuthAuthorize(req *httpserver.HttpRequestIncoming) httpserver.HttpRe
 		}
 	}
 
-	// Validate session and get user ID
-	userID, err := validateSession(sessionID)
+	// Validate session and get user ID from OAuth2 server
+	userID, err := callOAuth2ValidateSession(sessionID)
 	if err != nil {
 		// Session expired or invalid - redirect to login
 		returnTo := req.Url
@@ -85,23 +74,19 @@ func handleOAuthAuthorize(req *httpserver.HttpRequestIncoming) httpserver.HttpRe
 	// TODO: Show consent screen here instead of auto-approving
 	// For now, auto-approve and create authorization code
 
-	// Create authorization code with actual user ID
-	codeResp := oauth2server.CreateAuthorizationCode(&oauth2server.CreateAuthorizationCodeRequest{
-		InstanceID:          OAUTH2_INSTANCE_ID,
-		ClientID:            clientID,
-		UserID:              userID,
-		RedirectURI:         redirectURI,
-		Scopes:              params.Scopes,
-		CodeChallenge:       codeChallenge,
-		CodeChallengeMethod: codeChallengeMethod,
-		ExpiresInSeconds:    600,
-	})
+	// Create authorization code via OAuth2 server contract
+	code, err := callOAuth2CreateAuthorizationCode(
+		clientID,
+		userID,
+		redirectURI,
+		params.Scopes,
+		codeChallenge,
+		codeChallengeMethod,
+	)
 
-	if codeResp.Error != "" {
-		return sendTextResponse("Failed to create authorization code: "+codeResp.Error, 500)
+	if err != nil {
+		return sendTextResponse("Failed to create authorization code: "+err.Error(), 500)
 	}
-
-	code := codeResp.Code
 
 	// Build redirect URL
 	if redirectURI == "" {
@@ -173,115 +158,37 @@ func handleOAuthToken(req *httpserver.HttpRequestIncoming) httpserver.HttpRespon
 }
 
 func handleAuthorizationCodeGrant(code, redirectURI, clientID, clientSecret, codeVerifier string) httpserver.HttpResponseWrap {
-	// Validate client credentials
-	validateClientResp := oauth2server.ValidateClient(&oauth2server.ValidateClientRequest{
-		InstanceID:   OAUTH2_INSTANCE_ID,
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-	})
-
-	if validateClientResp.Error != "" || !validateClientResp.Valid {
-		return sendJSONResponse(map[string]string{"error": "invalid_client"}, 401)
-	}
-
-	// Validate and consume authorization code
-	validateCodeResp := oauth2server.ValidateAuthorizationCode(&oauth2server.ValidateAuthorizationCodeRequest{
-		InstanceID:   OAUTH2_INSTANCE_ID,
-		Code:         code,
-		ClientID:     clientID,
-		RedirectURI:  redirectURI,
-		CodeVerifier: codeVerifier,
-	})
-
-	if validateCodeResp.Error != "" || !validateCodeResp.Valid {
+	// Exchange code for tokens via OAuth2 server contract
+	tokenResp, err := callOAuth2ExchangeCodeForToken(code, clientID, clientSecret, redirectURI, codeVerifier)
+	if err != nil {
 		return sendJSONResponse(map[string]string{
 			"error":             "invalid_grant",
-			"error_description": validateCodeResp.Error,
+			"error_description": err.Error(),
 		}, 400)
 	}
 
-	// Issue access token
-	accessTokenResp := oauth2server.IssueAccessToken(&oauth2server.IssueAccessTokenRequest{
-		InstanceID:       OAUTH2_INSTANCE_ID,
-		ClientID:         clientID,
-		UserID:           validateCodeResp.UserID,
-		Scopes:           validateCodeResp.Scopes,
-		ExpiresInSeconds: 3600,
-	})
-
-	if accessTokenResp.Error != "" {
-		return sendJSONResponse(map[string]string{"error": "server_error"}, 500)
-	}
-
-	// Issue refresh token
-	refreshTokenResp := oauth2server.IssueRefreshToken(&oauth2server.IssueRefreshTokenRequest{
-		InstanceID:       OAUTH2_INSTANCE_ID,
-		ClientID:         clientID,
-		UserID:           validateCodeResp.UserID,
-		Scopes:           validateCodeResp.Scopes,
-		ExpiresInSeconds: 0,
-	})
-
-	if refreshTokenResp.Error != "" {
-		LoggerError("Failed to issue refresh token", []string{"error", refreshTokenResp.Error})
-	}
-
-	LoggerInfo("Generated access token", []string{
-		"user_id", validateCodeResp.UserID,
+	LoggerInfo("Issued tokens", []string{
 		"client_id", clientID,
 	})
 
-	// Return token response
-	response := TokenResponse{
-		AccessToken:  accessTokenResp.Token,
-		TokenType:    "Bearer",
-		ExpiresIn:    3600,
-		RefreshToken: refreshTokenResp.Token,
-	}
-
-	return sendJSONResponse(response, 200)
+	return sendJSONResponse(tokenResp, 200)
 }
 
 func handleRefreshTokenGrant(refreshToken, clientID, clientSecret string) httpserver.HttpResponseWrap {
-	// Validate client credentials
-	validateClientResp := oauth2server.ValidateClient(&oauth2server.ValidateClientRequest{
-		InstanceID:   OAUTH2_INSTANCE_ID,
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-	})
-
-	if validateClientResp.Error != "" || !validateClientResp.Valid {
-		return sendJSONResponse(map[string]string{"error": "invalid_client"}, 401)
-	}
-
-	// Refresh the access token
-	refreshResp := oauth2server.RefreshAccessToken(&oauth2server.RefreshAccessTokenRequest{
-		InstanceID:       OAUTH2_INSTANCE_ID,
-		RefreshToken:     refreshToken,
-		ExpiresInSeconds: 3600,
-	})
-
-	if refreshResp.Error != "" {
+	// Refresh token via OAuth2 server contract
+	tokenResp, err := callOAuth2RefreshAccessToken(refreshToken, clientID, clientSecret)
+	if err != nil {
 		return sendJSONResponse(map[string]string{
 			"error":             "invalid_grant",
-			"error_description": refreshResp.Error,
+			"error_description": err.Error(),
 		}, 400)
 	}
 
 	LoggerInfo("Refreshed access token", []string{
-		"user_id", refreshResp.UserID,
 		"client_id", clientID,
 	})
 
-	// Return token response
-	response := TokenResponse{
-		AccessToken:  refreshResp.AccessToken,
-		TokenType:    "Bearer",
-		ExpiresIn:    3600,
-		RefreshToken: refreshResp.RefreshToken,
-	}
-
-	return sendJSONResponse(response, 200)
+	return sendJSONResponse(tokenResp, 200)
 }
 
 func handleSSE(req *httpserver.HttpRequestIncoming) httpserver.HttpResponseWrap {
