@@ -241,6 +241,16 @@ func HandleHttpRequest(req *httpserver.HttpRequestIncoming) httpserver.HttpRespo
 	switch path {
 	case "/.well-known/oauth-authorization-server":
 		return handleOAuthMetadata(req)
+	case "/login":
+		return handleLoginPage(req)
+	case "/auth/register":
+		return handleRegister(req)
+	case "/auth/login":
+		return handleLoginSubmit(req)
+	case "/auth/logout":
+		return handleLogout(req)
+	case "/auth/me":
+		return handleGetCurrentUser(req)
 	case "/oauth/authorize":
 		return handleOAuthAuthorize(req)
 	case "/oauth/token":

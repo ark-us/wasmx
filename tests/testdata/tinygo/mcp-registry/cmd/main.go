@@ -111,6 +111,46 @@ func main() {
 		wasmx.Finish([]byte(`{"success": true}`))
 		return
 
+	// OAuth client management operations
+	case calldata.RegisterOAuthClient != nil:
+		res := lib.RegisterOAuthClient(*calldata.RegisterOAuthClient)
+		wasmx.Finish(res)
+		return
+	case calldata.UpdateOAuthClient != nil:
+		res := lib.UpdateOAuthClient(*calldata.UpdateOAuthClient)
+		wasmx.Finish(res)
+		return
+	case calldata.RevokeOAuthClient != nil:
+		res := lib.RevokeOAuthClient(*calldata.RevokeOAuthClient)
+		wasmx.Finish(res)
+		return
+	case calldata.GetOAuthClient != nil:
+		res := lib.GetOAuthClient(*calldata.GetOAuthClient)
+		wasmx.Finish(res)
+		return
+	case calldata.ListOAuthClients != nil:
+		res := lib.ListOAuthClients(*calldata.ListOAuthClients)
+		wasmx.Finish(res)
+		return
+
+	// User account management
+	case calldata.RegisterUser != nil:
+		res := lib.RegisterUser(*calldata.RegisterUser)
+		wasmx.Finish(res)
+		return
+	case calldata.Login != nil:
+		res := lib.Login(*calldata.Login)
+		wasmx.Finish(res)
+		return
+	case calldata.Logout != nil:
+		res := lib.Logout(*calldata.Logout)
+		wasmx.Finish(res)
+		return
+	case calldata.GetCurrentUser != nil:
+		res := lib.GetCurrentUser(*calldata.GetCurrentUser)
+		wasmx.Finish(res)
+		return
+
 	// Internal operations
 	case calldata.InitGenesis != nil:
 		res := lib.InitGenesis(*calldata.InitGenesis)
