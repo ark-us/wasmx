@@ -6,9 +6,10 @@ import (
 )
 
 type SqlConnectionRequest struct {
-	DbName     string `json:"db_name"`
-	Connection string `json:"connection"`
-	Id         string `json:"id"`
+	DbName     string                 `json:"db_name"`
+	Connection string                 `json:"connection"`
+	Id         string                 `json:"id"`
+	Options    map[string]interface{} `json:"options,omitempty"`
 }
 
 type SqlConnectionResponse struct {
@@ -104,8 +105,9 @@ type SqlQueryResponse struct {
 }
 
 type SqlCreateDatabase struct {
-	DbName     string `json:"db_name"`
-	Connection string `json:"connection"`
+	DbName     string                 `json:"db_name"`
+	Connection string                 `json:"connection"`
+	Options    map[string]interface{} `json:"options,omitempty"`
 }
 
 type SqlCreateDatabaseResponse struct {
