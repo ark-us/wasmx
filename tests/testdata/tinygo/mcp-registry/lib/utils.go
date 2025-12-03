@@ -12,10 +12,16 @@ func isValidRoutePrefix(prefix string) bool {
 	return strings.HasPrefix(prefix, "/tools/") && len(prefix) > 7
 }
 
-// hasMcpRole checks if caller has mcp role
+// hasGovRole checks if caller has governance role
 func hasGovRole(caller wasmx.Bech32String) bool {
 	role := wasmx.GetRoleName(MODULE_NAME, caller)
 	return role == wasmx.ROLE_GOVERNANCE
+}
+
+// hasMCPRole checks if caller has mcp role
+func hasMCPRole(caller wasmx.Bech32String) bool {
+	role := wasmx.GetRoleName(MODULE_NAME, caller)
+	return role == wasmx.ROLE_MCP
 }
 
 // formatToolName formats a tool name with route prefix

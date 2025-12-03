@@ -41,7 +41,18 @@ func main() {
 	entrypoint := os.Getenv("ENTRY_POINT")
 	switch entrypoint {
 	case "instantiate":
-		// Nothing to initialize on instantiate
+		data := wasmx.GetCallData()
+		if len(data) == 0 {
+			wasmx.Finish([]byte{})
+			return
+		}
+		var req lib.InitGenesisRequest
+		if err := json.Unmarshal(data, &req); err != nil {
+			wasmx.Revert([]byte("invalid instantiate request: " + err.Error()))
+			return
+		}
+		res := lib.InitGenesis(req)
+		wasmx.Finish(res)
 		return
 	}
 
@@ -58,18 +69,23 @@ func main() {
 		lib.Revert("invalid call data: " + err.Error() + ": " + string(databz))
 	}
 
+	wasmx.OnlyInternal(lib.MODULE_NAME, string(databz))
+
 	// Handle operations
 	switch {
 	// OAuth client management
 	case calldata.RegisterOAuthClient != nil:
+		wasmx.OnlyInternal(lib.MODULE_NAME, "RegisterOAuthClient")
 		res := lib.RegisterOAuthClient(*calldata.RegisterOAuthClient)
 		wasmx.Finish(res)
 		return
 	case calldata.UpdateOAuthClient != nil:
+		wasmx.OnlyInternal(lib.MODULE_NAME, "UpdateOAuthClient")
 		res := lib.UpdateOAuthClient(*calldata.UpdateOAuthClient)
 		wasmx.Finish(res)
 		return
 	case calldata.RevokeOAuthClient != nil:
+		wasmx.OnlyInternal(lib.MODULE_NAME, "RevokeOAuthClient")
 		res := lib.RevokeOAuthClient(*calldata.RevokeOAuthClient)
 		wasmx.Finish(res)
 		return
@@ -87,49 +103,52 @@ func main() {
 		res := lib.RegisterUser(*calldata.RegisterUser)
 		wasmx.Finish(res)
 		return
-	case calldata.Login != nil:
-		res := lib.Login(*calldata.Login)
-		wasmx.Finish(res)
-		return
-	case calldata.Logout != nil:
-		res := lib.Logout(*calldata.Logout)
-		wasmx.Finish(res)
-		return
+	// case calldata.Login != nil:
+	// 	res := lib.Login(*calldata.Login)
+	// 	wasmx.Finish(res)
+	// 	return
+	// case calldata.Logout != nil:
+	// 	res := lib.Logout(*calldata.Logout)
+	// 	wasmx.Finish(res)
+	// 	return
 	case calldata.GetCurrentUser != nil:
 		res := lib.GetCurrentUser(*calldata.GetCurrentUser)
 		wasmx.Finish(res)
 		return
 
-	// OAuth2 flow operations
-	case calldata.CreateAuthorizationCode != nil:
-		res := lib.CreateAuthorizationCode(*calldata.CreateAuthorizationCode)
-		wasmx.Finish(res)
-		return
-	case calldata.ExchangeCodeForToken != nil:
-		res := lib.ExchangeCodeForToken(*calldata.ExchangeCodeForToken)
-		wasmx.Finish(res)
-		return
-	case calldata.ValidateAccessToken != nil:
-		res := lib.ValidateAccessToken(*calldata.ValidateAccessToken)
-		wasmx.Finish(res)
-		return
-	case calldata.RefreshAccessToken != nil:
-		res := lib.RefreshAccessToken(*calldata.RefreshAccessToken)
-		wasmx.Finish(res)
-		return
-	case calldata.ValidateSession != nil:
-		res := lib.ValidateSession(*calldata.ValidateSession)
+	// // OAuth2 flow operations
+	// case calldata.CreateAuthorizationCode != nil:
+	// 	res := lib.CreateAuthorizationCode(*calldata.CreateAuthorizationCode)
+	// 	wasmx.Finish(res)
+	// 	return
+	// case calldata.ExchangeCodeForToken != nil:
+	// 	res := lib.ExchangeCodeForToken(*calldata.ExchangeCodeForToken)
+	// 	wasmx.Finish(res)
+	// 	return
+	// case calldata.ValidateAccessToken != nil:
+	// 	res := lib.ValidateAccessToken(*calldata.ValidateAccessToken)
+	// 	wasmx.Finish(res)
+	// 	return
+	// case calldata.RefreshAccessToken != nil:
+	// 	res := lib.RefreshAccessToken(*calldata.RefreshAccessToken)
+	// 	wasmx.Finish(res)
+	// 	return
+	// case calldata.ValidateSession != nil:
+	// 	res := lib.ValidateSession(*calldata.ValidateSession)
+	// 	wasmx.Finish(res)
+	// 	return
+	case calldata.HttpRequestHandler != nil:
+		// Called by HTTP server registry contract with HTTP request data
+		wasmx.OnlyRole(lib.MODULE_NAME, wasmx.ROLE_HTTP_SERVER, string(databz))
+		res := lib.HandleHttpRequestWrap(*calldata.HttpRequestHandler)
 		wasmx.Finish(res)
 		return
 
 	// Internal operations
-	case calldata.InitGenesis != nil:
-		res := lib.InitGenesis(*calldata.InitGenesis)
-		wasmx.Finish(res)
-		return
 	case calldata.RoleChanged != nil:
 		wasmx.OnlyRole(lib.MODULE_NAME, wasmx.ROLE_ROLES, "RoleChanged")
-		wasmx.Finish([]byte(`{\"success\": true}`))
+		res := lib.OnRoleChanged()
+		wasmx.Finish(res)
 		return
 	}
 

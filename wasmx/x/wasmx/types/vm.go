@@ -296,6 +296,7 @@ var ROLE_MCP_SERVER = "mcp_server"
 var ROLE_OAUTH2_SERVER = "oauth2_server"
 var ROLE_MCP_REGISTRY = "mcp_registry"
 var ROLE_MCP = "mcp"
+var ROLE_HTTP_SERVER = "httpserver"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"
@@ -384,6 +385,7 @@ var EMAIL_v001 = "email_0.0.1"
 var OAUTH2_SERVER_v001 = "oauth2_server_0.0.1"
 var MCP_REGISTRY_v001 = "mcp_registry_0.0.1"
 var HTTPSERVER_REGISTRY_v001 = "httpserver_registry_0.0.1"
+var HTTPSERVER_REGISTRY_v002 = "httpserver_registry_0.0.2"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"

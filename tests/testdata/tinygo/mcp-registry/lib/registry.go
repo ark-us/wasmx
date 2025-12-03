@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	sdkmath "cosmossdk.io/math"
-	httpserver "github.com/loredanacirstea/wasmx-env-httpserver/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -14,9 +13,9 @@ import (
 func RegisterMCPContract(req RegisterMCPContractRequest) []byte {
 	caller := wasmx.GetCaller()
 
-	// Check mcp role
-	if !hasGovRole(caller) {
-		Revert("unauthorized: only governance can set mcp tool")
+	// Check mcp role - only contracts with mcp role can register themselves
+	if !hasMCPRole(caller) {
+		Revert("unauthorized: only mcp role can register mcp tool")
 	}
 
 	// Validate route prefix
@@ -217,11 +216,23 @@ func GetAllTools(_ GetAllToolsRequest) []byte {
 func updateHttpRoute(routePrefix, contractAddress string) {
 	// Use wildcard route to match all paths under the prefix
 	route := routePrefix + "/*"
-	req := httpserver.SetRouteHandlerRequest{
-		Route:           route,
-		ContractAddress: contractAddress,
+
+	// Get HTTP registry address by role
+	httpRegistryAddr := wasmx.GetAddressByRole(wasmx.ROLE_HTTP_SERVER)
+
+	// Call HTTP server registry contract to set the route
+	msg := map[string]interface{}{
+		"set_route": map[string]interface{}{
+			"route":            route,
+			"contract_address": contractAddress,
+		},
 	}
-	httpserver.SetRouteHandler(&req)
+	msgBz, _ := json.Marshal(msg)
+	ok, data := wasmx.CallSimple(httpRegistryAddr, msgBz, false, MODULE_NAME)
+	if !ok {
+		LoggerError("Failed to register HTTP route", []string{"route", route, "error", string(data)})
+		return
+	}
 
 	LoggerInfo("HTTP route registered", []string{
 		"route", route,
@@ -232,10 +243,22 @@ func updateHttpRoute(routePrefix, contractAddress string) {
 // removeHttpRoute removes an HTTP route
 func removeHttpRoute(routePrefix string) {
 	route := routePrefix + "/*"
-	req := httpserver.RemoveRouteHandlerRequest{
-		Route: route,
+
+	// Get HTTP registry address by role
+	httpRegistryAddr := wasmx.GetAddressByRole(wasmx.ROLE_HTTP_SERVER)
+
+	// Call HTTP server registry contract to remove the route
+	msg := map[string]interface{}{
+		"remove_route": map[string]interface{}{
+			"route": route,
+		},
 	}
-	httpserver.RemoveRouteHandler(&req)
+	msgBz, _ := json.Marshal(msg)
+	ok, data := wasmx.CallSimple(httpRegistryAddr, msgBz, false, MODULE_NAME)
+	if !ok {
+		LoggerError("Failed to remove HTTP route", []string{"route", route, "error", string(data)})
+		return
+	}
 
 	LoggerInfo("HTTP route removed", []string{"route", route})
 }

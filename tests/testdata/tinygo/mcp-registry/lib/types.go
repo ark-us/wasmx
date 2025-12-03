@@ -12,6 +12,7 @@ const (
 	STORAGE_CONTRACT_PREFIX      = "contract:"            // contract:{address} -> ContractRegistration
 	STORAGE_ROUTE_PREFIX         = "route:"               // route:{path} -> address
 	STORAGE_PARAMS               = "params"
+	STORAGE_INIT_DATA            = "init_data" // InitGenesisRequest for RoleChanged
 )
 
 // ContractRegistration stores metadata for each registered MCP contract
@@ -53,10 +54,13 @@ type CallData struct {
 	GetAllTools            *GetAllToolsRequest            `json:"get_all_tools,omitempty"`
 
 	// Server management
-	StartServer *StartServerRequest     `json:"start_server,omitempty"`
-	InitGenesis *InitGenesisRequest     `json:"init_genesis,omitempty"`
-	GetParams   *GetParamsRequest       `json:"get_params,omitempty"`
-	RoleChanged *wasmx.RolesChangedHook `json:"RoleChanged,omitempty"`
+	RegisterHttpRoutes *RegisterHttpRoutesRequest `json:"register_http_routes,omitempty"`
+	InitGenesis        *InitGenesisRequest        `json:"init_genesis,omitempty"`
+	GetParams          *GetParamsRequest          `json:"get_params,omitempty"`
+	RoleChanged        *wasmx.RolesChangedHook    `json:"RoleChanged,omitempty"`
+
+	// HTTP request handling (called by HTTP server registry)
+	HttpRequestHandler *HttpRequestIncoming `json:"HttpRequestHandler,omitempty"`
 }
 
 // RegisterMCPContractRequest for registering a new MCP contract
@@ -88,10 +92,8 @@ type GetContractInfoRequest struct {
 // GetAllToolsRequest for getting aggregated tool list
 type GetAllToolsRequest struct{}
 
-// StartServerRequest for starting the HTTP server
-type StartServerRequest struct {
-	Address string `json:"address"`
-}
+// RegisterHttpRoutesRequest for registering routes with HTTP registry
+type RegisterHttpRoutesRequest struct{}
 
 // InitGenesisRequest for initializing genesis state
 type InitGenesisRequest struct {
@@ -151,4 +153,28 @@ type TokenResponse struct {
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int    `json:"expires_in"`
 	RefreshToken string `json:"refresh_token,omitempty"`
+}
+
+// HTTP request types (passed from HTTP server registry via CallData)
+type HttpRequestIncoming struct {
+	Method        string              `json:"method"`
+	Url           string              `json:"url"`
+	Header        map[string][]string `json:"header"`
+	ContentLength int64               `json:"content_length"`
+	Data          []byte              `json:"data"`
+	RemoteAddr    string              `json:"remote_address"`
+	RequestURI    string              `json:"request_uri"`
+}
+
+// HTTP response types (returned to HTTP server registry)
+type HttpResponseWrap struct {
+	Error string       `json:"error"`
+	Data  HttpResponse `json:"data"`
+}
+
+type HttpResponse struct {
+	StatusCode int                 `json:"status_code"`
+	Status     string              `json:"status"`
+	Header     map[string][]string `json:"header"`
+	Data       []byte              `json:"data"`
 }

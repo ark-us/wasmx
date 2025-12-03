@@ -1,6 +1,7 @@
 package lib
 
 import (
+	wasmxhttp "github.com/loredanacirstea/wasmx-env-httpserver/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -9,19 +10,20 @@ const MODULE_NAME = "oauth2-server"
 // Storage keys
 const (
 	STORAGE_PARAMS               = "params"
-	STORAGE_OAUTH_CLIENTS        = "oauth_clients"        // []string of client IDs
-	STORAGE_OAUTH_CLIENT_PREFIX  = "oauth_client:"        // oauth_client:{client_id} -> OAuthClient
-	STORAGE_USERS                = "users"                // []string of user IDs
-	STORAGE_USER_PREFIX          = "user:"                // user:{user_id} -> User
-	STORAGE_USER_EMAIL_PREFIX    = "user_email:"          // user_email:{email} -> user_id
-	STORAGE_SESSIONS             = "sessions"             // []string of session IDs
-	STORAGE_SESSION_PREFIX       = "session:"             // session:{session_id} -> Session
-	STORAGE_AUTH_CODES           = "auth_codes"           // []string of authorization codes
-	STORAGE_AUTH_CODE_PREFIX     = "auth_code:"           // auth_code:{code} -> AuthorizationCode
-	STORAGE_ACCESS_TOKENS        = "access_tokens"        // []string of access tokens
-	STORAGE_ACCESS_TOKEN_PREFIX  = "access_token:"        // access_token:{token} -> AccessToken
-	STORAGE_REFRESH_TOKENS       = "refresh_tokens"       // []string of refresh tokens
-	STORAGE_REFRESH_TOKEN_PREFIX = "refresh_token:"       // refresh_token:{token} -> RefreshToken
+	STORAGE_INIT_DATA            = "init_data"      // InitGenesisRequest for RoleChanged
+	STORAGE_OAUTH_CLIENTS        = "oauth_clients"  // []string of client IDs
+	STORAGE_OAUTH_CLIENT_PREFIX  = "oauth_client:"  // oauth_client:{client_id} -> OAuthClient
+	STORAGE_USERS                = "users"          // []string of user IDs
+	STORAGE_USER_PREFIX          = "user:"          // user:{user_id} -> User
+	STORAGE_USER_EMAIL_PREFIX    = "user_email:"    // user_email:{email} -> user_id
+	STORAGE_SESSIONS             = "sessions"       // []string of session IDs
+	STORAGE_SESSION_PREFIX       = "session:"       // session:{session_id} -> Session
+	STORAGE_AUTH_CODES           = "auth_codes"     // []string of authorization codes
+	STORAGE_AUTH_CODE_PREFIX     = "auth_code:"     // auth_code:{code} -> AuthorizationCode
+	STORAGE_ACCESS_TOKENS        = "access_tokens"  // []string of access tokens
+	STORAGE_ACCESS_TOKEN_PREFIX  = "access_token:"  // access_token:{token} -> AccessToken
+	STORAGE_REFRESH_TOKENS       = "refresh_tokens" // []string of refresh tokens
+	STORAGE_REFRESH_TOKEN_PREFIX = "refresh_token:" // refresh_token:{token} -> RefreshToken
 )
 
 const (
@@ -52,6 +54,7 @@ type CallData struct {
 	ValidateAccessToken     *ValidateAccessTokenRequest     `json:"validate_access_token,omitempty"`
 	RefreshAccessToken      *RefreshAccessTokenRequest      `json:"refresh_access_token,omitempty"`
 	ValidateSession         *ValidateSessionRequest         `json:"validate_session,omitempty"`
+	HttpRequestHandler      *wasmxhttp.HttpRequestIncoming  `json:"HttpRequestHandler,omitempty"`
 
 	// Internal operations
 	InitGenesis *InitGenesisRequest     `json:"init_genesis,omitempty"`

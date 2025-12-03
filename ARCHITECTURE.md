@@ -124,3 +124,9 @@ resp = host.FinalizeBlock(finalizeReq, metainfo)
 We have extensions for adding information to the global context. E.g. `vmp2p.WithP2PEmptyContext(ctx)`, `networktypes.ContextWithMultiChainContext` etc. These extensions must:
 * take into consideration the multichain architecture - e.g. use a mapping on chainId
 * use locks for all `map`s, lower case for the `map` field name and create getter & setter functions
+
+## System Contracts
+
+* if a system contract needs protected APIs to be initialized, we have two cases:
+    * if the contract is a precompile initialized at chain start, it should do the initialization on `instantiate`
+    * if the contract is added through governance, on `instantiate` we store initialization data and on `RoleChanged` we run the initialization process (e.g. for creating databases & tables or if we need to call other core contracts)
