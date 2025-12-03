@@ -37,4 +37,5 @@ const (
 	ROLE_OAUTH2_SERVER             = "oauth2_server"
 	ROLE_MCP_REGISTRY              = "mcp_registry"
 	ROLE_MCP                       = "mcp"
+	ROLE_HTTP_SERVER               = "httpserver"
 )

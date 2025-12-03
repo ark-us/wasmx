@@ -146,34 +146,36 @@ func WasmxCall(ctx *Context, req vmtypes.CallRequestCommon) (int32, []byte) {
 		contractAddress = *req.ContractAddress
 	}
 
-	fromstr := req.From.String()
+	// fromstr := req.From.String()
 	tostr := req.To.String()
 
 	// deterministic contracts cannot transact with or query non-deterministic contracts
-	// TODO eventually move this rule in contracts
-	sourceContractInfo := GetContractDependency(ctx, req.From)
-	if sourceContractInfo != nil {
-		fromStorageType := sourceContractInfo.StorageType
-		if fromStorageType == types.ContractStorageType_CoreConsensus && toStorageType != types.ContractStorageType_CoreConsensus {
-			// deterministic contracts can read & write from/to metaconsensus contracts
-			if toStorageType != types.ContractStorageType_MetaConsensus {
-				errmsg := "deterministic contract tried to execute non-deterministic contract"
-				ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "to", tostr)
-				errmsg += fmt.Sprintf(": from %s, to %s", fromstr, tostr)
-				return int32(1), []byte(errmsg)
-			}
-		}
-		// TODO execution should be stopped, queries are ok
-		// if fromStorageType == types.ContractStorageType_SingleConsensus && toStorageType == types.ContractStorageType_CoreConsensus {
-		// 	errmsg := "non-deterministic contract tried to execute deterministic (core consensus) contract"
-		// 	ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "to", tostr)
-		// 	errmsg += fmt.Sprintf(": from %s, to %s", fromstr, tostr)
-		// 	return int32(1), []byte(errmsg)
-		// }
+	// TODO eventually move this rule in contracts; because the contract info cache remains outdated when we upgrade roles, so in RoleChanged activation we have issues
+	// TODO have OnlyNonDeterministicRoles() in contracts
 
-		// right now single consensus contracts can call metaconsensus contracts
-		// and this is used to update chain information for a simple node statesync when the node is not a validator
-	}
+	// sourceContractInfo := GetContractDependency(ctx, req.From)
+	// if sourceContractInfo != nil {
+	// 	fromStorageType := sourceContractInfo.StorageType
+	// 	if fromStorageType == types.ContractStorageType_CoreConsensus && toStorageType != types.ContractStorageType_CoreConsensus {
+	// 		// deterministic contracts can read & write from/to metaconsensus contracts
+	// 		if toStorageType != types.ContractStorageType_MetaConsensus {
+	// 			errmsg := "deterministic contract tried to execute non-deterministic contract"
+	// 			ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "to", tostr)
+	// 			errmsg += fmt.Sprintf(": from %s, to %s", fromstr, tostr)
+	// 			return int32(1), []byte(errmsg)
+	// 		}
+	// 	}
+	// 	// TODO execution should be stopped, queries are ok
+	// 	// if fromStorageType == types.ContractStorageType_SingleConsensus && toStorageType == types.ContractStorageType_CoreConsensus {
+	// 	// 	errmsg := "non-deterministic contract tried to execute deterministic (core consensus) contract"
+	// 	// 	ctx.Ctx.Logger().Debug(errmsg, "from", fromstr, "to", tostr)
+	// 	// 	errmsg += fmt.Sprintf(": from %s, to %s", fromstr, tostr)
+	// 	// 	return int32(1), []byte(errmsg)
+	// 	// }
+
+	// 	// right now single consensus contracts can call metaconsensus contracts
+	// 	// and this is used to update chain information for a simple node statesync when the node is not a validator
+	// }
 	callContext := types.MessageInfo{
 		Origin:   ctx.Env.CurrentCall.Origin,
 		Sender:   req.From,

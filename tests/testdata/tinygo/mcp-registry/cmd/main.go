@@ -2,10 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 
-	httpserver "github.com/loredanacirstea/wasmx-env-httpserver/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	lib "github.com/loredanacirstea/wasmx-mcp-registry/lib"
 )
@@ -26,14 +24,6 @@ func Memory_ptrlen_i64_1() {}
 //export wasmx_env_i64_2
 func Wasmx_env_i64_2() {}
 
-//go:wasm-module httpserver
-//export wasmx_httpserver_i64_1
-func Wasmx_httpserver_i64_1() {}
-
-//go:wasm-module oauth2server
-//export wasmx_oauth2server_i64_1
-func Wasmx_oauth2server_i64_1() {}
-
 //go:wasm-module postgresql
 //export wasmx_postgresql_i64_1
 func Wasmx_postgresql_i64_1() {}
@@ -42,11 +32,19 @@ func main() {
 	// Handle internal entry points
 	entrypoint := os.Getenv("ENTRY_POINT")
 	switch entrypoint {
-	case "http_request_incoming":
-		handleHttpRequest()
-		return
 	case "instantiate":
-		lib.InitializeTables()
+		// Check if there's initialization data in the call data
+		databz := wasmx.GetCallData()
+		if len(databz) > 0 {
+			var calldata lib.CallData
+			if err := json.Unmarshal(databz, &calldata); err == nil && calldata.InitGenesis != nil {
+				// Store the init data first
+				lib.InitGenesis(*calldata.InitGenesis)
+				// Initialize tables and register HTTP routes
+				// This is called during chain initialization when the contract is activated
+				lib.InitializeTables()
+			}
+		}
 		return
 	}
 
@@ -98,46 +96,24 @@ func main() {
 		res := lib.GetParams(*calldata.GetParams)
 		wasmx.Finish(res)
 		return
-	case calldata.StartServer != nil:
-		lib.StartServer(calldata.StartServer)
-		wasmx.Finish([]byte(`{"success": true}`))
+	case calldata.RegisterHttpRoutes != nil:
+		res := lib.RegisterHttpRoutes(calldata.RegisterHttpRoutes)
+		wasmx.Finish(res)
 		return
 
 	// Internal operations
-	case calldata.InitGenesis != nil:
-		res := lib.InitGenesis(*calldata.InitGenesis)
-		wasmx.Finish(res)
-		return
 	case calldata.RoleChanged != nil:
 		wasmx.OnlyRole(lib.MODULE_NAME, wasmx.ROLE_ROLES, "RoleChanged")
 		res := lib.InitializeTables()
 		wasmx.Finish(res)
 		return
+	case calldata.HttpRequestHandler != nil:
+		// Called by HTTP server registry contract with HTTP request data
+		wasmx.OnlyRole(lib.MODULE_NAME, wasmx.ROLE_HTTP_SERVER, string(databz))
+		res := lib.HandleHttpRequest(*calldata.HttpRequestHandler)
+		wasmx.Finish(res)
+		return
 	}
 
 	wasmx.Revert(append([]byte("invalid function call data: "), databz...))
-}
-
-func handleHttpRequest() {
-	fmt.Println("--handleHttpRequest--")
-	// Get the HTTP request data from call data
-	databz := wasmx.GetCallData()
-	fmt.Println("--handleHttpRequest--", string(databz))
-	var req httpserver.HttpRequestIncoming
-	if err := json.Unmarshal(databz, &req); err != nil {
-		lib.LoggerError("Failed to parse HTTP request", []string{"error", err.Error()})
-		lib.Revert("invalid HTTP request: " + err.Error())
-	}
-
-	// Handle the request
-	resp := lib.HandleHttpRequest(&req)
-
-	// Marshal and return the response
-	respBz, err := json.Marshal(resp)
-	if err != nil {
-		lib.LoggerError("Failed to marshal HTTP response", []string{"error", err.Error()})
-		lib.Revert("failed to marshal response: " + err.Error())
-	}
-
-	wasmx.Finish(respBz)
 }

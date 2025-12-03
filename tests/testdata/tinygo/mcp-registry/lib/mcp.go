@@ -6,22 +6,47 @@ import (
 	"net/http"
 	"strings"
 
-	httpserver "github.com/loredanacirstea/wasmx-env-httpserver/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 func InitGenesis(req InitGenesisRequest) []byte {
-	// Store the OAuth client configuration
+	// ONLY store the initialization data for later use in RoleChanged
+	// Do NOT register contracts or call other contracts - we don't have roles yet!
+	initDataBz, _ := json.Marshal(req)
+	wasmx.StorageStore([]byte(STORAGE_INIT_DATA), initDataBz)
+
+	// Store the OAuth client configuration for quick access
 	paramsBz, _ := json.Marshal(req.Params)
 	wasmx.StorageStore([]byte(STORAGE_PARAMS), paramsBz)
 
-	LoggerInfo("MCP Registry initialized - params stored", []string{
-		"client_id", req.Params.ClientID,
+	LoggerInfo("MCP Registry init data stored", []string{
+		"redirect_uris_count", fmt.Sprintf("%d", len(req.Params.RedirectURIs)),
+		"initial_contracts_count", fmt.Sprintf("%d", len(req.InitialContracts)),
 	})
 
+	return []byte(`{"success": true}`)
+}
+
+// InitializeTables initializes the MCP registry tables
+func InitializeTables() []byte {
+	LoggerInfo("InitializeTables called", nil)
+	// Load initialization data
+	initDataBz := wasmx.StorageLoad([]byte(STORAGE_INIT_DATA))
+	if len(initDataBz) == 0 {
+		LoggerError("Init data not found", nil)
+		return []byte(`{"error": "init data not found"}`)
+	}
+	LoggerInfo("Init data loaded", []string{"size", fmt.Sprintf("%d", len(initDataBz))})
+
+	var initData InitGenesisRequest
+	if err := json.Unmarshal(initDataBz, &initData); err != nil {
+		LoggerError("Failed to unmarshal init data", []string{"error", err.Error()})
+		return []byte(`{"error": "failed to unmarshal init data"}`)
+	}
+
 	// Register initial contracts if provided
-	if len(req.InitialContracts) > 0 {
-		for _, contract := range req.InitialContracts {
+	if len(initData.InitialContracts) > 0 {
+		for _, contract := range initData.InitialContracts {
 			// Parse and validate tools JSON
 			var tools []MCPToolDefinition
 			if err := json.Unmarshal([]byte(contract.ToolsJSON), &tools); err != nil {
@@ -50,7 +75,7 @@ func InitGenesis(req InitGenesisRequest) []byte {
 			addToRegisteredList(contract.ContractAddress)
 			storeRouteMapping(contract.RoutePrefix, contract.ContractAddress)
 
-			// Update HTTP routing
+			// Update HTTP routing (now we have roles to call other contracts)
 			updateHttpRoute(contract.RoutePrefix, contract.ContractAddress)
 
 			LoggerInfo("Initial MCP contract registered", []string{
@@ -61,20 +86,32 @@ func InitGenesis(req InitGenesisRequest) []byte {
 		}
 	}
 
-	return []byte(`{"success": true}`)
-}
-
-// InitializeTables initializes the MCP registry tables
-func InitializeTables() []byte {
-	// Get stored params to get database connection info
-	params := getParams()
-	if params == nil {
-		LoggerError("Failed to get params", nil)
-		return []byte(`{"error": "params not initialized"}`)
+	// Register as OAuth2 client with OAuth2 server
+	oauth2Addr := wasmx.GetAddressByRole(wasmx.ROLE_OAUTH2_SERVER)
+	if oauth2Addr != "" {
+		registerOAuthClientMsg := map[string]interface{}{
+			"register_oauth_client": map[string]interface{}{
+				"name":          "MCP Registry",
+				"description":   "Model Context Protocol Registry for AI Agents",
+				"redirect_uris": initData.Params.RedirectURIs,
+				"scopes":        initData.Params.Scopes,
+				"website_url":   "",
+				"logo_url":      "",
+			},
+		}
+		msgBz, _ := json.Marshal(registerOAuthClientMsg)
+		ok, data := wasmx.CallSimple(oauth2Addr, msgBz, false, MODULE_NAME)
+		if !ok {
+			LoggerError("Failed to register OAuth client", []string{"error", string(data)})
+		} else {
+			LoggerInfo("Registered as OAuth2 client", nil)
+		}
 	}
 
-	// OAuth2 server is now a separate contract, no initialization needed here
-	LoggerInfo("MCP Registry tables initialized", nil)
+	// Register HTTP routes with HTTP registry
+	RegisterHttpRoutes(&RegisterHttpRoutesRequest{})
+
+	LoggerInfo("MCP Registry initialized on RoleChanged", nil)
 	return []byte(`{"success": true}`)
 }
 
@@ -86,35 +123,37 @@ func GetParams(req GetParamsRequest) []byte {
 	return paramsBz
 }
 
-func StartServer(req *StartServerRequest) {
-	config := httpserver.WebsrvConfig{
-		Address:            req.Address,
-		CORSAllowedOrigins: []string{"*"},
-		CORSAllowedMethods: []string{"GET", "POST", "OPTIONS"},
-		CORSAllowedHeaders: []string{"Content-Type", "Authorization"},
-		MaxOpenConnections: 100,
-		RequestBodyMaxSize: 1024 * 1024, // 1MB
-		RouteToContractAddress: map[string]string{
-			"/.well-known/oauth-authorization-server": string(wasmx.GetAddress()),
-			"/oauth/authorize":                        string(wasmx.GetAddress()),
-			"/oauth/token":                            string(wasmx.GetAddress()),
-			"/sse":                                    string(wasmx.GetAddress()),
-			"/":                                       string(wasmx.GetAddress()),
-		},
+func RegisterHttpRoutes(req *RegisterHttpRoutesRequest) []byte {
+	self := string(wasmx.GetAddress())
+	LoggerInfo("RegisterHttpRoutes called", []string{"self", self})
+
+	// Get HTTP registry address by role
+	httpRegistryAddr := wasmx.GetAddressByRole(wasmx.ROLE_HTTP_SERVER)
+	LoggerInfo("HTTP registry address", []string{"addr", string(httpRegistryAddr)})
+
+	routes := []string{
+		"/sse",
 	}
 
-	resp := httpserver.StartWebServer(&httpserver.StartWebServerRequest{
-		Config: config,
-	})
-
-	if resp.Error != "" {
-		LoggerError("Failed to start web server", []string{"error", resp.Error})
-		Revert("failed to start server: " + resp.Error)
+	for _, rt := range routes {
+		LoggerInfo("Registering route", []string{"route", rt, "contract", self})
+		msg := map[string]interface{}{
+			"set_route": map[string]interface{}{
+				"route":            rt,
+				"contract_address": self,
+			},
+		}
+		bz, _ := json.Marshal(msg)
+		ok, data := wasmx.CallSimple(httpRegistryAddr, bz, false, MODULE_NAME)
+		if !ok {
+			LoggerError("failed to set route", []string{"route", rt, "error", string(data)})
+		} else {
+			LoggerInfo("Successfully registered route", []string{"route", rt})
+		}
 	}
 
-	LoggerInfo("MCP Registry Server started", []string{
-		"address", req.Address,
-	})
+	LoggerInfo("MCP Registry HTTP routes registered", []string{"registry", string(httpRegistryAddr)})
+	return []byte(`{"success": true}`)
 }
 
 func getParams() *ServerParams {
@@ -129,9 +168,13 @@ func getParams() *ServerParams {
 	return &params
 }
 
-func extractToken(req *httpserver.HttpRequestIncoming) string {
+func extractToken(req *HttpRequestIncoming) string {
 	// Try Authorization header first (OAuth Bearer token)
-	auth := req.Header.Get("Authorization")
+	authHeaders := req.Header["Authorization"]
+	if len(authHeaders) == 0 {
+		return ""
+	}
+	auth := authHeaders[0]
 	if strings.HasPrefix(auth, "Bearer ") {
 		return strings.TrimPrefix(auth, "Bearer ")
 	}
@@ -153,39 +196,27 @@ func validateToken(token string) (string, bool) {
 	return userID, true
 }
 
-func HandleHttpRequest(req *httpserver.HttpRequestIncoming) httpserver.HttpResponseWrap {
-	// Extract path from RequestURI (remove query string)
-	path := req.RequestURI
+func HandleHttpRequest(req HttpRequestIncoming) []byte {
+	// Extract path from Url or RequestURI (remove query string)
+	path := req.Url
+	if path == "" {
+		path = req.RequestURI
+	}
 	if idx := strings.Index(path, "?"); idx != -1 {
 		path = path[:idx]
 	}
 
 	// Route the request based on the URL path
+	var resp HttpResponseWrap
 	switch path {
-	case "/.well-known/oauth-authorization-server":
-		return handleOAuthMetadata(req)
-	case "/login":
-		return handleLoginPage(req)
-	case "/auth/register":
-		return handleRegister(req)
-	case "/auth/login":
-		return handleLoginSubmit(req)
-	case "/auth/logout":
-		return handleLogout(req)
-	case "/auth/me":
-		return handleGetCurrentUser(req)
-	case "/oauth/authorize":
-		return handleOAuthAuthorize(req)
-	case "/oauth/token":
-		return handleOAuthToken(req)
-	case "/sse":
-		return handleSSE(req)
 	case "/":
-		return handleRoot(req)
+		resp = handleRoot(&req)
+	case "/sse":
+		resp = handleSSE(&req)
 	default:
-		return httpserver.HttpResponseWrap{
+		resp = HttpResponseWrap{
 			Error: "",
-			Data: httpserver.HttpResponse{
+			Data: HttpResponse{
 				StatusCode: 404,
 				Status:     "404 Not Found",
 				Header:     http.Header{"Content-Type": []string{"text/plain"}},
@@ -193,64 +224,77 @@ func HandleHttpRequest(req *httpserver.HttpRequestIncoming) httpserver.HttpRespo
 			},
 		}
 	}
+
+	// Marshal and return
+	respBz, _ := json.Marshal(resp)
+	return respBz
 }
 
-func handleRoot(req *httpserver.HttpRequestIncoming) httpserver.HttpResponseWrap {
-	params := getParams()
-	if params == nil {
-		return sendJSONResponse(map[string]string{
-			"error": "Server not configured",
-		}, 500)
-	}
-
+func handleRoot(req *HttpRequestIncoming) HttpResponseWrap {
 	response := map[string]interface{}{
-		"message":       "MCP Registry Server",
-		"version":       "1.0.0",
-		"sse_endpoint":  "/sse",
-		"authorize_url": "/oauth/authorize",
-		"token_url":     "/oauth/token",
-		"auth_methods": map[string]interface{}{
-			"oauth2": map[string]string{
-				"client_id":     params.ClientID,
-				"client_secret": params.ClientSecret,
-			},
-		},
+		"message": "MCP Registry Server",
+		"version": "1.0.0",
 	}
 
 	return sendJSONResponse(response, 200)
 }
 
-func handleOAuthMetadata(req *httpserver.HttpRequestIncoming) httpserver.HttpResponseWrap {
-	// Parse the base URL from the request
-	scheme := "http"
-	if req.Header.Get("X-Forwarded-Proto") == "https" {
-		scheme = "https"
-	}
-	// Use X-Forwarded-Host if available (for proxies like ngrok)
-	host := req.Header.Get("X-Forwarded-Host")
-	if host == "" {
-		host = req.Header.Get("Host")
-	}
-	baseURL := fmt.Sprintf("%s://%s", scheme, host)
-
-	metadata := map[string]interface{}{
-		"issuer":                                baseURL,
-		"authorization_endpoint":                baseURL + "/oauth/authorize",
-		"token_endpoint":                        baseURL + "/oauth/token",
-		"grant_types_supported":                 []string{"authorization_code"},
-		"response_types_supported":              []string{"code"},
-		"token_endpoint_auth_methods_supported": []string{"client_secret_post", "client_secret_basic"},
-		"code_challenge_methods_supported":      []string{"plain", "S256"},
+func handleSSE(req *HttpRequestIncoming) HttpResponseWrap {
+	// Extract token from Authorization header
+	token := extractToken(req)
+	if token == "" {
+		return HttpResponseWrap{
+			Error: "",
+			Data: HttpResponse{
+				StatusCode: 401,
+				Status:     "401 Unauthorized",
+				Header:     http.Header{"Content-Type": []string{"text/plain"}},
+				Data:       []byte("Unauthorized: missing token"),
+			},
+		}
 	}
 
-	return sendJSONResponse(metadata, 200)
+	// Validate token and get user_id
+	userID, valid := validateToken(token)
+	if !valid {
+		return HttpResponseWrap{
+			Error: "",
+			Data: HttpResponse{
+				StatusCode: 401,
+				Status:     "401 Unauthorized",
+				Header:     http.Header{"Content-Type": []string{"text/plain"}},
+				Data:       []byte("Unauthorized: invalid token"),
+			},
+		}
+	}
+
+	// Get request body
+	body := req.Data
+
+	// Parse JSON-RPC request
+	var rpcReq JSONRPCRequest
+	if err := json.Unmarshal(body, &rpcReq); err != nil {
+		return sendJSONRPCError(nil, -32700, "Parse error: "+err.Error())
+	}
+
+	// Route based on JSON-RPC method
+	switch rpcReq.Method {
+	case "initialize":
+		return handleInitialize(&rpcReq, userID)
+	case "tools/list":
+		return handleToolsList(&rpcReq, userID)
+	case "tools/call":
+		return handleToolsCall(&rpcReq, userID)
+	default:
+		return sendJSONRPCError(rpcReq.ID, -32601, "Method not found: "+rpcReq.Method)
+	}
 }
 
-func sendJSONResponse(data interface{}, statusCode int) httpserver.HttpResponseWrap {
+func sendJSONResponse(data interface{}, statusCode int) HttpResponseWrap {
 	jsonData, _ := json.Marshal(data)
-	return httpserver.HttpResponseWrap{
+	return HttpResponseWrap{
 		Error: "",
-		Data: httpserver.HttpResponse{
+		Data: HttpResponse{
 			StatusCode: statusCode,
 			Status:     fmt.Sprintf("%d OK", statusCode),
 			Header:     http.Header{"Content-Type": []string{"application/json"}},
@@ -259,26 +303,166 @@ func sendJSONResponse(data interface{}, statusCode int) httpserver.HttpResponseW
 	}
 }
 
-func sendTextResponse(text string, statusCode int) httpserver.HttpResponseWrap {
-	return httpserver.HttpResponseWrap{
-		Error: "",
-		Data: httpserver.HttpResponse{
-			StatusCode: statusCode,
-			Status:     fmt.Sprintf("%d", statusCode),
-			Header:     http.Header{"Content-Type": []string{"text/plain"}},
-			Data:       []byte(text),
-		},
+func sendJSONRPCResponse(id interface{}, result interface{}) HttpResponseWrap {
+	resp := JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      id,
+		Result:  result,
 	}
-}
 
-func sendJSONResponseBytes(jsonData []byte, statusCode int) httpserver.HttpResponseWrap {
-	return httpserver.HttpResponseWrap{
+	jsonData, _ := json.Marshal(resp)
+	return HttpResponseWrap{
 		Error: "",
-		Data: httpserver.HttpResponse{
-			StatusCode: statusCode,
-			Status:     fmt.Sprintf("%d OK", statusCode),
+		Data: HttpResponse{
+			StatusCode: 200,
+			Status:     "200 OK",
 			Header:     http.Header{"Content-Type": []string{"application/json"}},
 			Data:       jsonData,
 		},
 	}
+}
+
+func sendJSONRPCError(id interface{}, code int, message string) HttpResponseWrap {
+	resp := JSONRPCResponse{
+		JSONRPC: "2.0",
+		ID:      id,
+		Error: &RPCError{
+			Code:    code,
+			Message: message,
+		},
+	}
+
+	jsonData, _ := json.Marshal(resp)
+	return HttpResponseWrap{
+		Error: "",
+		Data: HttpResponse{
+			StatusCode: 200,
+			Status:     "200 OK",
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Data:       jsonData,
+		},
+	}
+}
+
+func handleInitialize(req *JSONRPCRequest, userID string) HttpResponseWrap {
+	// MCP initialize response
+	result := map[string]interface{}{
+		"protocolVersion": "2024-11-05",
+		"capabilities": map[string]interface{}{
+			"tools": map[string]interface{}{},
+		},
+		"serverInfo": map[string]interface{}{
+			"name":    "MCP Registry Server",
+			"version": "1.0.0",
+		},
+	}
+
+	return sendJSONRPCResponse(req.ID, result)
+}
+
+func handleToolsList(req *JSONRPCRequest, userID string) HttpResponseWrap {
+	// Get all registered contracts
+	addresses := getRegisteredList()
+	var allTools []ToolsListEntry
+
+	for _, addr := range addresses {
+		registration := getContractRegistration(addr)
+		if registration == nil || !registration.Active {
+			continue
+		}
+
+		// Add tools from this contract
+		for _, tool := range registration.Tools {
+			allTools = append(allTools, ToolsListEntry{
+				Name:            tool.Name,
+				Description:     tool.Description,
+				InputSchema:     tool.InputSchema,
+				ContractAddress: registration.Address,
+				RoutePrefix:     registration.RoutePrefix,
+			})
+		}
+	}
+
+	result := map[string]interface{}{
+		"tools": allTools,
+	}
+
+	return sendJSONRPCResponse(req.ID, result)
+}
+
+func handleToolsCall(req *JSONRPCRequest, userID string) HttpResponseWrap {
+	// Parse params
+	params, ok := req.Params.(map[string]interface{})
+	if !ok {
+		return sendJSONRPCError(req.ID, -32602, "Invalid params: expected object")
+	}
+
+	toolName, ok := params["name"].(string)
+	if !ok {
+		return sendJSONRPCError(req.ID, -32602, "Missing or invalid 'name' parameter")
+	}
+
+	arguments, ok := params["arguments"].(map[string]interface{})
+	if !ok {
+		arguments = map[string]interface{}{}
+	}
+
+	// Find the contract that provides this tool
+	addresses := getRegisteredList()
+	var targetContract *ContractRegistration
+
+	for _, addr := range addresses {
+		registration := getContractRegistration(addr)
+		if registration == nil || !registration.Active {
+			continue
+		}
+
+		for _, tool := range registration.Tools {
+			if tool.Name == toolName {
+				targetContract = registration
+				break
+			}
+		}
+		if targetContract != nil {
+			break
+		}
+	}
+
+	if targetContract == nil {
+		return sendJSONRPCError(req.ID, -32602, "Tool not found: "+toolName)
+	}
+
+	// Call the contract that provides this tool
+	executeMsg := map[string]interface{}{
+		"execute_tool": map[string]interface{}{
+			"tool_name":  toolName,
+			"arguments":  arguments,
+			"user_id":    userID,
+		},
+	}
+	msgBz, _ := json.Marshal(executeMsg)
+	ok, data := wasmx.CallSimple(wasmx.Bech32String(targetContract.Address), msgBz, false, MODULE_NAME)
+	if !ok {
+		return sendJSONRPCError(req.ID, -32603, "Tool execution failed: "+string(data))
+	}
+
+	// Parse the tool result
+	var toolResult struct {
+		Content []map[string]interface{} `json:"content"`
+		IsError bool                     `json:"isError,omitempty"`
+	}
+	if err := json.Unmarshal(data, &toolResult); err != nil {
+		return sendJSONRPCError(req.ID, -32603, "Failed to parse tool result: "+err.Error())
+	}
+
+	// Return the result
+	result := map[string]interface{}{
+		"content": toolResult.Content,
+	}
+
+	if toolResult.IsError {
+		result["isError"] = true
+	}
+
+	return sendJSONRPCResponse(req.ID, result)
 }

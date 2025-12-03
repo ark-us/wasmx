@@ -11,12 +11,6 @@ import (
 
 // RegisterOAuthClient registers a new OAuth client and generates credentials
 func RegisterOAuthClient(req RegisterOAuthClientRequest) []byte {
-	// Only governance can register OAuth clients
-	caller := wasmx.GetCaller()
-	if !hasGovRole(caller) {
-		Revert("unauthorized: only governance can register OAuth clients")
-	}
-
 	// Validate request
 	if req.Name == "" {
 		Revert("client name is required")
@@ -72,12 +66,6 @@ func RegisterOAuthClient(req RegisterOAuthClientRequest) []byte {
 
 // UpdateOAuthClient updates an existing OAuth client
 func UpdateOAuthClient(req UpdateOAuthClientRequest) []byte {
-	// Only governance can update OAuth clients
-	caller := wasmx.GetCaller()
-	if !hasGovRole(caller) {
-		Revert("unauthorized: only governance can update OAuth clients")
-	}
-
 	// Get existing client
 	client := getOAuthClient(req.ClientID)
 	if client == nil {
@@ -117,12 +105,6 @@ func UpdateOAuthClient(req UpdateOAuthClientRequest) []byte {
 
 // RevokeOAuthClient revokes an OAuth client
 func RevokeOAuthClient(req RevokeOAuthClientRequest) []byte {
-	// Only governance can revoke OAuth clients
-	caller := wasmx.GetCaller()
-	if !hasGovRole(caller) {
-		Revert("unauthorized: only governance can revoke OAuth clients")
-	}
-
 	// Get existing client
 	client := getOAuthClient(req.ClientID)
 	if client == nil {
@@ -264,9 +246,4 @@ func removeFromOAuthClientList(clientID string) {
 	}
 	data, _ := json.Marshal(newList)
 	wasmx.StorageStore([]byte(STORAGE_OAUTH_CLIENTS), data)
-}
-
-func hasGovRole(caller wasmx.Bech32String) bool {
-	role := wasmx.GetRoleName(MODULE_NAME, caller)
-	return role == wasmx.ROLE_GOVERNANCE
 }

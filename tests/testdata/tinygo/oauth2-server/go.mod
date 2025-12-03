@@ -10,7 +10,11 @@ replace github.com/loredanacirstea/wasmx-env-core => ../wasmx-env-core
 
 replace github.com/loredanacirstea/wasmx-env-utils => ../wasmx-env-utils
 
+replace github.com/loredanacirstea/wasmx-env-httpserver => ../wasmx-env-httpserver
+
 require github.com/loredanacirstea/wasmx-env v0.0.0
+
+require github.com/loredanacirstea/wasmx-env-httpserver v0.0.0
 
 require (
 	cosmossdk.io/math v1.3.0 // indirect

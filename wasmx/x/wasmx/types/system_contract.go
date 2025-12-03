@@ -84,8 +84,35 @@ var ADDR_ONDEMAND_SINGLE_LIBRARY = "0x0000000000000000000000000000000000000064"
 var ADDR_ONDEMAND_SINGLE = "0x0000000000000000000000000000000000000065"
 var ADDR_OAUTH2_SERVER = "0x0000000000000000000000000000000000000066"
 var ADDR_MCP_REGISTRY = "0x0000000000000000000000000000000000000067"
+var ADDR_HTTPSERVER_REGISTRY = "0x0000000000000000000000000000000000000068"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+
+func mcpRegistryInitMsg() []byte {
+	initGenesis := map[string]interface{}{
+		"init_genesis": map[string]interface{}{
+			"params": map[string]interface{}{
+				"client_id":     "",
+				"client_secret": "",
+				"redirect_uris": []string{
+					"https://chat.openai.com/aip/callback",
+					"https://chatgpt.com/connector_platform_oauth_redirect",
+					"http://localhost:3000/callback",
+				},
+				"scopes": []string{"read", "write", "tools"},
+			},
+			"initial_contracts": []interface{}{},
+		},
+	}
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	data, _ := json.Marshal(initGenesis)
+	msg.Data = data
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("mcpRegistryInitMsg: cannot marshal init message")
+	}
+	return initMsg
+}
 
 func StarterPrecompiles() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
@@ -883,6 +910,16 @@ func SpecialPrecompiles() SystemContracts {
 		// 	Deps:        []string{},
 		// },
 		{
+			Address:     ADDR_HTTPSERVER_REGISTRY,
+			Label:       HTTPSERVER_REGISTRY_v002,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        &SystemContractRole{Role: ROLE_HTTP_SERVER, Label: ROLE_HTTP_SERVER, Primary: true},
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
 			Address:     ADDR_OAUTH2_SERVER,
 			Label:       OAUTH2_SERVER_v001,
 			InitMessage: initMsg,
@@ -895,7 +932,7 @@ func SpecialPrecompiles() SystemContracts {
 		{
 			Address:     ADDR_MCP_REGISTRY,
 			Label:       MCP_REGISTRY_v001,
-			InitMessage: initMsg,
+			InitMessage: mcpRegistryInitMsg(),
 			Pinned:      true,
 			MeteringOff: true,
 			Role:        &SystemContractRole{Role: ROLE_MCP_REGISTRY, Label: ROLE_MCP_REGISTRY, Primary: true},
@@ -1255,6 +1292,19 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 		roleMap[ROLE_DENOM] = &RoleJSON{
 			Role:        ROLE_DENOM,
 			StorageType: int32(ContractStorageType_CoreConsensus),
+			Primary:     0,
+			Multiple:    true,
+			Labels:      []string{},
+			Addresses:   []string{},
+		}
+	}
+
+	// add mcp role - for MCP tool provider contracts
+	if _, exists := roleMap[ROLE_MCP]; !exists {
+		order = append(order, ROLE_MCP)
+		roleMap[ROLE_MCP] = &RoleJSON{
+			Role:        ROLE_MCP,
+			StorageType: int32(ContractStorageType_SingleConsensus),
 			Primary:     0,
 			Multiple:    true,
 			Labels:      []string{},
