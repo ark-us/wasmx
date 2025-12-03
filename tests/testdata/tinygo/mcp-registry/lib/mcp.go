@@ -86,28 +86,6 @@ func InitializeTables() []byte {
 		}
 	}
 
-	// Register as OAuth2 client with OAuth2 server
-	oauth2Addr := wasmx.GetAddressByRole(wasmx.ROLE_OAUTH2_SERVER)
-	if oauth2Addr != "" {
-		registerOAuthClientMsg := map[string]interface{}{
-			"register_oauth_client": map[string]interface{}{
-				"name":          "MCP Registry",
-				"description":   "Model Context Protocol Registry for AI Agents",
-				"redirect_uris": initData.Params.RedirectURIs,
-				"scopes":        initData.Params.Scopes,
-				"website_url":   "",
-				"logo_url":      "",
-			},
-		}
-		msgBz, _ := json.Marshal(registerOAuthClientMsg)
-		ok, data := wasmx.CallSimple(oauth2Addr, msgBz, false, MODULE_NAME)
-		if !ok {
-			LoggerError("Failed to register OAuth client", []string{"error", string(data)})
-		} else {
-			LoggerInfo("Registered as OAuth2 client", nil)
-		}
-	}
-
 	// Register HTTP routes with HTTP registry
 	RegisterHttpRoutes(&RegisterHttpRoutesRequest{})
 

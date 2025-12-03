@@ -42,17 +42,19 @@ func main() {
 	switch entrypoint {
 	case "instantiate":
 		data := wasmx.GetCallData()
-		if len(data) == 0 {
-			wasmx.Finish([]byte{})
-			return
+		if len(data) > 0 {
+			var req lib.InitGenesisRequest
+			if err := json.Unmarshal(data, &req); err != nil {
+				wasmx.Revert([]byte("invalid instantiate request: " + err.Error()))
+				return
+			}
+			// Store the init data first
+			lib.InitGenesis(req)
 		}
-		var req lib.InitGenesisRequest
-		if err := json.Unmarshal(data, &req); err != nil {
-			wasmx.Revert([]byte("invalid instantiate request: " + err.Error()))
-			return
-		}
-		res := lib.InitGenesis(req)
-		wasmx.Finish(res)
+		// Initialize and register HTTP routes
+		// This is called during chain initialization when the contract is activated
+		lib.OnRoleChanged()
+		wasmx.Finish([]byte(`{"success": true}`))
 		return
 	}
 
@@ -69,23 +71,24 @@ func main() {
 		lib.Revert("invalid call data: " + err.Error() + ": " + string(databz))
 	}
 
-	wasmx.OnlyInternal(lib.MODULE_NAME, string(databz))
+	// wasmx.OnlyInternal(lib.MODULE_NAME, string(databz))
 
 	// Handle operations
 	switch {
 	// OAuth client management
 	case calldata.RegisterOAuthClient != nil:
-		wasmx.OnlyInternal(lib.MODULE_NAME, "RegisterOAuthClient")
 		res := lib.RegisterOAuthClient(*calldata.RegisterOAuthClient)
 		wasmx.Finish(res)
 		return
 	case calldata.UpdateOAuthClient != nil:
-		wasmx.OnlyInternal(lib.MODULE_NAME, "UpdateOAuthClient")
+		// TODO permissions; registration of client ids should be under a user
+		// TODO remove from here, only allow by http request
+		// wasmx.OnlyInternal(lib.MODULE_NAME, "UpdateOAuthClient")
 		res := lib.UpdateOAuthClient(*calldata.UpdateOAuthClient)
 		wasmx.Finish(res)
 		return
 	case calldata.RevokeOAuthClient != nil:
-		wasmx.OnlyInternal(lib.MODULE_NAME, "RevokeOAuthClient")
+		// wasmx.OnlyInternal(lib.MODULE_NAME, "RevokeOAuthClient")
 		res := lib.RevokeOAuthClient(*calldata.RevokeOAuthClient)
 		wasmx.Finish(res)
 		return
