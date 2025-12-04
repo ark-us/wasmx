@@ -3,8 +3,10 @@ package lib
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
@@ -198,7 +200,11 @@ func ExchangeCodeForToken(req ExchangeCodeForTokenRequest) []byte {
 
 // ValidateAccessToken validates an access token and returns user info
 func ValidateAccessToken(req ValidateAccessTokenRequest) []byte {
+	fmt.Println("=== ValidateAccessToken called ===")
+	fmt.Println("Token:", req.Token)
+
 	if req.Token == "" {
+		fmt.Println("Token is empty")
 		response := ValidateAccessTokenResponse{Valid: false}
 		data, _ := json.Marshal(response)
 		return data
@@ -206,19 +212,25 @@ func ValidateAccessToken(req ValidateAccessTokenRequest) []byte {
 
 	token := getAccessToken(req.Token)
 	if token == nil {
+		fmt.Println("Token not found in storage")
 		response := ValidateAccessTokenResponse{Valid: false}
 		data, _ := json.Marshal(response)
 		return data
 	}
+
+	fmt.Printf("Token found: UserID=%s, ExpiresAt=%d\n", token.UserID, token.ExpiresAt)
 
 	// Check if token is expired
 	currentBlock := wasmx.GetCurrentBlock()
+	fmt.Printf("Current block height: %d\n", currentBlock.Height)
 	if int64(currentBlock.Height) > token.ExpiresAt {
+		fmt.Println("Token expired")
 		response := ValidateAccessTokenResponse{Valid: false}
 		data, _ := json.Marshal(response)
 		return data
 	}
 
+	fmt.Println("Token valid!")
 	response := ValidateAccessTokenResponse{
 		Valid:  true,
 		UserID: token.UserID,
@@ -328,9 +340,9 @@ func generateRefreshToken() string {
 
 func verifyPKCE(verifier, challenge, method string) bool {
 	if method == "S256" {
-		// SHA256 hash of verifier
+		// SHA256 hash of verifier, base64url encoded per RFC 7636
 		hash := sha256.Sum256([]byte(verifier))
-		computed := hex.EncodeToString(hash[:])
+		computed := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(hash[:])
 		return computed == challenge
 	} else if method == "plain" {
 		return verifier == challenge

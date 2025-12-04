@@ -111,6 +111,9 @@ func RegisterHttpRoutes(req *RegisterHttpRoutesRequest) []byte {
 
 	routes := []string{
 		"/sse",
+		"/.well-known/ai-plugin.json",
+		"/openapi.json",
+		"/tools",
 	}
 
 	for _, rt := range routes {
@@ -186,11 +189,17 @@ func HandleHttpRequest(req HttpRequestIncoming) []byte {
 
 	// Route the request based on the URL path
 	var resp HttpResponseWrap
-	switch path {
-	case "/":
+	switch {
+	case path == "/":
 		resp = handleRoot(&req)
-	case "/sse":
+	case path == "/sse":
 		resp = handleSSE(&req)
+	case path == "/.well-known/ai-plugin.json":
+		resp = handleAIPluginManifest(&req)
+	case path == "/openapi.json":
+		resp = handleOpenAPISpec(&req)
+	case strings.HasPrefix(path, "/tools/"):
+		resp = handleToolExecution(&req, path)
 	default:
 		resp = HttpResponseWrap{
 			Error: "",
@@ -218,9 +227,16 @@ func handleRoot(req *HttpRequestIncoming) HttpResponseWrap {
 }
 
 func handleSSE(req *HttpRequestIncoming) HttpResponseWrap {
+	fmt.Println("=== handleSSE called ===")
+	fmt.Println("Request method:", req.Method)
+	fmt.Println("Request data length:", len(req.Data))
+	fmt.Println("Request data (raw):", string(req.Data))
+
 	// Extract token from Authorization header
 	token := extractToken(req)
+	fmt.Println("Extracted token:", token)
 	if token == "" {
+		fmt.Println("No token found, returning 401")
 		return HttpResponseWrap{
 			Error: "",
 			Data: HttpResponse{
@@ -233,8 +249,11 @@ func handleSSE(req *HttpRequestIncoming) HttpResponseWrap {
 	}
 
 	// Validate token and get user_id
+	fmt.Println("Validating token...")
 	userID, valid := validateToken(token)
+	fmt.Println("Token valid:", valid, "UserID:", userID)
 	if !valid {
+		fmt.Println("Token invalid, returning 401")
 		return HttpResponseWrap{
 			Error: "",
 			Data: HttpResponse{
@@ -248,22 +267,31 @@ func handleSSE(req *HttpRequestIncoming) HttpResponseWrap {
 
 	// Get request body
 	body := req.Data
+	fmt.Println("Parsing JSON-RPC request from body...")
 
 	// Parse JSON-RPC request
 	var rpcReq JSONRPCRequest
 	if err := json.Unmarshal(body, &rpcReq); err != nil {
+		fmt.Println("Failed to parse JSON-RPC:", err.Error())
 		return sendJSONRPCError(nil, -32700, "Parse error: "+err.Error())
 	}
+
+	fmt.Println("JSON-RPC method:", rpcReq.Method)
+	fmt.Println("JSON-RPC id:", rpcReq.ID)
 
 	// Route based on JSON-RPC method
 	switch rpcReq.Method {
 	case "initialize":
+		fmt.Println("Calling handleInitialize...")
 		return handleInitialize(&rpcReq, userID)
 	case "tools/list":
+		fmt.Println("Calling handleToolsList...")
 		return handleToolsList(&rpcReq, userID)
 	case "tools/call":
+		fmt.Println("Calling handleToolsCall...")
 		return handleToolsCall(&rpcReq, userID)
 	default:
+		fmt.Println("Unknown method:", rpcReq.Method)
 		return sendJSONRPCError(rpcReq.ID, -32601, "Method not found: "+rpcReq.Method)
 	}
 }
@@ -339,18 +367,46 @@ func handleInitialize(req *JSONRPCRequest, userID string) HttpResponseWrap {
 }
 
 func handleToolsList(req *JSONRPCRequest, userID string) HttpResponseWrap {
+	fmt.Println("=== handleToolsList START ===")
+	fmt.Println("User ID:", userID)
+
 	// Get all registered contracts
 	addresses := getRegisteredList()
+	fmt.Println("Registered addresses count:", len(addresses))
+	fmt.Println("Registered addresses:", addresses)
+
+	LoggerInfo("handleToolsList called", []string{
+		"user_id", userID,
+		"registered_count", fmt.Sprintf("%d", len(addresses)),
+	})
+
 	var allTools []ToolsListEntry
 
-	for _, addr := range addresses {
+	for i, addr := range addresses {
+		fmt.Printf("Processing address %d: %s\n", i, addr)
 		registration := getContractRegistration(addr)
-		if registration == nil || !registration.Active {
+		if registration == nil {
+			fmt.Println("  -> Registration is nil")
+			LoggerInfo("Registration not found", []string{"address", addr})
+			continue
+		}
+		fmt.Printf("  -> Active: %v, Tools count: %d\n", registration.Active, len(registration.Tools))
+
+		if !registration.Active {
+			fmt.Println("  -> Registration inactive, skipping")
+			LoggerInfo("Registration inactive", []string{"address", addr})
 			continue
 		}
 
+		LoggerInfo("Found active registration", []string{
+			"address", addr,
+			"route_prefix", registration.RoutePrefix,
+			"tool_count", fmt.Sprintf("%d", len(registration.Tools)),
+		})
+
 		// Add tools from this contract
-		for _, tool := range registration.Tools {
+		for j, tool := range registration.Tools {
+			fmt.Printf("  -> Tool %d: %s\n", j, tool.Name)
 			allTools = append(allTools, ToolsListEntry{
 				Name:            tool.Name,
 				Description:     tool.Description,
@@ -361,9 +417,18 @@ func handleToolsList(req *JSONRPCRequest, userID string) HttpResponseWrap {
 		}
 	}
 
+	fmt.Println("Total tools collected:", len(allTools))
+	LoggerInfo("Returning tools list", []string{
+		"total_tools", fmt.Sprintf("%d", len(allTools)),
+	})
+
 	result := map[string]interface{}{
 		"tools": allTools,
 	}
+
+	resultJSON, _ := json.Marshal(result)
+	fmt.Println("Result JSON:", string(resultJSON))
+	fmt.Println("=== handleToolsList END ===")
 
 	return sendJSONRPCResponse(req.ID, result)
 }
@@ -443,4 +508,290 @@ func handleToolsCall(req *JSONRPCRequest, userID string) HttpResponseWrap {
 	}
 
 	return sendJSONRPCResponse(req.ID, result)
+}
+
+func handleAIPluginManifest(req *HttpRequestIncoming) HttpResponseWrap {
+	// Get the base URL from headers
+	scheme := "http"
+	if len(req.Header["X-Forwarded-Proto"]) > 0 && strings.Contains(req.Header["X-Forwarded-Proto"][0], "https") {
+		scheme = "https"
+	}
+	host := ""
+	if len(req.Header["X-Forwarded-Host"]) > 0 {
+		host = req.Header["X-Forwarded-Host"][0]
+	}
+	if host == "" && len(req.Header["Host"]) > 0 {
+		host = req.Header["Host"][0]
+	}
+	baseURL := fmt.Sprintf("%s://%s", scheme, host)
+
+	params := getParams()
+	if params == nil {
+		return sendJSONResponse(map[string]interface{}{
+			"error": "server not configured",
+		}, 500)
+	}
+
+	manifest := map[string]interface{}{
+		"schema_version": "v1",
+		"name_for_human":  "MCP Tools Registry",
+		"name_for_model":  "mcp_tools",
+		"description_for_human": "Access to blockchain-based MCP tools for executing code and managing data",
+		"description_for_model": "Provides access to various MCP (Model Context Protocol) tools running on blockchain. Includes code execution, data management, and other utilities.",
+		"auth": map[string]interface{}{
+			"type": "oauth",
+			"client_url": baseURL + "/oauth/authorize",
+			"scope": "",
+			"authorization_url": baseURL + "/oauth/token",
+			"authorization_content_type": "application/x-www-form-urlencoded",
+			"verification_tokens": map[string]interface{}{
+				"openai": params.ClientID,
+			},
+		},
+		"api": map[string]interface{}{
+			"type": "openapi",
+			"url":  baseURL + "/openapi.json",
+		},
+		"logo_url": baseURL + "/logo.png",
+		"contact_email": "support@provable.dev",
+		"legal_info_url": baseURL + "/legal",
+	}
+
+	return sendJSONResponse(manifest, 200)
+}
+
+func handleOpenAPISpec(req *HttpRequestIncoming) HttpResponseWrap {
+	// Get the base URL from headers
+	scheme := "http"
+	if len(req.Header["X-Forwarded-Proto"]) > 0 && strings.Contains(req.Header["X-Forwarded-Proto"][0], "https") {
+		scheme = "https"
+	}
+	host := ""
+	if len(req.Header["X-Forwarded-Host"]) > 0 {
+		host = req.Header["X-Forwarded-Host"][0]
+	}
+	if host == "" && len(req.Header["Host"]) > 0 {
+		host = req.Header["Host"][0]
+	}
+	baseURL := fmt.Sprintf("%s://%s", scheme, host)
+
+	// Get all registered tools
+	addresses := getRegisteredList()
+	paths := make(map[string]interface{})
+
+	for _, addr := range addresses {
+		registration := getContractRegistration(addr)
+		if registration == nil || !registration.Active {
+			continue
+		}
+
+		// Create an endpoint for each tool
+		for _, tool := range registration.Tools {
+			pathKey := fmt.Sprintf("/tools/%s", tool.Name)
+
+			// Convert JSON Schema properties to OpenAPI parameters
+			parameters := []map[string]interface{}{}
+			if props, ok := tool.InputSchema["properties"].(map[string]interface{}); ok {
+				for propName, propSchema := range props {
+					param := map[string]interface{}{
+						"name": propName,
+						"in": "query",
+						"required": false,
+						"schema": propSchema,
+					}
+					// Check if this property is required
+					if required, ok := tool.InputSchema["required"].([]interface{}); ok {
+						for _, req := range required {
+							if req.(string) == propName {
+								param["required"] = true
+								break
+							}
+						}
+					}
+					parameters = append(parameters, param)
+				}
+			}
+
+			paths[pathKey] = map[string]interface{}{
+				"post": map[string]interface{}{
+					"operationId": tool.Name,
+					"summary": tool.Description,
+					"description": tool.Description,
+					"requestBody": map[string]interface{}{
+						"required": true,
+						"content": map[string]interface{}{
+							"application/json": map[string]interface{}{
+								"schema": tool.InputSchema,
+							},
+						},
+					},
+					"responses": map[string]interface{}{
+						"200": map[string]interface{}{
+							"description": "Successful response",
+							"content": map[string]interface{}{
+								"application/json": map[string]interface{}{
+									"schema": map[string]interface{}{
+										"type": "object",
+										"properties": map[string]interface{}{
+											"content": map[string]interface{}{
+												"type": "array",
+												"items": map[string]interface{}{
+													"type": "object",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		}
+	}
+
+	openapi := map[string]interface{}{
+		"openapi": "3.0.0",
+		"info": map[string]interface{}{
+			"title": "MCP Tools Registry",
+			"description": "API for accessing blockchain-based MCP tools",
+			"version": "1.0.0",
+		},
+		"servers": []map[string]interface{}{
+			{
+				"url": baseURL,
+			},
+		},
+		"paths": paths,
+	}
+
+	return sendJSONResponse(openapi, 200)
+}
+
+func handleToolExecution(req *HttpRequestIncoming, path string) HttpResponseWrap {
+	// Extract token from Authorization header for authentication
+	token := extractToken(req)
+	if token == "" {
+		return HttpResponseWrap{
+			Error: "",
+			Data: HttpResponse{
+				StatusCode: 401,
+				Status:     "401 Unauthorized",
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"missing authorization token"}`),
+			},
+		}
+	}
+
+	// Validate token and get user_id
+	userID, valid := validateToken(token)
+	if !valid {
+		return HttpResponseWrap{
+			Error: "",
+			Data: HttpResponse{
+				StatusCode: 401,
+				Status:     "401 Unauthorized",
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"invalid token"}`),
+			},
+		}
+	}
+
+	// Extract tool name from path: /tools/{toolName}
+	toolName := strings.TrimPrefix(path, "/tools/")
+	if toolName == "" {
+		return HttpResponseWrap{
+			Error: "",
+			Data: HttpResponse{
+				StatusCode: 400,
+				Status:     "400 Bad Request",
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"missing tool name"}`),
+			},
+		}
+	}
+
+	// Parse request body as tool arguments
+	var arguments map[string]interface{}
+	if len(req.Data) > 0 {
+		if err := json.Unmarshal(req.Data, &arguments); err != nil {
+			return HttpResponseWrap{
+				Error: "",
+				Data: HttpResponse{
+					StatusCode: 400,
+					Status:     "400 Bad Request",
+					Header:     http.Header{"Content-Type": []string{"application/json"}},
+					Data:       []byte(`{"error":"invalid JSON body"}`),
+				},
+			}
+		}
+	} else {
+		arguments = map[string]interface{}{}
+	}
+
+	// Find the contract that provides this tool
+	addresses := getRegisteredList()
+	var targetContract *ContractRegistration
+
+	for _, addr := range addresses {
+		registration := getContractRegistration(addr)
+		if registration == nil || !registration.Active {
+			continue
+		}
+
+		for _, tool := range registration.Tools {
+			if tool.Name == toolName {
+				targetContract = registration
+				break
+			}
+		}
+		if targetContract != nil {
+			break
+		}
+	}
+
+	if targetContract == nil {
+		return HttpResponseWrap{
+			Error: "",
+			Data: HttpResponse{
+				StatusCode: 404,
+				Status:     "404 Not Found",
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(fmt.Sprintf(`{"error":"tool not found: %s"}`, toolName)),
+			},
+		}
+	}
+
+	// Call the contract that provides this tool
+	executeMsg := map[string]interface{}{
+		"execute_tool": map[string]interface{}{
+			"tool_name":  toolName,
+			"arguments":  arguments,
+			"user_id":    userID,
+		},
+	}
+	msgBz, _ := json.Marshal(executeMsg)
+	ok, data := wasmx.CallSimple(wasmx.Bech32String(targetContract.Address), msgBz, false, MODULE_NAME)
+	if !ok {
+		return HttpResponseWrap{
+			Error: "",
+			Data: HttpResponse{
+				StatusCode: 500,
+				Status:     "500 Internal Server Error",
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(fmt.Sprintf(`{"error":"tool execution failed: %s"}`, string(data))),
+			},
+		}
+	}
+
+	// Return the tool result directly
+	return HttpResponseWrap{
+		Error: "",
+		Data: HttpResponse{
+			StatusCode: 200,
+			Status:     "200 OK",
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Data:       data,
+		},
+	}
 }
