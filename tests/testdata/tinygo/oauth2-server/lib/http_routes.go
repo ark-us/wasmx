@@ -19,6 +19,11 @@ func registerHttpRoutes(registryAddr wasmx.Bech32String) {
 
 	routes := []string{
 		"/.well-known/oauth-authorization-server",
+		"/.well-known/oauth-authorization-server/sse",
+		"/.well-known/openid-configuration",
+		"/.well-known/openid-configuration/sse",
+		"/.well-known/oauth-protected-resource",
+		"/.well-known/oauth-protected-resource/sse",
 		"/oauth/authorize",
 		"/oauth/token",
 		"/auth/register",

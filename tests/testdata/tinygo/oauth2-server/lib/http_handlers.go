@@ -18,8 +18,21 @@ func HandleHttpRequestWrap(req wasmxhttp.HttpRequestIncoming) []byte {
 	}
 	pathOnly := strings.SplitN(path, "?", 2)[0]
 
+	fmt.Println("=== OAuth2 HandleHttpRequestWrap called ===")
+	fmt.Println("RequestURI:", req.RequestURI)
+	fmt.Println("URL:", req.Url)
+	fmt.Println("pathOnly:", pathOnly)
+	fmt.Println("Method:", req.Method)
+
 	switch pathOnly {
-	case "/.well-known/oauth-authorization-server":
+	case "/.well-known/oauth-authorization-server", "/.well-known/oauth-authorization-server/sse":
+		fmt.Println("Matched case: /.well-known/oauth-authorization-server")
+		return handleWellKnown(req)
+	case "/.well-known/openid-configuration", "/.well-known/openid-configuration/sse":
+		fmt.Println("Matched case: /.well-known/openid-configuration")
+		return handleWellKnown(req)
+	case "/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/sse":
+		fmt.Println("Matched case: /.well-known/oauth-protected-resource")
 		return handleWellKnown(req)
 	case "/oauth/authorize":
 		return handleAuthorize(req)
@@ -45,6 +58,11 @@ func HandleHttpRequestWrap(req wasmxhttp.HttpRequestIncoming) []byte {
 }
 
 func handleWellKnown(req wasmxhttp.HttpRequestIncoming) []byte {
+	fmt.Println("=== handleWellKnown called in oauth2-server ===")
+	fmt.Println("Request URL:", req.Url)
+	fmt.Println("Request URI:", req.RequestURI)
+	fmt.Println("Request Method:", req.Method)
+
 	scheme := "http"
 	if strings.EqualFold(req.Header.Get("X-Forwarded-Proto"), "https") {
 		scheme = "https"
@@ -53,6 +71,8 @@ func handleWellKnown(req wasmxhttp.HttpRequestIncoming) []byte {
 	if host == "" {
 		host = req.Header.Get("Host")
 	}
+	fmt.Println("Computed base URL:", fmt.Sprintf("%s://%s", scheme, host))
+
 	base := fmt.Sprintf("%s://%s", scheme, host)
 	body, _ := json.Marshal(map[string]interface{}{
 		"issuer":                                base,

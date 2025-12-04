@@ -10,7 +10,9 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/simulation"
 
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
@@ -53,6 +55,46 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 	userAddress := appA.InstantiateCode(sender, userCodeId, types.WasmxExecutionMessage{Data: userdataInitDataJSON}, "mcp_userdata", nil)
 	fmt.Println("Instantiated mcp-userdata contract:", userAddress.String())
 
+	// Prepare init data for mcp-search contract
+	// Using all-MiniLM-L6-v2 model which produces 384-dimensional embeddings
+	searchInitData := &MCPContractInitGenesis{
+		InitGenesis: &MCPSearchInitGenesisRequest{
+			RoutePrefix:        "/tools/search",
+			ConnectionString:   "postgresql://localhost:5432/postgres",
+			DatabaseName:       "mcp_search_test",
+			EmbeddingDimension: 384,
+			EmbeddingMetric:    "cosine",
+		},
+	}
+	searchInitDataJSON, _ := json.Marshal(searchInitData)
+
+	// Instantiate mcp-search with init data
+	searchCodeId := appA.StoreCode(sender, testdata.MCPSearch, nil)
+	searchAddress := appA.InstantiateCode(sender, searchCodeId, types.WasmxExecutionMessage{Data: searchInitDataJSON}, "mcp_search", nil)
+	fmt.Println("Instantiated mcp-search contract:", searchAddress.String())
+
+	// Generate and store embeddings using the GenerateEmbeddings function
+	fmt.Println("=== Generating embeddings for search contract ===")
+	generateEmbeddingsMsg := map[string]interface{}{
+		"generate_embeddings": map[string]interface{}{
+			// No items provided - will use mock data from Python script
+		},
+	}
+	genEmbedBz, _ := json.Marshal(generateEmbeddingsMsg)
+	genEmbedResp := appA.ExecuteContract(sender, searchAddress, types.WasmxExecutionMessage{Data: genEmbedBz}, nil, nil)
+
+	var genEmbedResult struct {
+		Success      bool   `json:"success"`
+		ItemsStored  int    `json:"items_stored"`
+		ErrorMessage string `json:"error_message,omitempty"`
+	}
+	if err := appA.DecodeExecuteResponse(genEmbedResp, &genEmbedResult); err == nil {
+		fmt.Printf("Generated embeddings: success=%v, items_stored=%d\n", genEmbedResult.Success, genEmbedResult.ItemsStored)
+		if genEmbedResult.ErrorMessage != "" {
+			fmt.Printf("Error: %s\n", genEmbedResult.ErrorMessage)
+		}
+	}
+
 	// Assign MCP role - this will trigger RoleChanged hook which automatically registers with MCP registry
 	fmt.Println("Assigning MCP role to execute contract...")
 	utils.RegisterRole(suite, appA, types.ROLE_MCP, executeAddress, sender)
@@ -61,6 +103,10 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 	fmt.Println("Assigning MCP role to userdata contract...")
 	utils.RegisterRole(suite, appA, types.ROLE_MCP, userAddress, sender)
 	fmt.Println("MCP role assigned to userdata contract - auto-registration triggered via RoleChanged hook")
+
+	fmt.Println("Assigning MCP role to search contract...")
+	utils.RegisterRole(suite, appA, types.ROLE_MCP, searchAddress, sender)
+	fmt.Println("MCP role assigned to search contract - auto-registration triggered via RoleChanged hook")
 
 	// Register OAuth client
 	oauth2Addr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_OAUTH2_SERVER))
@@ -153,13 +199,105 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 	suite.T().Log("Received exit signal. Test ending.")
 }
 
+// initSearchWithSampleData initializes the mcp-search contract with sample vector embeddings
+func initSearchWithSampleData(appA ut.AppContext, searchAddress mcodec.AccAddressPrefixed, sender simulation.Account) {
+	fmt.Println("=== Initializing mcp-search with sample embeddings ===")
+
+	// Sample embeddings - in practice these would come from an embedding model
+	// For simplicity, using small dimension vectors (we can expand if needed)
+	sampleData := []struct {
+		key       string
+		value     string
+		embedding []float32
+	}{
+		{
+			key:   "blockchain_intro",
+			value: "Blockchain is a distributed ledger technology that enables secure and transparent record-keeping.",
+			// Using 384 dimensions for all-MiniLM-L6-v2 model
+			embedding: generateMockEmbedding(384, 0.1),
+		},
+		{
+			key:       "smart_contracts",
+			value:     "Smart contracts are self-executing contracts with the terms directly written into code.",
+			embedding: generateMockEmbedding(384, 0.2),
+		},
+		{
+			key:       "consensus_mechanisms",
+			value:     "Consensus mechanisms like Proof of Work and Proof of Stake ensure agreement in distributed networks.",
+			embedding: generateMockEmbedding(384, 0.3),
+		},
+		{
+			key:       "cryptography",
+			value:     "Cryptographic techniques secure blockchain transactions and ensure data integrity.",
+			embedding: generateMockEmbedding(384, 0.4),
+		},
+		{
+			key:       "defi",
+			value:     "Decentralized Finance (DeFi) enables financial services without traditional intermediaries.",
+			embedding: generateMockEmbedding(384, 0.5),
+		},
+	}
+
+	// Convert sample data to populate items
+	populateItems := make([]map[string]interface{}, len(sampleData))
+	for i, item := range sampleData {
+		populateItems[i] = map[string]interface{}{
+			"key":       item.key,
+			"value":     item.value,
+			"embedding": item.embedding,
+		}
+	}
+
+	// Use Populate function to bulk insert embeddings
+	populateMsg := map[string]interface{}{
+		"populate": map[string]interface{}{
+			"items": populateItems,
+		},
+	}
+	msgBz, _ := json.Marshal(populateMsg)
+	resp := appA.ExecuteContract(sender, searchAddress, types.WasmxExecutionMessage{Data: msgBz}, nil, nil)
+
+	// Parse and log response
+	var populateResp struct {
+		Success      bool   `json:"success"`
+		ItemsStored  int    `json:"items_stored"`
+		ErrorMessage string `json:"error_message,omitempty"`
+	}
+	if err := appA.DecodeExecuteResponse(resp, &populateResp); err == nil {
+		fmt.Printf("Populated %d embeddings (success: %v)\n", populateResp.ItemsStored, populateResp.Success)
+		if populateResp.ErrorMessage != "" {
+			fmt.Printf("Last error: %s\n", populateResp.ErrorMessage)
+		}
+	}
+
+	fmt.Println("=== Sample embeddings initialized ===")
+}
+
+// generateMockEmbedding creates a mock embedding vector for testing
+func generateMockEmbedding(dimension int, seed float32) []float32 {
+	embedding := make([]float32, dimension)
+	for i := 0; i < dimension; i++ {
+		// Simple pattern based on index and seed for reproducible test vectors
+		embedding[i] = float32(i%10)*0.1 + seed
+	}
+	return embedding
+}
+
 // Calldata structures for MCP tool contract initialization
 type MCPContractInitGenesis struct {
-	InitGenesis *MCPContractInitGenesisRequest `json:"init_genesis,omitempty"`
+	InitGenesis interface{} `json:"init_genesis,omitempty"`
 }
 
 type MCPContractInitGenesisRequest struct {
 	RoutePrefix string `json:"route_prefix"`
+}
+
+type MCPSearchInitGenesisRequest struct {
+	RoutePrefix        string `json:"route_prefix"`
+	ConnectionString   string `json:"connection_string"`
+	DatabaseName       string `json:"database_name"`
+	EmbeddingDimension int    `json:"embedding_dimension,omitempty"`
+	EmbeddingMetric    string `json:"embedding_metric,omitempty"`
 }
 
 // HTTP server structures
