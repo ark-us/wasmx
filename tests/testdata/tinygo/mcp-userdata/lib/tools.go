@@ -31,6 +31,10 @@ func ExecuteTool(req ExecuteToolRequest) []byte {
 
 // setFavoriteColor sets the user's favorite color
 func setFavoriteColor(userID string, arguments map[string]interface{}) ExecuteToolResponse {
+	fmt.Println("=== setFavoriteColor called ===")
+	fmt.Println("UserID:", userID)
+	fmt.Println("Arguments:", arguments)
+
 	if userID == "" {
 		return ExecuteToolResponse{
 			Content: []ContentItem{{Type: "text", Text: "Authentication required: no user_id provided"}},
@@ -40,6 +44,7 @@ func setFavoriteColor(userID string, arguments map[string]interface{}) ExecuteTo
 
 	color, ok := arguments["color"].(string)
 	if !ok {
+		fmt.Println("Color argument not found or invalid")
 		return ExecuteToolResponse{
 			Content: []ContentItem{{Type: "text", Text: "Missing or invalid 'color' argument"}},
 			IsError: true,
@@ -47,9 +52,15 @@ func setFavoriteColor(userID string, arguments map[string]interface{}) ExecuteTo
 	}
 
 	keyStr := STORAGE_FAVORITE_COLOR_PREFIX + userID
+	fmt.Println("Storage key:", keyStr)
+	fmt.Println("Color value:", color)
 
 	key := []byte(keyStr)
 	wasmx.StorageStore(key, []byte(color))
+
+	// Verify it was stored
+	verifyData := wasmx.StorageLoad(key)
+	fmt.Println("Verification - stored data:", string(verifyData))
 
 	LoggerInfo("Favorite color set", []string{"user_id", userID, "color", color})
 
@@ -64,6 +75,9 @@ func setFavoriteColor(userID string, arguments map[string]interface{}) ExecuteTo
 
 // getFavoriteColor gets the user's favorite color
 func getFavoriteColor(userID string, arguments map[string]interface{}) ExecuteToolResponse {
+	fmt.Println("=== getFavoriteColor called ===")
+	fmt.Println("UserID:", userID)
+
 	if userID == "" {
 		return ExecuteToolResponse{
 			Content: []ContentItem{{Type: "text", Text: "Authentication required: no user_id provided"}},
@@ -72,11 +86,15 @@ func getFavoriteColor(userID string, arguments map[string]interface{}) ExecuteTo
 	}
 
 	keyStr := STORAGE_FAVORITE_COLOR_PREFIX + userID
+	fmt.Println("Storage key:", keyStr)
 
 	key := []byte(keyStr)
 	data := wasmx.StorageLoad(key)
+	fmt.Println("Loaded data length:", len(data))
+	fmt.Println("Loaded data:", string(data))
 
 	if len(data) == 0 {
+		fmt.Println("No data found in storage")
 		return ExecuteToolResponse{
 			Content: []ContentItem{{
 				Type: "text",
@@ -87,6 +105,7 @@ func getFavoriteColor(userID string, arguments map[string]interface{}) ExecuteTo
 	}
 
 	color := string(data)
+	fmt.Println("Returning color:", color)
 
 	return ExecuteToolResponse{
 		Content: []ContentItem{{

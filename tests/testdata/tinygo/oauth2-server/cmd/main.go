@@ -128,10 +128,10 @@ func main() {
 	// 	res := lib.ExchangeCodeForToken(*calldata.ExchangeCodeForToken)
 	// 	wasmx.Finish(res)
 	// 	return
-	// case calldata.ValidateAccessToken != nil:
-	// 	res := lib.ValidateAccessToken(*calldata.ValidateAccessToken)
-	// 	wasmx.Finish(res)
-	// 	return
+	case calldata.ValidateAccessToken != nil:
+		res := lib.ValidateAccessToken(*calldata.ValidateAccessToken)
+		wasmx.Finish(res)
+		return
 	// case calldata.RefreshAccessToken != nil:
 	// 	res := lib.RefreshAccessToken(*calldata.RefreshAccessToken)
 	// 	wasmx.Finish(res)

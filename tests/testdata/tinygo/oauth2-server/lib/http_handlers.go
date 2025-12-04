@@ -95,8 +95,15 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 }
 
 func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
+	// Parse URL to get redirect parameter
+	u, _ := url.Parse(req.Url)
+	q := u.Query()
+	redirectURL := q.Get("redirect")
+
 	if req.Method == "GET" {
-		// Return HTML login form
+		// Return HTML login form with hidden redirect field
+		// Escape HTML to prevent XSS and format string issues
+		escapedRedirect := strings.ReplaceAll(redirectURL, `"`, `&quot;`)
 		html := `<!DOCTYPE html>
 <html>
 <head>
@@ -114,6 +121,7 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
     <form method="POST" action="/login">
         <input type="email" name="email" placeholder="Email" required />
         <input type="password" name="password" placeholder="Password" required />
+        <input type="hidden" name="redirect" value="` + escapedRedirect + `" />
         <button type="submit">Login</button>
     </form>
 </body>
@@ -135,11 +143,13 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
 
 	// Parse form data or JSON
 	var r LoginRequest
+	var formRedirect string
 	contentType := req.Header.Get("Content-Type")
 	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
 		form, _ := url.ParseQuery(string(req.Data))
 		r.Email = form.Get("email")
 		r.Password = form.Get("password")
+		formRedirect = form.Get("redirect")
 	} else {
 		if err := json.Unmarshal(req.Data, &r); err != nil {
 			return badRequest("invalid json")
@@ -148,17 +158,48 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
 
 	resp := Login(r)
 
-	// Parse response to set session cookie
+	// Parse response to check for errors and get session
 	var loginResp LoginResponse
 	json.Unmarshal(resp, &loginResp)
 
-	headers := http.Header{"Content-Type": []string{"application/json"}}
-	if loginResp.SessionID != "" {
-		// Set session cookie
-		cookie := fmt.Sprintf("session_id=%s; Path=/; HttpOnly; Max-Age=%d", loginResp.SessionID, SESSION_DURATION_SECONDS)
-		headers.Set("Set-Cookie", cookie)
+	// If login failed, return error
+	if loginResp.SessionID == "" {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "401 Unauthorized",
+				StatusCode: 401,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       resp,
+			},
+		})
 	}
 
+	// Set session cookie
+	cookie := fmt.Sprintf("session_id=%s; Path=/; HttpOnly; Max-Age=%d", loginResp.SessionID, SESSION_DURATION_SECONDS)
+
+	// If there's a redirect URL, redirect there (for OAuth flow)
+	if formRedirect != "" {
+		headers := http.Header{
+			"Set-Cookie": []string{cookie},
+			"Location":   []string{formRedirect},
+		}
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:      "302 Found",
+				StatusCode:  302,
+				Header:      headers,
+				RedirectUrl: formRedirect,
+			},
+		})
+	}
+
+	// No redirect - return JSON response (for API calls)
+	headers := http.Header{
+		"Content-Type": []string{"application/json"},
+		"Set-Cookie":   []string{cookie},
+	}
 	return marshalHTTP(wasmxhttp.HttpResponseWrap{
 		Error: "",
 		Data: wasmxhttp.HttpResponse{
