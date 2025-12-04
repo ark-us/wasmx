@@ -34,16 +34,16 @@ use (
 	./tests/testdata/tinygo/simple_storage
 	./tests/testdata/tinygo/imaptest
 	./tests/testdata/tinygo/smtptest
-	./tests/testdata/tinygo/mcp
+	./tests/testdata/tinygo/mcp-registry
 )
 
 replace (
 	// go get github.com/loredanacirstea/cosmos-db@c3cda2071a0e24399f845be60f398a5477cc436f
-	github.com/cosmos/cosmos-db => github.com/loredanacirstea/cosmos-db v1.0.3-0.20250928222443-c3cda2071a0e
+	// github.com/cosmos/cosmos-db => github.com/loredanacirstea/cosmos-db v1.0.3-0.20250928222443-c3cda2071a0e
 
 	// github.com/cosmos/cosmos-sdk => ../cosmos-sdk
 	// cosmossdk.io/store => ../cosmos-sdk/store
 	// github.com/cosmos/iavl => ../iavl
-	// github.com/cosmos/cosmos-db => ../cosmos-db
+	github.com/cosmos/cosmos-db => ../cosmos-db
 	// github.com/tetratelabs/wazero => ../wazero
 )
