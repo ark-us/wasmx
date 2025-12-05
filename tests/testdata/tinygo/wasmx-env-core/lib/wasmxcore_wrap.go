@@ -314,10 +314,15 @@ func executeCliCommandWrap(bz []byte) []byte {
 }
 
 func ExecuteCliCommand(command string, args []string, workDir string) (*ExecuteCliCommandResponse, error) {
+	return ExecuteCliCommandWithEnv(command, args, workDir, nil)
+}
+
+func ExecuteCliCommandWithEnv(command string, args []string, workDir string, env map[string]string) (*ExecuteCliCommandResponse, error) {
 	req := ExecuteCliCommandRequest{
 		Command: command,
 		Args:    args,
 		WorkDir: workDir,
+		Env:     env,
 	}
 
 	reqJSON, err := json.Marshal(req)

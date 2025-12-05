@@ -128,9 +128,10 @@ type CoreCallResponse struct {
 }
 
 type ExecuteCliCommandRequest struct {
-	Command string   `json:"command"`
-	Args    []string `json:"args"`
-	WorkDir string   `json:"work_dir,omitempty"`
+	Command string            `json:"command"`
+	Args    []string          `json:"args"`
+	WorkDir string            `json:"work_dir,omitempty"`
+	Env     map[string]string `json:"env,omitempty"` // Environment variables to set for the command
 }
 
 type ExecuteCliCommandResponse struct {
