@@ -5,7 +5,7 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
-const MODULE_NAME = "oauth2-server"
+const MODULE_NAME = "wasmx-oauth2-server"
 
 // Storage keys
 const (

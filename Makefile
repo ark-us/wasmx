@@ -11,8 +11,8 @@ TINYGO_TARGETS := \
 	wasmx-raftp2p-lib:36.raftp2p_library.wasm \
 	wasmx-ondemand-single-lib:65.wasmx_ondemand_single_library.wasm \
 	emailchain:63.wasmx_email_0.0.1.wasm \
-	oauth2-server:66.wasmx_oauth2_server_0.0.1.wasm \
-	mcp-registry:67.wasmx_mcp_registry_0.0.1.wasm \
+	wasmx-oauth2-server:66.wasmx_oauth2_server_0.0.1.wasm \
+	wasmx-mcp-registry:67.wasmx_mcp_registry_0.0.1.wasm \
 	wasmx-httpserver-registry:68.wasmx_httpserver_registry_0.0.2.wasm
 
 # wasmx-gov:35.gov_0.0.1.wasm \
