@@ -29,11 +29,13 @@ type CallData struct {
 
 // InitGenesisRequest for storing initialization data
 type InitGenesisRequest struct {
-	RoutePrefix        string `json:"route_prefix"`
-	ConnectionString   string `json:"connection_string"`
-	DatabaseName       string `json:"database_name"`
-	EmbeddingDimension int    `json:"embedding_dimension,omitempty"` // defaults to 1536
-	EmbeddingMetric    string `json:"embedding_metric,omitempty"`    // cosine, l2, ip - defaults to cosine
+	RoutePrefix        string            `json:"route_prefix"`
+	ConnectionString   string            `json:"connection_string"`
+	DatabaseName       string            `json:"database_name"`
+	EmbeddingDimension int               `json:"embedding_dimension,omitempty"` // defaults to 1536
+	EmbeddingMetric    string            `json:"embedding_metric,omitempty"`    // cosine, l2, ip - defaults to cosine
+	EmbeddingModel     string            `json:"embedding_model,omitempty"`     // model name for embeddings (e.g., all-MiniLM-L6-v2)
+	EnvironmentVars    map[string]string `json:"environment_vars,omitempty"`    // environment variables for CLI commands
 }
 
 // ExecuteToolRequest represents a request to execute a tool

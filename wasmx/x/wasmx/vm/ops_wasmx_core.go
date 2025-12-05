@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 
 	sdkmath "cosmossdk.io/math"
@@ -659,9 +660,10 @@ func coreUpdateSystemCache(_context interface{}, rnh memc.RuntimeHandler, params
 }
 
 type ExecuteCliCommandRequest struct {
-	Command string   `json:"command"`
-	Args    []string `json:"args"`
-	WorkDir string   `json:"work_dir,omitempty"`
+	Command string            `json:"command"`
+	Args    []string          `json:"args"`
+	WorkDir string            `json:"work_dir,omitempty"`
+	Env     map[string]string `json:"env,omitempty"` // Environment variables to set for the command
 }
 
 type ExecuteCliCommandResponse struct {
@@ -674,7 +676,7 @@ type ExecuteCliCommandResponse struct {
 func coreExecuteCliCommand(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	resp := ExecuteCliCommandResponse{ExitCode: -1}
-	
+
 	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
 	reqbz, err := rnh.ReadMemFromPtr(keyptr)
 	if err != nil {
@@ -682,7 +684,7 @@ func coreExecuteCliCommand(_context interface{}, rnh memc.RuntimeHandler, params
 		responsebz, _ := json.Marshal(&resp)
 		return rnh.AllocateWriteMem(responsebz)
 	}
-	
+
 	var req ExecuteCliCommandRequest
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
@@ -690,22 +692,32 @@ func coreExecuteCliCommand(_context interface{}, rnh memc.RuntimeHandler, params
 		responsebz, _ := json.Marshal(&resp)
 		return rnh.AllocateWriteMem(responsebz)
 	}
-	
+
 	// Execute the CLI command
 	cmd := exec.CommandContext(ctx.Ctx, req.Command, req.Args...)
 	if req.WorkDir != "" {
 		cmd.Dir = req.WorkDir
 	}
-	
+
+	// Set environment variables if provided
+	if len(req.Env) > 0 {
+		// Start with current environment
+		cmd.Env = os.Environ()
+		// Add/override with custom environment variables
+		for key, value := range req.Env {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	
+
 	err = cmd.Run()
-	
+
 	resp.Stdout = stdout.String()
 	resp.Stderr = stderr.String()
-	
+
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			resp.ExitCode = exitErr.ExitCode()
@@ -715,7 +727,7 @@ func coreExecuteCliCommand(_context interface{}, rnh memc.RuntimeHandler, params
 	} else {
 		resp.ExitCode = 0
 	}
-	
+
 	responsebz, err := json.Marshal(&resp)
 	if err != nil {
 		return nil, err
