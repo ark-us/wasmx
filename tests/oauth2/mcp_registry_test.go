@@ -10,9 +10,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/simulation"
 
-	mcodec "github.com/loredanacirstea/wasmx/codec"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
@@ -55,15 +53,34 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 	userAddress := appA.InstantiateCode(sender, userCodeId, types.WasmxExecutionMessage{Data: userdataInitDataJSON}, "mcp_userdata", nil)
 	fmt.Println("Instantiated mcp-userdata contract:", userAddress.String())
 
+	// Load database configuration from environment (for Supabase testing)
+	dbConnection := os.Getenv("TEST_MCP_DB_CONNECTION")
+	if dbConnection == "" {
+		dbConnection = "postgresql://localhost:5432/postgres"
+	}
+
+	dbName := os.Getenv("TEST_MCP_DB_NAME")
+	if dbName == "" {
+		dbName = "mcp_search_test"
+	}
+
+	fmt.Println("=== Using Database Configuration ===")
+	fmt.Println("Connection:", dbConnection)
+	fmt.Println("Database:", dbName)
+	fmt.Println("====================================")
+
+	// Build search configuration
+	searchConfig := buildSearchConfig(dbConnection, dbName)
+
+	// Build tool descriptions for AI agents
+	toolDescriptions := buildToolDescriptions()
+
 	// Prepare init data for mcp-search contract
-	// Using all-MiniLM-L6-v2 model which produces 384-dimensional embeddings
 	searchInitData := &MCPContractInitGenesis{
 		InitGenesis: &MCPSearchInitGenesisRequest{
-			RoutePrefix:        "/tools/search",
-			ConnectionString:   "postgresql://localhost:5432/postgres",
-			DatabaseName:       "mcp_search_test",
-			EmbeddingDimension: 384,
-			EmbeddingMetric:    "cosine",
+			RoutePrefix:      "/tools/search",
+			SearchConfig:     searchConfig,
+			ToolDescriptions: toolDescriptions,
 		},
 	}
 	searchInitDataJSON, _ := json.Marshal(searchInitData)
@@ -72,28 +89,7 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 	searchCodeId := appA.StoreCode(sender, testdata.MCPSearch, nil)
 	searchAddress := appA.InstantiateCode(sender, searchCodeId, types.WasmxExecutionMessage{Data: searchInitDataJSON}, "mcp_search", nil)
 	fmt.Println("Instantiated mcp-search contract:", searchAddress.String())
-
-	// Generate and store embeddings using the GenerateEmbeddings function
-	fmt.Println("=== Generating embeddings for search contract ===")
-	generateEmbeddingsMsg := map[string]interface{}{
-		"generate_embeddings": map[string]interface{}{
-			// No items provided - will use mock data from Python script
-		},
-	}
-	genEmbedBz, _ := json.Marshal(generateEmbeddingsMsg)
-	genEmbedResp := appA.ExecuteContract(sender, searchAddress, types.WasmxExecutionMessage{Data: genEmbedBz}, nil, nil)
-
-	var genEmbedResult struct {
-		Success      bool   `json:"success"`
-		ItemsStored  int    `json:"items_stored"`
-		ErrorMessage string `json:"error_message,omitempty"`
-	}
-	if err := appA.DecodeExecuteResponse(genEmbedResp, &genEmbedResult); err == nil {
-		fmt.Printf("Generated embeddings: success=%v, items_stored=%d\n", genEmbedResult.Success, genEmbedResult.ItemsStored)
-		if genEmbedResult.ErrorMessage != "" {
-			fmt.Printf("Error: %s\n", genEmbedResult.ErrorMessage)
-		}
-	}
+	fmt.Println("Search configured with", len(searchConfig.Tables), "tables:", searchConfig.Tables[0].TableName, ",", searchConfig.Tables[1].TableName)
 
 	// Assign MCP role - this will trigger RoleChanged hook which automatically registers with MCP registry
 	fmt.Println("Assigning MCP role to execute contract...")
@@ -199,90 +195,6 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 	suite.T().Log("Received exit signal. Test ending.")
 }
 
-// initSearchWithSampleData initializes the mcp-search contract with sample vector embeddings
-func initSearchWithSampleData(appA ut.AppContext, searchAddress mcodec.AccAddressPrefixed, sender simulation.Account) {
-	fmt.Println("=== Initializing mcp-search with sample embeddings ===")
-
-	// Sample embeddings - in practice these would come from an embedding model
-	// For simplicity, using small dimension vectors (we can expand if needed)
-	sampleData := []struct {
-		key       string
-		value     string
-		embedding []float32
-	}{
-		{
-			key:   "blockchain_intro",
-			value: "Blockchain is a distributed ledger technology that enables secure and transparent record-keeping.",
-			// Using 384 dimensions for all-MiniLM-L6-v2 model
-			embedding: generateMockEmbedding(384, 0.1),
-		},
-		{
-			key:       "smart_contracts",
-			value:     "Smart contracts are self-executing contracts with the terms directly written into code.",
-			embedding: generateMockEmbedding(384, 0.2),
-		},
-		{
-			key:       "consensus_mechanisms",
-			value:     "Consensus mechanisms like Proof of Work and Proof of Stake ensure agreement in distributed networks.",
-			embedding: generateMockEmbedding(384, 0.3),
-		},
-		{
-			key:       "cryptography",
-			value:     "Cryptographic techniques secure blockchain transactions and ensure data integrity.",
-			embedding: generateMockEmbedding(384, 0.4),
-		},
-		{
-			key:       "defi",
-			value:     "Decentralized Finance (DeFi) enables financial services without traditional intermediaries.",
-			embedding: generateMockEmbedding(384, 0.5),
-		},
-	}
-
-	// Convert sample data to populate items
-	populateItems := make([]map[string]interface{}, len(sampleData))
-	for i, item := range sampleData {
-		populateItems[i] = map[string]interface{}{
-			"key":       item.key,
-			"value":     item.value,
-			"embedding": item.embedding,
-		}
-	}
-
-	// Use Populate function to bulk insert embeddings
-	populateMsg := map[string]interface{}{
-		"populate": map[string]interface{}{
-			"items": populateItems,
-		},
-	}
-	msgBz, _ := json.Marshal(populateMsg)
-	resp := appA.ExecuteContract(sender, searchAddress, types.WasmxExecutionMessage{Data: msgBz}, nil, nil)
-
-	// Parse and log response
-	var populateResp struct {
-		Success      bool   `json:"success"`
-		ItemsStored  int    `json:"items_stored"`
-		ErrorMessage string `json:"error_message,omitempty"`
-	}
-	if err := appA.DecodeExecuteResponse(resp, &populateResp); err == nil {
-		fmt.Printf("Populated %d embeddings (success: %v)\n", populateResp.ItemsStored, populateResp.Success)
-		if populateResp.ErrorMessage != "" {
-			fmt.Printf("Last error: %s\n", populateResp.ErrorMessage)
-		}
-	}
-
-	fmt.Println("=== Sample embeddings initialized ===")
-}
-
-// generateMockEmbedding creates a mock embedding vector for testing
-func generateMockEmbedding(dimension int, seed float32) []float32 {
-	embedding := make([]float32, dimension)
-	for i := 0; i < dimension; i++ {
-		// Simple pattern based on index and seed for reproducible test vectors
-		embedding[i] = float32(i%10)*0.1 + seed
-	}
-	return embedding
-}
-
 // Calldata structures for MCP tool contract initialization
 type MCPContractInitGenesis struct {
 	InitGenesis interface{} `json:"init_genesis,omitempty"`
@@ -293,11 +205,98 @@ type MCPContractInitGenesisRequest struct {
 }
 
 type MCPSearchInitGenesisRequest struct {
-	RoutePrefix        string `json:"route_prefix"`
-	ConnectionString   string `json:"connection_string"`
-	DatabaseName       string `json:"database_name"`
-	EmbeddingDimension int    `json:"embedding_dimension,omitempty"`
-	EmbeddingMetric    string `json:"embedding_metric,omitempty"`
+	RoutePrefix      string           `json:"route_prefix"`
+	SearchConfig     SearchConfig     `json:"search_config"`
+	ToolDescriptions ToolDescriptions `json:"tool_descriptions"`
+}
+
+type SearchConfig struct {
+	Database           DatabaseConfig `json:"database"`
+	Tables             []TableConfig  `json:"tables"`
+	EmbeddingDimension int            `json:"embedding_dimension"`
+	EmbeddingMetric    string         `json:"embedding_metric"`
+	DefaultLimit       int            `json:"default_limit"`
+}
+
+type DatabaseConfig struct {
+	ConnectionString string `json:"connection_string"`
+	DatabaseName     string `json:"database_name"`
+}
+
+type TableConfig struct {
+	TableName       string `json:"table_name"`
+	EmbeddingColumn string `json:"embedding_column"`
+	IDColumn        string `json:"id_column"`
+	CacheTextColumn string `json:"cache_text_column"`
+}
+
+// Tool description types
+type ToolDescriptions struct {
+	SearchKnowledge SearchKnowledgeDescription `json:"search_knowledge"`
+	VectorSearch    VectorSearchDescription    `json:"vector_search,omitempty"`
+	StoreEmbedding  StoreEmbeddingDescription  `json:"store_embedding,omitempty"`
+}
+
+type SearchKnowledgeDescription struct {
+	Description      string `json:"description"`
+	QueryDescription string `json:"query_description"`
+}
+
+type VectorSearchDescription struct {
+	Description string `json:"description"`
+}
+
+type StoreEmbeddingDescription struct {
+	Description string `json:"description"`
+}
+
+// buildSearchConfig creates the search configuration for testing
+func buildSearchConfig(connectionString, dbName string) SearchConfig {
+	return SearchConfig{
+		Database: DatabaseConfig{
+			ConnectionString: connectionString,
+			DatabaseName:     dbName,
+		},
+		Tables: []TableConfig{
+			{
+				TableName:       "organization_embeddings",
+				EmbeddingColumn: "embedding",
+				IDColumn:        "organization_id",
+				CacheTextColumn: "cache_text",
+			},
+			{
+				TableName:       "event_embeddings",
+				EmbeddingColumn: "embedding",
+				IDColumn:        "event_id",
+				CacheTextColumn: "cache_text",
+			},
+		},
+		EmbeddingDimension: 768, // sentence-transformers/all-mpnet-base-v2
+		EmbeddingMetric:    "cosine",
+		DefaultLimit:       10,
+	}
+}
+
+// buildToolDescriptions creates the tool descriptions for AI agents
+// THIS IS WHERE YOU CONFIGURE HOW AI AGENTS SEE YOUR SEARCH TOOLS
+func buildToolDescriptions() ToolDescriptions {
+	return ToolDescriptions{
+		SearchKnowledge: SearchKnowledgeDescription{
+			Description: "Search for venture capital firms, investors, organizations, and startup events. " +
+				"Finds relevant VCs by stage (preseed, seed, Series A, etc.), industry focus (space tech, AI, biotech, etc.), " +
+				"geography, check size, and other criteria. Also searches for startup events, accelerators, residencies, fellowships, etc." +
+				"The assistant must display all returned fields for every result, including all links, emails, URLs, tags, and metadata. " +
+				"ALL links MUST be displayed as clickable hyperlinks. ",
+			QueryDescription: "Natural language search query (e.g., 'VCs for preseed in space tech', 'seed investors in SF', 'Startup accelerators in 2025')",
+		},
+		// VectorSearch: VectorSearchDescription{
+		// 	Description: "Advanced vector similarity search for investors and events using pre-computed embeddings. " +
+		// 		"Useful for programmatic searches when you already have embeddings.",
+		// },
+		// StoreEmbedding: StoreEmbeddingDescription{
+		// 	Description: "Store a new investor or event with its vector embedding for future similarity search.",
+		// },
+	}
 }
 
 // HTTP server structures

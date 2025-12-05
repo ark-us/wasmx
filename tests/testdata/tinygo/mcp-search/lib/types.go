@@ -29,13 +29,56 @@ type CallData struct {
 
 // InitGenesisRequest for storing initialization data
 type InitGenesisRequest struct {
-	RoutePrefix        string            `json:"route_prefix"`
-	ConnectionString   string            `json:"connection_string"`
-	DatabaseName       string            `json:"database_name"`
-	EmbeddingDimension int               `json:"embedding_dimension,omitempty"` // defaults to 1536
-	EmbeddingMetric    string            `json:"embedding_metric,omitempty"`    // cosine, l2, ip - defaults to cosine
-	EmbeddingModel     string            `json:"embedding_model,omitempty"`     // model name for embeddings (e.g., all-MiniLM-L6-v2)
-	EnvironmentVars    map[string]string `json:"environment_vars,omitempty"`    // environment variables for CLI commands
+	RoutePrefix      string            `json:"route_prefix"`
+	SearchConfig     SearchConfig      `json:"search_config"`              // Complete search configuration
+	ToolDescriptions ToolDescriptions  `json:"tool_descriptions"`          // Descriptions for AI agents
+	EnvironmentVars  map[string]string `json:"environment_vars,omitempty"` // environment variables for CLI commands
+}
+
+// ToolDescriptions contains user-facing descriptions for the MCP tools
+type ToolDescriptions struct {
+	SearchKnowledge SearchKnowledgeDescription `json:"search_knowledge"`
+	VectorSearch    VectorSearchDescription    `json:"vector_search,omitempty"`
+	StoreEmbedding  StoreEmbeddingDescription  `json:"store_embedding,omitempty"`
+}
+
+// SearchKnowledgeDescription describes the search_knowledge tool
+type SearchKnowledgeDescription struct {
+	Description      string `json:"description"`       // What the tool does
+	QueryDescription string `json:"query_description"` // Description for query parameter
+}
+
+// VectorSearchDescription describes the vector_search tool
+type VectorSearchDescription struct {
+	Description string `json:"description"` // What the tool does
+}
+
+// StoreEmbeddingDescription describes the store_embedding tool
+type StoreEmbeddingDescription struct {
+	Description string `json:"description"` // What the tool does
+}
+
+// SearchConfig defines the database and tables to search
+type SearchConfig struct {
+	Database           DatabaseConfig `json:"database"`
+	Tables             []TableConfig  `json:"tables"`
+	EmbeddingDimension int            `json:"embedding_dimension"` // e.g., 768, 384
+	EmbeddingMetric    string         `json:"embedding_metric"`    // cosine, l2, ip
+	DefaultLimit       int            `json:"default_limit"`       // default result limit
+}
+
+// DatabaseConfig for PostgreSQL connection
+type DatabaseConfig struct {
+	ConnectionString string `json:"connection_string"`
+	DatabaseName     string `json:"database_name"`
+}
+
+// TableConfig defines a single table with embeddings
+type TableConfig struct {
+	TableName       string `json:"table_name"`        // e.g., "organization_embeddings"
+	EmbeddingColumn string `json:"embedding_column"`  // e.g., "embedding"
+	IDColumn        string `json:"id_column"`         // e.g., "organization_id"
+	CacheTextColumn string `json:"cache_text_column"` // e.g., "cache_text" - human readable text
 }
 
 // ExecuteToolRequest represents a request to execute a tool
@@ -55,13 +98,6 @@ type ExecuteToolResponse struct {
 type ContentItem struct {
 	Type string `json:"type"`
 	Text string `json:"text,omitempty"`
-}
-
-// SearchResult represents a single search result
-type SearchResult struct {
-	Key      string  `json:"key"`
-	Value    string  `json:"value,omitempty"`
-	Distance float32 `json:"distance"`
 }
 
 // PopulateRequest for bulk populating embeddings (for testing/initialization)

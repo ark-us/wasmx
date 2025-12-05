@@ -74,7 +74,7 @@ def insert_embeddings_to_db(items: list[dict], connection_string: str, database_
     """
     try:
         if model_name is None:
-            model_name = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+            model_name = os.environ.get("EMBEDDING_MODEL", "sentence-transformers/all-mpnet-base-v2")
 
         # Load model
         model = SentenceTransformer(model_name)
@@ -181,7 +181,7 @@ def main():
                 sys.exit(1)
 
         # Get model from environment or use default
-        model_name = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+        model_name = os.environ.get("EMBEDDING_MODEL", "sentence-transformers/all-mpnet-base-v2")
 
         # Generate embeddings and insert into database
         result = insert_embeddings_to_db(items, connection_string, database_name, dimension, model_name)

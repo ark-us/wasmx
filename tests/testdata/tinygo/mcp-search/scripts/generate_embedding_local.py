@@ -34,9 +34,9 @@ def get_model(model_name: str = None):
 
     if _model is None:
         if model_name is None:
-            # Default to a small, fast, high-quality model
-            # all-MiniLM-L6-v2: 384 dimensions, 80MB, great quality/speed tradeoff
-            model_name = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+            # Default to all-mpnet-base-v2: 768 dimensions, 420MB, better quality
+            # Alternative: all-MiniLM-L6-v2 (384 dimensions, 80MB, faster)
+            model_name = os.environ.get("EMBEDDING_MODEL", "sentence-transformers/all-mpnet-base-v2")
 
         # Don't print to stderr in production - it may cause issues with wasmx
         # print(f"Loading model: {model_name}...", file=sys.stderr)
@@ -80,7 +80,7 @@ def main():
 
     try:
         # Get model from environment or use default
-        model_name = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+        model_name = os.environ.get("EMBEDDING_MODEL", "sentence-transformers/all-mpnet-base-v2")
 
         # Generate embedding
         embedding = generate_embedding(text, model_name)
