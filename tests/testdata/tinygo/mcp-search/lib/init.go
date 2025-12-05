@@ -2,36 +2,53 @@ package lib
 
 import (
 	"encoding/json"
+	"fmt"
 
-	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	postgresql "github.com/loredanacirstea/wasmx-env-postgresql/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
-// getToolDefinitions returns the hardcoded tool definitions for this contract
+// getToolDefinitions returns the tool definitions using stored descriptions
 func getToolDefinitions() []map[string]interface{} {
-	return []map[string]interface{}{
+	// Load init data to get tool descriptions
+	initDataBz := wasmx.StorageLoad([]byte(STORAGE_INIT_DATA))
+	if len(initDataBz) == 0 {
+		// Return empty if not initialized
+		return []map[string]interface{}{}
+	}
+
+	var initData InitGenesisRequest
+	if err := json.Unmarshal(initDataBz, &initData); err != nil {
+		return []map[string]interface{}{}
+	}
+
+	tools := []map[string]interface{}{
 		{
 			"name":        "search_knowledge",
-			"description": "Search for information in the knowledge base using natural language queries. Returns relevant information about blockchain, smart contracts, consensus mechanisms, cryptography, and DeFi.",
+			"description": initData.ToolDescriptions.SearchKnowledge.Description,
 			"inputSchema": map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"query": map[string]interface{}{
 						"type":        "string",
-						"description": "The search query in natural language (e.g., 'blockchain technology', 'smart contracts')",
+						"description": initData.ToolDescriptions.SearchKnowledge.QueryDescription,
 					},
 					"limit": map[string]interface{}{
 						"type":        "integer",
-						"description": "Maximum number of results to return (default: 5)",
-						"default":     5,
+						"description": fmt.Sprintf("Maximum number of results to return (default: %d)", initData.SearchConfig.DefaultLimit),
+						"default":     initData.SearchConfig.DefaultLimit,
 					},
 				},
 				"required": []string{"query"},
 			},
 		},
-		{
+	}
+
+	// Add vector_search if description provided
+	if initData.ToolDescriptions.VectorSearch.Description != "" {
+		tools = append(tools, map[string]interface{}{
 			"name":        "vector_search",
-			"description": "Advanced search using pre-computed vector embeddings. For direct embedding-based similarity search.",
+			"description": initData.ToolDescriptions.VectorSearch.Description,
 			"inputSchema": map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
@@ -42,16 +59,20 @@ func getToolDefinitions() []map[string]interface{} {
 					},
 					"limit": map[string]interface{}{
 						"type":        "integer",
-						"description": "Maximum number of results to return (default: 10)",
-						"default":     10,
+						"description": fmt.Sprintf("Maximum number of results to return (default: %d)", initData.SearchConfig.DefaultLimit),
+						"default":     initData.SearchConfig.DefaultLimit,
 					},
 				},
 				"required": []string{"query_embedding"},
 			},
-		},
-		{
+		})
+	}
+
+	// Add store_embedding if description provided
+	if initData.ToolDescriptions.StoreEmbedding.Description != "" {
+		tools = append(tools, map[string]interface{}{
 			"name":        "store_embedding",
-			"description": "Store a key-value pair with its vector embedding for future similarity search",
+			"description": initData.ToolDescriptions.StoreEmbedding.Description,
 			"inputSchema": map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
@@ -71,24 +92,29 @@ func getToolDefinitions() []map[string]interface{} {
 				},
 				"required": []string{"key", "value", "embedding"},
 			},
-		},
+		})
 	}
+
+	return tools
 }
 
 // InitGenesis stores initialization data and establishes database connection
 func InitGenesis(req InitGenesisRequest) []byte {
-	// Set defaults
-	if req.EmbeddingDimension == 0 {
-		req.EmbeddingDimension = 1536 // OpenAI default
+	// Set defaults in search config
+	if req.SearchConfig.EmbeddingDimension == 0 {
+		req.SearchConfig.EmbeddingDimension = 768 // sentence-transformers/all-mpnet-base-v2
 	}
-	if req.EmbeddingMetric == "" {
-		req.EmbeddingMetric = "cosine"
+	if req.SearchConfig.EmbeddingMetric == "" {
+		req.SearchConfig.EmbeddingMetric = "cosine"
 	}
-	if req.DatabaseName == "" {
-		req.DatabaseName = "mcp_search"
+	if req.SearchConfig.Database.DatabaseName == "" {
+		req.SearchConfig.Database.DatabaseName = "mcp_search"
 	}
-	if req.ConnectionString == "" {
-		req.ConnectionString = "postgresql://localhost:5432/postgres"
+	if req.SearchConfig.Database.ConnectionString == "" {
+		req.SearchConfig.Database.ConnectionString = "postgresql://localhost:5432/postgres"
+	}
+	if req.SearchConfig.DefaultLimit == 0 {
+		req.SearchConfig.DefaultLimit = 10
 	}
 
 	// Store init data for later use in RoleChanged
@@ -98,15 +124,15 @@ func InitGenesis(req InitGenesisRequest) []byte {
 	// Establish PostgreSQL connection with vector embeddings support
 	options := map[string]interface{}{
 		"enable_embeddings":   true,
-		"embedding_dimension": req.EmbeddingDimension,
-		"embedding_metric":    req.EmbeddingMetric,
+		"embedding_dimension": req.SearchConfig.EmbeddingDimension,
+		"embedding_metric":    req.SearchConfig.EmbeddingMetric,
 		"maxconns":            50,
 		"minconns":            5,
 	}
 
 	connReq := &postgresql.SqlConnectionRequest{
-		Connection: req.ConnectionString,
-		DbName:     req.DatabaseName,
+		Connection: req.SearchConfig.Database.ConnectionString,
+		DbName:     req.SearchConfig.Database.DatabaseName,
 		Id:         "mcp_search_main",
 		Options:    options,
 	}
@@ -122,9 +148,10 @@ func InitGenesis(req InitGenesisRequest) []byte {
 
 	LoggerInfo("MCP Search initialized", []string{
 		"route_prefix", req.RoutePrefix,
-		"db_name", req.DatabaseName,
-		"embedding_dimension", string(rune(req.EmbeddingDimension)),
-		"embedding_metric", req.EmbeddingMetric,
+		"db_name", req.SearchConfig.Database.DatabaseName,
+		"tables_count", string(rune(len(req.SearchConfig.Tables))),
+		"embedding_dimension", string(rune(req.SearchConfig.EmbeddingDimension)),
+		"embedding_metric", req.SearchConfig.EmbeddingMetric,
 	})
 
 	return []byte(`{"success": true}`)

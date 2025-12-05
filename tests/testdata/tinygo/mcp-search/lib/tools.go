@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	postgresql "github.com/loredanacirstea/wasmx-env-postgresql/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // ExecuteTool handles tool execution requests
@@ -45,8 +45,16 @@ func searchKnowledge(userID string, arguments map[string]interface{}) ExecuteToo
 		}
 	}
 
-	// Parse limit
-	limit := 5
+	// Parse limit - use from arguments or fall back to SearchConfig.DefaultLimit
+	searchConfig := loadSearchConfig()
+	if searchConfig == nil {
+		return ExecuteToolResponse{
+			Content: []ContentItem{{Type: "text", Text: "Search configuration not found"}},
+			IsError: true,
+		}
+	}
+
+	limit := searchConfig.DefaultLimit
 	if limitRaw, ok := arguments["limit"]; ok {
 		switch v := limitRaw.(type) {
 		case float64:
@@ -67,13 +75,11 @@ func searchKnowledge(userID string, arguments map[string]interface{}) ExecuteToo
 		}
 	}
 
-	fmt.Println("=== Converting embedding to interface{} slice ===")
 	// Convert []float32 to []interface{} for vectorSearch
 	queryEmbeddingInterface := make([]interface{}, len(queryEmbedding))
 	for i, v := range queryEmbedding {
 		queryEmbeddingInterface[i] = v
 	}
-	fmt.Println("Conversion complete, length:", len(queryEmbeddingInterface))
 
 	// Now perform vector search with the generated embedding
 	vectorArgs := map[string]interface{}{
@@ -96,19 +102,10 @@ func generateQueryEmbedding(query string) []float32 {
 	// Just run the Python script directly - assume dependencies are already installed
 	// User should run: pip install -r requirements.txt before starting the test
 	cmdStr := fmt.Sprintf("python3 %s %s", scriptPath, query)
-	fmt.Println("=== About to execute embedding command ===")
-	fmt.Println("Command:", cmdStr)
 	LoggerInfo("About to execute embedding script", []string{"script", scriptPath, "query", query, "full_command", cmdStr})
 
 	result, err := wasmxcore.ExecuteCliCommand("python3", []string{scriptPath, query}, "")
 
-	fmt.Println("=== Command execution completed ===")
-	fmt.Println("Has error:", err != nil)
-	if result != nil {
-		fmt.Println("Exit code:", result.ExitCode)
-		fmt.Println("Stdout length:", len(result.Stdout))
-		fmt.Println("Stderr length:", len(result.Stderr))
-	}
 	LoggerInfo("Script execution completed", []string{"has_error", fmt.Sprintf("%v", err != nil)})
 
 	if err != nil {
@@ -127,9 +124,6 @@ func generateQueryEmbedding(query string) []float32 {
 
 	// Parse the JSON output
 	output := strings.TrimSpace(result.Stdout)
-	fmt.Println("=== Parsing embedding output ===")
-	fmt.Println("Output length:", len(output))
-	fmt.Println("First 100 chars:", output[:min(100, len(output))])
 	LoggerInfo("Embedding script output", []string{"output_length", fmt.Sprintf("%d", len(output))})
 
 	// Check if output is an error object
@@ -144,16 +138,12 @@ func generateQueryEmbedding(query string) []float32 {
 	}
 
 	// Parse embedding array
-	fmt.Println("=== About to unmarshal JSON ===")
 	var embedding []float32
 	if err := json.Unmarshal([]byte(output), &embedding); err != nil {
-		fmt.Println("JSON unmarshal error:", err.Error())
 		LoggerError("Failed to parse embedding JSON", []string{"error", err.Error(), "output", output})
 		return nil
 	}
 
-	fmt.Println("=== Embedding parsed successfully ===")
-	fmt.Println("Dimensions:", len(embedding))
 	LoggerInfo("Successfully generated embedding", []string{"dimensions", fmt.Sprintf("%d", len(embedding))})
 	return embedding
 }
@@ -165,84 +155,80 @@ func min(a, b int) int {
 	return b
 }
 
-// ensureDatabaseConnection ensures a database connection exists, creating one if needed
-func ensureDatabaseConnection() string {
-	fmt.Println("=== ensureDatabaseConnection called ===")
-
-	// Always try to establish a fresh connection
-	// The stored connection ID may not be valid anymore
-	fmt.Println("Establishing new database connection...")
-
-	// Load init data to get connection parameters
+// loadSearchConfig loads the search configuration from storage
+func loadSearchConfig() *SearchConfig {
 	initDataBz := wasmx.StorageLoad([]byte(STORAGE_INIT_DATA))
 	if len(initDataBz) == 0 {
-		LoggerError("Init data not found, cannot establish connection", nil)
-		fmt.Println("ERROR: Init data not found")
-		return ""
+		return nil
 	}
 
 	var initData InitGenesisRequest
 	if err := json.Unmarshal(initDataBz, &initData); err != nil {
-		LoggerError("Failed to unmarshal init data", []string{"error", err.Error()})
-		fmt.Println("ERROR: Failed to unmarshal init data:", err.Error())
+		return nil
+	}
+
+	return &initData.SearchConfig
+}
+
+// ensureDatabaseConnection ensures a database connection exists, creating one if needed
+func ensureDatabaseConnection() string {
+	// Load search configuration
+	searchConfig := loadSearchConfig()
+	if searchConfig == nil {
+		LoggerError("Search config not found, cannot establish connection", nil)
 		return ""
 	}
 
-	fmt.Println("Init data loaded:", initData.DatabaseName, initData.ConnectionString)
+	// Set default metric if not specified
+	metric := searchConfig.EmbeddingMetric
+	if metric == "" {
+		metric = "cosine"
+	}
 
 	// Establish PostgreSQL connection with vector embeddings support
 	options := map[string]interface{}{
 		"enable_embeddings":   true,
-		"embedding_dimension": initData.EmbeddingDimension,
-		"embedding_metric":    initData.EmbeddingMetric,
+		"embedding_dimension": searchConfig.EmbeddingDimension,
+		"embedding_metric":    metric,
 		"maxconns":            50,
 		"minconns":            5,
 	}
 
 	connReq := &postgresql.SqlConnectionRequest{
-		Connection: initData.ConnectionString,
-		DbName:     initData.DatabaseName,
+		Connection: searchConfig.Database.ConnectionString,
+		DbName:     searchConfig.Database.DatabaseName,
 		Id:         "mcp_search_main",
 		Options:    options,
 	}
 
-	fmt.Println("Calling postgresql.Connect...")
 	connResp := postgresql.Connect(connReq)
-	fmt.Println("Connect returned, error:", connResp.Error)
 
 	if connResp.Error != "" {
 		LoggerError("Failed to connect to PostgreSQL", []string{"error", connResp.Error})
-		fmt.Println("ERROR: Failed to connect:", connResp.Error)
 		return ""
 	}
 
 	// Connection ID is always the same
 	connID := "mcp_search_main"
-	fmt.Println("Connection established:", connID)
 
 	LoggerInfo("Database connection established", []string{"conn_id", connID})
 	return connID
 }
 
-// vectorSearch performs similarity search using vector embeddings
+// vectorSearch performs similarity search using vector embeddings across all configured tables
 func vectorSearch(userID string, arguments map[string]interface{}) ExecuteToolResponse {
-	fmt.Println("=== vectorSearch called ===")
 	LoggerInfo("vectorSearch called", []string{"user_id", userID})
 
 	// Parse query embedding
-	fmt.Println("=== Parsing query_embedding ===")
 	queryEmbeddingRaw, ok := arguments["query_embedding"].([]interface{})
 	if !ok {
-		fmt.Println("ERROR: query_embedding is not []interface{}")
 		return ExecuteToolResponse{
 			Content: []ContentItem{{Type: "text", Text: "Missing or invalid 'query_embedding' argument"}},
 			IsError: true,
 		}
 	}
-	fmt.Println("query_embedding length:", len(queryEmbeddingRaw))
 
 	// Convert to float32 slice
-	fmt.Println("=== Converting to float32 slice ===")
 	queryEmbedding := make([]float32, len(queryEmbeddingRaw))
 	for i, v := range queryEmbeddingRaw {
 		switch val := v.(type) {
@@ -253,17 +239,24 @@ func vectorSearch(userID string, arguments map[string]interface{}) ExecuteToolRe
 		case int:
 			queryEmbedding[i] = float32(val)
 		default:
-			fmt.Println("ERROR: Invalid embedding value type at index", i)
 			return ExecuteToolResponse{
 				Content: []ContentItem{{Type: "text", Text: fmt.Sprintf("Invalid embedding value at index %d", i)}},
 				IsError: true,
 			}
 		}
 	}
-	fmt.Println("Conversion complete, float32 slice length:", len(queryEmbedding))
 
-	// Parse limit
-	limit := 10
+	// Load search configuration
+	searchConfig := loadSearchConfig()
+	if searchConfig == nil {
+		return ExecuteToolResponse{
+			Content: []ContentItem{{Type: "text", Text: "Search configuration not found"}},
+			IsError: true,
+		}
+	}
+
+	// Parse limit - use from arguments or fall back to SearchConfig.DefaultLimit
+	limit := searchConfig.DefaultLimit
 	if limitRaw, ok := arguments["limit"]; ok {
 		switch v := limitRaw.(type) {
 		case float64:
@@ -272,114 +265,132 @@ func vectorSearch(userID string, arguments map[string]interface{}) ExecuteToolRe
 			limit = v
 		}
 	}
-	fmt.Println("Limit:", limit)
 
 	// Get or establish database connection
-	fmt.Println("=== Getting database connection ===")
 	connID := ensureDatabaseConnection()
 	if connID == "" {
-		fmt.Println("ERROR: Failed to establish database connection")
 		return ExecuteToolResponse{
 			Content: []ContentItem{{Type: "text", Text: "Failed to establish database connection"}},
 			IsError: true,
 		}
 	}
-	fmt.Println("Connection ID:", connID)
 
-	// Build similarity search query
-	// Using PostgreSQL pgvector similarity operators
-	// The query will be constructed by the host-side PostgreSQL adapter
-	fmt.Println("=== Building PostgreSQL query ===")
-	query := `
-		SELECT key, value, embedding <=> $1::vector AS distance
-		FROM state_embeddings
-		ORDER BY embedding <=> $1::vector
-		LIMIT $2
-	`
+	// Search across all configured tables
+	allResults := make([]SearchResult, 0)
 
-	// Encode embedding as JSON for the query parameter
-	fmt.Println("=== Encoding embedding as JSON ===")
-	embeddingJSON, _ := json.Marshal(queryEmbedding)
-	fmt.Println("Embedding JSON length:", len(embeddingJSON))
+	for _, tableConfig := range searchConfig.Tables {
+		// Build query for this table
+		query := fmt.Sprintf(`
+			SELECT
+				%s as id,
+				%s as cache_text,
+				%s <=> $1::vector AS distance
+			FROM %s
+			ORDER BY %s <=> $1::vector
+			LIMIT $2
+		`,
+			tableConfig.IDColumn,
+			tableConfig.CacheTextColumn,
+			tableConfig.EmbeddingColumn,
+			tableConfig.TableName,
+			tableConfig.EmbeddingColumn,
+		)
 
-	embeddingParam, _ := json.Marshal(postgresql.SqlQueryParam{
-		Type:  "jsonb",
-		Value: string(embeddingJSON),
-	})
+		// Execute query
+		embeddingJSON, _ := json.Marshal(queryEmbedding)
+		embeddingParam, _ := json.Marshal(postgresql.SqlQueryParam{
+			Type:  "jsonb",
+			Value: string(embeddingJSON),
+		})
+		limitParam, _ := json.Marshal(postgresql.SqlQueryParam{
+			Type:  "",
+			Value: limit,
+		})
 
-	limitParam, _ := json.Marshal(postgresql.SqlQueryParam{
-		Type:  "",
-		Value: limit,
-	})
-
-	queryReq := &postgresql.SqlQueryRequest{
-		Id:     connID,
-		Query:  query,
-		Params: postgresql.Params{embeddingParam, limitParam},
-	}
-
-	fmt.Println("=== Executing PostgreSQL query ===")
-	queryResp := postgresql.Query(queryReq)
-	fmt.Println("=== Query completed ===")
-	fmt.Println("Error:", queryResp.Error)
-	fmt.Println("Data length:", len(queryResp.Data))
-
-	if queryResp.Error != "" {
-		fmt.Println("ERROR: Query failed:", queryResp.Error)
-		LoggerError("Vector search query failed", []string{"error", queryResp.Error})
-		return ExecuteToolResponse{
-			Content: []ContentItem{{Type: "text", Text: "Search failed: " + queryResp.Error}},
-			IsError: true,
+		queryReq := &postgresql.SqlQueryRequest{
+			Id:     connID,
+			Query:  query,
+			Params: postgresql.Params{embeddingParam, limitParam},
 		}
+
+		queryResp := postgresql.Query(queryReq)
+		if queryResp.Error != "" {
+			LoggerError("Error querying table", []string{"table", tableConfig.TableName, "error", queryResp.Error})
+			continue
+		}
+
+		// Parse results
+		var tableResults []map[string]interface{}
+		if len(queryResp.Data) > 0 {
+			if err := json.Unmarshal(queryResp.Data, &tableResults); err != nil {
+				LoggerError("Error parsing results", []string{"table", tableConfig.TableName, "error", err.Error()})
+				continue
+			}
+		}
+
+		// Add to all results with source table
+		for _, result := range tableResults {
+			allResults = append(allResults, SearchResult{
+				Source:    tableConfig.TableName,
+				ID:        fmt.Sprintf("%v", result["id"]),
+				CacheText: fmt.Sprintf("%v", result["cache_text"]),
+				Distance:  float32(result["distance"].(float64)),
+			})
+		}
+
+		LoggerInfo("Search results", []string{"table", tableConfig.TableName, "count", fmt.Sprintf("%d", len(tableResults))})
 	}
 
-	// Parse results
-	fmt.Println("=== Parsing query results ===")
-	var results []map[string]interface{}
-	if len(queryResp.Data) > 0 {
-		if err := json.Unmarshal(queryResp.Data, &results); err != nil {
-			fmt.Println("ERROR: Failed to unmarshal results:", err.Error())
-			return ExecuteToolResponse{
-				Content: []ContentItem{{Type: "text", Text: "Failed to parse search results"}},
-				IsError: true,
+	// Sort all results by distance
+	sortResultsByDistance(allResults)
+
+	// Limit to top N overall
+	if len(allResults) > limit {
+		allResults = allResults[:limit]
+	}
+
+	// Format response
+	return formatSearchResults(allResults)
+}
+
+// SearchResult represents a single search result
+type SearchResult struct {
+	Source    string  `json:"source"`     // Table name
+	ID        string  `json:"id"`         // Record ID
+	CacheText string  `json:"cache_text"` // Human readable text
+	Distance  float32 `json:"distance"`   // Similarity distance
+}
+
+// sortResultsByDistance sorts results by distance (ascending)
+func sortResultsByDistance(results []SearchResult) {
+	for i := 0; i < len(results)-1; i++ {
+		for j := i + 1; j < len(results); j++ {
+			if results[j].Distance < results[i].Distance {
+				results[i], results[j] = results[j], results[i]
 			}
 		}
 	}
-	fmt.Println("Results count:", len(results))
+}
 
-	// Format results
+// formatSearchResults formats search results for display
+func formatSearchResults(results []SearchResult) ExecuteToolResponse {
 	if len(results) == 0 {
-		fmt.Println("No results found")
 		return ExecuteToolResponse{
 			Content: []ContentItem{{Type: "text", Text: "No results found"}},
 			IsError: false,
 		}
 	}
 
-	// Build response text
-	fmt.Println("=== Building response text ===")
-	responseText := fmt.Sprintf("Found %d similar items:\n\n", len(results))
-	for i, result := range results {
-		key := result["key"]
-		value := result["value"]
-		distance := result["distance"]
+	// Build simple list of results with just the cache_text (JSON data)
+	var responseText strings.Builder
+	responseText.WriteString(fmt.Sprintf("Found %d results:\n\n", len(results)))
 
-		// Value is now fetched directly from PostgreSQL
-		valueStr := ""
-		if value != nil {
-			valueStr = fmt.Sprintf("%v", value)
-		}
-		if valueStr == "" {
-			valueStr = "(no value stored)"
-		}
-
-		responseText += fmt.Sprintf("%d. Key: %v, Distance: %v\n   Value: %s\n", i+1, key, distance, valueStr)
+	for i, item := range results {
+		responseText.WriteString(fmt.Sprintf("%d. %s\n\n", i+1, item.CacheText))
 	}
 
-	fmt.Println("=== Returning response ===")
-	fmt.Println("Response length:", len(responseText))
 	return ExecuteToolResponse{
-		Content: []ContentItem{{Type: "text", Text: responseText}},
+		Content: []ContentItem{{Type: "text", Text: responseText.String()}},
 		IsError: false,
 	}
 }
