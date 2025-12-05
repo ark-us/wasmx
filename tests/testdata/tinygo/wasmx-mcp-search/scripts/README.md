@@ -6,7 +6,7 @@ This directory contains Python scripts for generating text embeddings used by th
 
 1. Install dependencies (sentence-transformers will download the model on first use):
 ```bash
-cd /Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/mcp-search/scripts
+cd /Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/wasmx-mcp-search/scripts
 pip install -r requirements.txt
 ```
 
@@ -61,7 +61,7 @@ If an error occurs, the output will be a JSON object with an error field:
 {"error": "error message"}
 ```
 
-## Integration with mcp-search
+## Integration with wasmx-mcp-search
 
 The mcp-search contract calls this script directly using the wasmx-env-core ExecuteCliCommand API to generate embeddings dynamically when users perform searches.
 

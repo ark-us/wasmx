@@ -13,7 +13,7 @@ func GenerateEmbeddings(req GenerateEmbeddingsRequest) []byte {
 	LoggerInfo("GenerateEmbeddings called", []string{"items_count", fmt.Sprintf("%d", len(req.Items))})
 
 	// Path to the bulk embedding generation script
-	scriptPath := "/Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/mcp-search/scripts/generate_bulk_embeddings.py"
+	scriptPath := "/Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/wasmx-mcp-search/scripts/generate_bulk_embeddings.py"
 
 	// Load init data to get database connection parameters
 	initDataBz := wasmx.StorageLoad([]byte(STORAGE_INIT_DATA))

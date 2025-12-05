@@ -4,7 +4,7 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
-const MODULE_NAME = "mcp-registry"
+const MODULE_NAME = "wasmx-mcp-registry"
 
 // Storage keys
 const (

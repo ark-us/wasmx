@@ -4,7 +4,7 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
-const MODULE_NAME = "mcp-search"
+const MODULE_NAME = "wasmx-mcp-search"
 
 // Storage keys
 const (
@@ -17,7 +17,7 @@ type CallData struct {
 	// Tool execution
 	ExecuteTool *ExecuteToolRequest `json:"execute_tool,omitempty"`
 	// Initialization
-	InitGenesis *InitGenesisRequest `json:"init_genesis,omitempty"`
+	InitGenesis *InitGenesisRequest     `json:"init_genesis,omitempty"`
 	RoleChanged *wasmx.RolesChangedHook `json:"RoleChanged,omitempty"`
 	// HTTP request handling
 	HttpRequestHandler *HttpRequestIncoming `json:"HttpRequestHandler,omitempty"`
@@ -133,10 +133,10 @@ type GenerateEmbeddingsItem struct {
 
 // GenerateEmbeddingsResponse represents the response with generated embeddings
 type GenerateEmbeddingsResponse struct {
-	Success      bool          `json:"success"`
+	Success      bool           `json:"success"`
 	Items        []PopulateItem `json:"items"` // Items with embeddings added
-	ItemsStored  int           `json:"items_stored"`
-	ErrorMessage string        `json:"error_message,omitempty"`
+	ItemsStored  int            `json:"items_stored"`
+	ErrorMessage string         `json:"error_message,omitempty"`
 }
 
 // HTTP request types (passed from HTTP server registry)

@@ -97,7 +97,7 @@ func generateQueryEmbedding(query string) []float32 {
 	// Get the absolute path to the embedding script
 	// In production, this should be configurable via InitGenesis
 	// Using local model (no API key required)
-	scriptPath := "/Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/mcp-search/scripts/generate_embedding_local.py"
+	scriptPath := "/Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/wasmx-mcp-search/scripts/generate_embedding_local.py"
 
 	// Just run the Python script directly - assume dependencies are already installed
 	// User should run: pip install -r requirements.txt before starting the test
