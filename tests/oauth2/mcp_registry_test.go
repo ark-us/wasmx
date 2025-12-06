@@ -112,6 +112,7 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 			Description: "OAuth client for MCP testing",
 			RedirectURIs: []string{
 				"https://chat.openai.com/aip/callback",
+				"https://chat.openai.com/aip/*",
 				"https://chatgpt.com/connector_platform_oauth_redirect",
 				"http://localhost:3000/callback",
 			},
@@ -285,12 +286,8 @@ func buildSearchConfig(connectionString, dbName string) SearchConfig {
 func buildToolDescriptions() ToolDescriptions {
 	return ToolDescriptions{
 		SearchKnowledge: SearchKnowledgeDescription{
-			Description: "Search for venture capital firms, investors, organizations, and startup events. " +
-				"Finds relevant VCs by stage (preseed, seed, Series A, etc.), industry focus (space tech, AI, biotech, etc.), " +
-				"geography, check size, and other criteria. Also searches for startup events, accelerators, residencies, fellowships, etc." +
-				"The assistant must display all returned fields for every result, including all links, emails, URLs, tags, and metadata. " +
-				"ALL links MUST be displayed as clickable hyperlinks. ",
-			QueryDescription: "Natural language search query (e.g., 'VCs for preseed in space tech', 'seed investors in SF', 'Startup accelerators in 2025')",
+			Description:      `Search for venture capital firms, investors, startup accelerators, residencies, fellowships. Filter by stage (preseed, seed, Series A), industry focus (space tech, AI, biotech), and other criteria. AI agent must display all returned fields & results, links MUST be displayed as clickable hyperlinks.`,
+			QueryDescription: `Natural language search query (e.g., 'VCs for preseed in space tech', 'seed investors in SF', 'Startup accelerators in 2025')`,
 		},
 		// VectorSearch: VectorSearchDescription{
 		// 	Description: "Advanced vector similarity search for investors and events using pre-computed embeddings. " +
