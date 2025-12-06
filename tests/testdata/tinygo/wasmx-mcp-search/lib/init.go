@@ -189,6 +189,7 @@ func OnRoleChanged() []byte {
 			"contract_address": string(wasmx.GetAddress()),
 			"route_prefix":     initData.RoutePrefix,
 			"tools_json":       string(toolsJSON),
+			"use_oauth2":       false,
 		},
 	}
 	msgBz, _ := json.Marshal(registerMsg)

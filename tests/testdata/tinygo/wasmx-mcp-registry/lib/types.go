@@ -22,6 +22,7 @@ type ContractRegistration struct {
 	RegisteredAt  int64               `json:"registered_at"`   // Block height
 	LastUpdatedAt int64               `json:"last_updated_at"` // Block height
 	Active        bool                `json:"active"`          // Enable/disable
+	UseOAuth2     bool                `json:"use_oauth2"`      // Require OAuth2 authentication
 }
 
 // MCPToolDefinition represents a tool from MCP protocol
@@ -66,6 +67,7 @@ type RegisterMCPContractRequest struct {
 	ContractAddress string `json:"contract_address"` // Address of MCP contract
 	RoutePrefix     string `json:"route_prefix"`     // e.g., "/tools/execute"
 	ToolsJSON       string `json:"tools_json"`       // JSON array of MCPToolDefinition
+	UseOAuth2       bool   `json:"use_oauth2"`       // Require OAuth2 authentication for this contract's tools
 }
 
 // DeregisterMCPContractRequest for removing an MCP contract

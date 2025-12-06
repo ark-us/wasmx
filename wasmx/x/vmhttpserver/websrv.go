@@ -3,7 +3,6 @@ package vmhttpserver
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -68,7 +67,6 @@ func (k *WebsrvServer) Route(w http.ResponseWriter, r *http.Request) {
 }
 
 func (k *WebsrvServer) HandleContractRoute(r *http.Request) (*HttpResponseWrap, error) {
-	fmt.Println("---wasmx.host.HandleContractRoute--", r.URL.Path)
 	// this can be a quick way to get the handling contract
 	// if we need additional parsing of the route, we do it in the
 	// contract starting the webserver
@@ -77,7 +75,6 @@ func (k *WebsrvServer) HandleContractRoute(r *http.Request) (*HttpResponseWrap, 
 		// set default as the contract starting the webserver
 		contractAddress = k.senderAddress
 	}
-	fmt.Println("---wasmx.host.HandleContractRoute--", contractAddress)
 
 	body := []byte{}
 	var err error
@@ -102,7 +99,6 @@ func (k *WebsrvServer) HandleContractRoute(r *http.Request) (*HttpResponseWrap, 
 	if err != nil {
 		return nil, sdkerr.Wrapf(err, "cannot marshal HttpRequestGet")
 	}
-	fmt.Println("---wasmx.host.HandleContractRoute.httpReqBz--", string(httpReqBz))
 
 	msg := &networktypes.MsgReentry{
 		Authority:  k.wasmxAuthority,
