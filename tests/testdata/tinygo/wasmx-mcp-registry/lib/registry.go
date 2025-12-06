@@ -61,6 +61,7 @@ func RegisterMCPContract(req RegisterMCPContractRequest) []byte {
 		registration.Tools = tools
 		registration.LastUpdatedAt = int64(currentBlock.Height)
 		registration.Active = true
+		registration.UseOAuth2 = req.UseOAuth2
 	} else {
 		// Create new registration
 		registration = ContractRegistration{
@@ -70,6 +71,7 @@ func RegisterMCPContract(req RegisterMCPContractRequest) []byte {
 			RegisteredAt:  int64(currentBlock.Height),
 			LastUpdatedAt: int64(currentBlock.Height),
 			Active:        true,
+			UseOAuth2:     req.UseOAuth2,
 		}
 	}
 

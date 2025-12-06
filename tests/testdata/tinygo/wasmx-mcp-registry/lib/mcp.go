@@ -63,6 +63,7 @@ func InitializeTables() []byte {
 				RegisteredAt:  int64(currentBlock.Height),
 				LastUpdatedAt: int64(currentBlock.Height),
 				Active:        true,
+				UseOAuth2:     contract.UseOAuth2,
 			}
 
 			// Store registration
@@ -153,6 +154,7 @@ func validateToken(token string) (string, bool) {
 }
 
 func HandleHttpRequest(req HttpRequestIncoming) []byte {
+	fmt.Println("* mcpregistry", req.Url)
 	// Extract path from Url or RequestURI (remove query string)
 	path := req.Url
 	if path == "" {
@@ -202,33 +204,27 @@ func handleRoot(req *HttpRequestIncoming) HttpResponseWrap {
 }
 
 func handleSSE(req *HttpRequestIncoming) HttpResponseWrap {
-	// Extract token from Authorization header
+	// Extract token from Authorization header (optional - will be checked per-tool)
 	token := extractToken(req)
-	if token == "" {
-		return HttpResponseWrap{
-			Error: "",
-			Data: HttpResponse{
-				StatusCode: 401,
-				Status:     "401 Unauthorized",
-				Header:     http.Header{"Content-Type": []string{"text/plain"}},
-				Data:       []byte("Unauthorized: missing token"),
-			},
+	var userID string
+	if token != "" {
+		// Validate token if provided
+		var valid bool
+		userID, valid = validateToken(token)
+		if !valid {
+			// Invalid token provided
+			return HttpResponseWrap{
+				Error: "",
+				Data: HttpResponse{
+					StatusCode: 401,
+					Status:     "401 Unauthorized",
+					Header:     http.Header{"Content-Type": []string{"text/plain"}},
+					Data:       []byte("Unauthorized: invalid token"),
+				},
+			}
 		}
 	}
-
-	// Validate token and get user_id
-	userID, valid := validateToken(token)
-	if !valid {
-		return HttpResponseWrap{
-			Error: "",
-			Data: HttpResponse{
-				StatusCode: 401,
-				Status:     "401 Unauthorized",
-				Header:     http.Header{"Content-Type": []string{"text/plain"}},
-				Data:       []byte("Unauthorized: invalid token"),
-			},
-		}
-	}
+	// If no token provided, userID will be empty string
 
 	// Get request body
 	body := req.Data
@@ -313,7 +309,7 @@ func handleInitialize(req *JSONRPCRequest, userID string) HttpResponseWrap {
 			"tools": map[string]interface{}{},
 		},
 		"serverInfo": map[string]interface{}{
-			"name":    "MCP Registry Server",
+			"name":    "WasmX Provable MCP Registry Server",
 			"version": "1.0.0",
 		},
 	}
@@ -415,6 +411,11 @@ func handleToolsCall(req *JSONRPCRequest, userID string) HttpResponseWrap {
 
 	if targetContract == nil {
 		return sendJSONRPCError(req.ID, -32602, "Tool not found: "+toolName)
+	}
+
+	// Check if OAuth2 authentication is required for this tool
+	if targetContract.UseOAuth2 && userID == "" {
+		return sendJSONRPCError(req.ID, -32600, "Authentication required: this tool requires OAuth2 authentication")
 	}
 
 	// Call the contract that provides this tool
@@ -601,34 +602,6 @@ func handleOpenAPISpec(req *HttpRequestIncoming) HttpResponseWrap {
 }
 
 func handleToolExecution(req *HttpRequestIncoming, path string) HttpResponseWrap {
-	// Extract token from Authorization header for authentication
-	token := extractToken(req)
-	if token == "" {
-		return HttpResponseWrap{
-			Error: "",
-			Data: HttpResponse{
-				StatusCode: 401,
-				Status:     "401 Unauthorized",
-				Header:     http.Header{"Content-Type": []string{"application/json"}},
-				Data:       []byte(`{"error":"missing authorization token"}`),
-			},
-		}
-	}
-
-	// Validate token and get user_id
-	userID, valid := validateToken(token)
-	if !valid {
-		return HttpResponseWrap{
-			Error: "",
-			Data: HttpResponse{
-				StatusCode: 401,
-				Status:     "401 Unauthorized",
-				Header:     http.Header{"Content-Type": []string{"application/json"}},
-				Data:       []byte(`{"error":"invalid token"}`),
-			},
-		}
-	}
-
 	// Extract tool name from path: /tools/{toolName}
 	toolName := strings.TrimPrefix(path, "/tools/")
 	if toolName == "" {
@@ -692,6 +665,42 @@ func handleToolExecution(req *HttpRequestIncoming, path string) HttpResponseWrap
 				Data:       []byte(fmt.Sprintf(`{"error":"tool not found: %s"}`, toolName)),
 			},
 		}
+	}
+
+	// Check if OAuth2 authentication is required for this tool
+	var userID string
+	if targetContract.UseOAuth2 {
+		// Extract and validate token
+		token := extractToken(req)
+		if token == "" {
+			return HttpResponseWrap{
+				Error: "",
+				Data: HttpResponse{
+					StatusCode: 401,
+					Status:     "401 Unauthorized",
+					Header:     http.Header{"Content-Type": []string{"application/json"}},
+					Data:       []byte(`{"error":"missing authorization token"}`),
+				},
+			}
+		}
+
+		// Validate token and get user_id
+		var valid bool
+		userID, valid = validateToken(token)
+		if !valid {
+			return HttpResponseWrap{
+				Error: "",
+				Data: HttpResponse{
+					StatusCode: 401,
+					Status:     "401 Unauthorized",
+					Header:     http.Header{"Content-Type": []string{"application/json"}},
+					Data:       []byte(`{"error":"invalid token"}`),
+				},
+			}
+		}
+	} else {
+		// No authentication required - use empty user_id
+		userID = ""
 	}
 
 	// Call the contract that provides this tool
