@@ -6,10 +6,27 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"strings"
+	"time"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
+
+// matchRedirectURI checks if a redirect URI matches a pattern (supports wildcard *)
+func matchRedirectURI(pattern, uri string) bool {
+	// Exact match
+	if pattern == uri {
+		return true
+	}
+
+	// Wildcard match - pattern must end with /*
+	if strings.HasSuffix(pattern, "/*") {
+		prefix := strings.TrimSuffix(pattern, "*")
+		return strings.HasPrefix(uri, prefix)
+	}
+
+	return false
+}
 
 // CreateAuthorizationCode creates an authorization code for OAuth2 flow
 func CreateAuthorizationCode(req CreateAuthorizationCodeRequest) []byte {
@@ -33,10 +50,10 @@ func CreateAuthorizationCode(req CreateAuthorizationCodeRequest) []byte {
 		Revert("client is inactive")
 	}
 
-	// Verify redirect URI matches one of the registered URIs
+	// Verify redirect URI matches one of the registered URIs (supports wildcards)
 	validRedirect := false
-	for _, uri := range client.RedirectURIs {
-		if uri == req.RedirectURI {
+	for _, pattern := range client.RedirectURIs {
+		if matchRedirectURI(pattern, req.RedirectURI) {
 			validRedirect = true
 			break
 		}
@@ -48,10 +65,10 @@ func CreateAuthorizationCode(req CreateAuthorizationCodeRequest) []byte {
 	// Generate authorization code
 	code := generateAuthorizationCode()
 
-	// Get current block height
-	currentBlock := wasmx.GetCurrentBlock()
-	createdAt := int64(currentBlock.Height)
-	expiresAt := createdAt + AUTH_CODE_DURATION_SECONDS
+	// Use actual timestamps
+	now := time.Now().Unix()
+	createdAt := now
+	expiresAt := now + AUTH_CODE_DURATION_SECONDS
 
 	// Create authorization code record
 	authCode := AuthorizationCode{
@@ -106,8 +123,8 @@ func ExchangeCodeForToken(req ExchangeCodeForTokenRequest) []byte {
 	}
 
 	// Check if code is expired
-	currentBlock := wasmx.GetCurrentBlock()
-	if int64(currentBlock.Height) > authCode.ExpiresAt {
+	now := time.Now().Unix()
+	if now > authCode.ExpiresAt {
 		Revert("authorization code expired")
 	}
 
@@ -152,9 +169,9 @@ func ExchangeCodeForToken(req ExchangeCodeForTokenRequest) []byte {
 	accessToken := generateAccessToken()
 	refreshToken := generateRefreshToken()
 
-	createdAt := int64(currentBlock.Height)
-	accessExpiresAt := createdAt + ACCESS_TOKEN_DURATION_SECONDS
-	refreshExpiresAt := createdAt + (REFRESH_TOKEN_DURATION_DAYS * 86400)
+	createdAt := now
+	accessExpiresAt := now + ACCESS_TOKEN_DURATION_SECONDS
+	refreshExpiresAt := now + (REFRESH_TOKEN_DURATION_DAYS * 86400)
 
 	// Store access token
 	accessTokenRecord := AccessToken{
@@ -200,11 +217,7 @@ func ExchangeCodeForToken(req ExchangeCodeForTokenRequest) []byte {
 
 // ValidateAccessToken validates an access token and returns user info
 func ValidateAccessToken(req ValidateAccessTokenRequest) []byte {
-	fmt.Println("=== ValidateAccessToken called ===")
-	fmt.Println("Token:", req.Token)
-
 	if req.Token == "" {
-		fmt.Println("Token is empty")
 		response := ValidateAccessTokenResponse{Valid: false}
 		data, _ := json.Marshal(response)
 		return data
@@ -212,25 +225,19 @@ func ValidateAccessToken(req ValidateAccessTokenRequest) []byte {
 
 	token := getAccessToken(req.Token)
 	if token == nil {
-		fmt.Println("Token not found in storage")
 		response := ValidateAccessTokenResponse{Valid: false}
 		data, _ := json.Marshal(response)
 		return data
 	}
-
-	fmt.Printf("Token found: UserID=%s, ExpiresAt=%d\n", token.UserID, token.ExpiresAt)
 
 	// Check if token is expired
-	currentBlock := wasmx.GetCurrentBlock()
-	fmt.Printf("Current block height: %d\n", currentBlock.Height)
-	if int64(currentBlock.Height) > token.ExpiresAt {
-		fmt.Println("Token expired")
+	now := time.Now().Unix()
+	if now > token.ExpiresAt {
 		response := ValidateAccessTokenResponse{Valid: false}
 		data, _ := json.Marshal(response)
 		return data
 	}
 
-	fmt.Println("Token valid!")
 	response := ValidateAccessTokenResponse{
 		Valid:  true,
 		UserID: token.UserID,
@@ -261,8 +268,8 @@ func RefreshAccessToken(req RefreshAccessTokenRequest) []byte {
 	}
 
 	// Check if token is expired
-	currentBlock := wasmx.GetCurrentBlock()
-	if int64(currentBlock.Height) > refreshToken.ExpiresAt {
+	now := time.Now().Unix()
+	if now > refreshToken.ExpiresAt {
 		Revert("refresh_token expired")
 	}
 
@@ -284,8 +291,8 @@ func RefreshAccessToken(req RefreshAccessTokenRequest) []byte {
 
 	// Generate new access token
 	accessToken := generateAccessToken()
-	createdAt := int64(currentBlock.Height)
-	expiresAt := createdAt + ACCESS_TOKEN_DURATION_SECONDS
+	createdAt := now
+	expiresAt := now + ACCESS_TOKEN_DURATION_SECONDS
 
 	// Store new access token
 	accessTokenRecord := AccessToken{

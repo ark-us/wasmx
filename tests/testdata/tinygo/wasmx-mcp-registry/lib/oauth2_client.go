@@ -58,12 +58,7 @@ func callOAuth2ValidateSession(sessionID string) (string, error) {
 
 // ValidateAccessToken calls OAuth2 server to validate an access token and get user_id
 func callOAuth2ValidateAccessToken(token string) (string, error) {
-	fmt.Println("=== callOAuth2ValidateAccessToken ===")
-	fmt.Println("Token:", token)
-
 	oauth2Addr := getOAuth2ServerAddress()
-	fmt.Println("OAuth2 server address:", string(oauth2Addr))
-
 	req := map[string]interface{}{
 		"validate_access_token": map[string]string{
 			"token": token,
@@ -71,7 +66,6 @@ func callOAuth2ValidateAccessToken(token string) (string, error) {
 	}
 
 	calldata, _ := json.Marshal(req)
-	fmt.Println("Request calldata:", string(calldata))
 
 	value := sdkmath.NewInt(0)
 	gas := big.NewInt(10000000)
@@ -84,11 +78,7 @@ func callOAuth2ValidateAccessToken(token string) (string, error) {
 		MODULE_NAME,
 	)
 
-	fmt.Println("Call success:", success)
-	fmt.Println("Response data:", string(responseData))
-
 	if !success {
-		fmt.Println("OAuth2 server call failed")
 		return "", fmt.Errorf("OAuth2 server call failed")
 	}
 
@@ -98,14 +88,12 @@ func callOAuth2ValidateAccessToken(token string) (string, error) {
 	}
 
 	if err := json.Unmarshal(responseData, &response); err != nil {
-		fmt.Println("Failed to parse response:", err.Error())
 		return "", fmt.Errorf("failed to parse response: %s", err.Error())
 	}
 
 	fmt.Printf("Response parsed: Valid=%v, UserID=%s\n", response.Valid, response.UserID)
 
 	if !response.Valid {
-		fmt.Println("Token marked as invalid by OAuth2 server")
 		return "", fmt.Errorf("invalid token")
 	}
 

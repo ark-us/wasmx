@@ -202,16 +202,9 @@ func handleRoot(req *HttpRequestIncoming) HttpResponseWrap {
 }
 
 func handleSSE(req *HttpRequestIncoming) HttpResponseWrap {
-	fmt.Println("=== handleSSE called ===")
-	fmt.Println("Request method:", req.Method)
-	fmt.Println("Request data length:", len(req.Data))
-	fmt.Println("Request data (raw):", string(req.Data))
-
 	// Extract token from Authorization header
 	token := extractToken(req)
-	fmt.Println("Extracted token:", token)
 	if token == "" {
-		fmt.Println("No token found, returning 401")
 		return HttpResponseWrap{
 			Error: "",
 			Data: HttpResponse{
@@ -224,11 +217,8 @@ func handleSSE(req *HttpRequestIncoming) HttpResponseWrap {
 	}
 
 	// Validate token and get user_id
-	fmt.Println("Validating token...")
 	userID, valid := validateToken(token)
-	fmt.Println("Token valid:", valid, "UserID:", userID)
 	if !valid {
-		fmt.Println("Token invalid, returning 401")
 		return HttpResponseWrap{
 			Error: "",
 			Data: HttpResponse{
@@ -242,31 +232,21 @@ func handleSSE(req *HttpRequestIncoming) HttpResponseWrap {
 
 	// Get request body
 	body := req.Data
-	fmt.Println("Parsing JSON-RPC request from body...")
-
 	// Parse JSON-RPC request
 	var rpcReq JSONRPCRequest
 	if err := json.Unmarshal(body, &rpcReq); err != nil {
-		fmt.Println("Failed to parse JSON-RPC:", err.Error())
 		return sendJSONRPCError(nil, -32700, "Parse error: "+err.Error())
 	}
-
-	fmt.Println("JSON-RPC method:", rpcReq.Method)
-	fmt.Println("JSON-RPC id:", rpcReq.ID)
 
 	// Route based on JSON-RPC method
 	switch rpcReq.Method {
 	case "initialize":
-		fmt.Println("Calling handleInitialize...")
 		return handleInitialize(&rpcReq, userID)
 	case "tools/list":
-		fmt.Println("Calling handleToolsList...")
 		return handleToolsList(&rpcReq, userID)
 	case "tools/call":
-		fmt.Println("Calling handleToolsCall...")
 		return handleToolsCall(&rpcReq, userID)
 	default:
-		fmt.Println("Unknown method:", rpcReq.Method)
 		return sendJSONRPCError(rpcReq.ID, -32601, "Method not found: "+rpcReq.Method)
 	}
 }
@@ -342,13 +322,8 @@ func handleInitialize(req *JSONRPCRequest, userID string) HttpResponseWrap {
 }
 
 func handleToolsList(req *JSONRPCRequest, userID string) HttpResponseWrap {
-	fmt.Println("=== handleToolsList START ===")
-	fmt.Println("User ID:", userID)
-
 	// Get all registered contracts
 	addresses := getRegisteredList()
-	fmt.Println("Registered addresses count:", len(addresses))
-	fmt.Println("Registered addresses:", addresses)
 
 	LoggerInfo("handleToolsList called", []string{
 		"user_id", userID,
@@ -361,14 +336,12 @@ func handleToolsList(req *JSONRPCRequest, userID string) HttpResponseWrap {
 		fmt.Printf("Processing address %d: %s\n", i, addr)
 		registration := getContractRegistration(addr)
 		if registration == nil {
-			fmt.Println("  -> Registration is nil")
 			LoggerInfo("Registration not found", []string{"address", addr})
 			continue
 		}
 		fmt.Printf("  -> Active: %v, Tools count: %d\n", registration.Active, len(registration.Tools))
 
 		if !registration.Active {
-			fmt.Println("  -> Registration inactive, skipping")
 			LoggerInfo("Registration inactive", []string{"address", addr})
 			continue
 		}
@@ -392,7 +365,6 @@ func handleToolsList(req *JSONRPCRequest, userID string) HttpResponseWrap {
 		}
 	}
 
-	fmt.Println("Total tools collected:", len(allTools))
 	LoggerInfo("Returning tools list", []string{
 		"total_tools", fmt.Sprintf("%d", len(allTools)),
 	})
@@ -400,11 +372,6 @@ func handleToolsList(req *JSONRPCRequest, userID string) HttpResponseWrap {
 	result := map[string]interface{}{
 		"tools": allTools,
 	}
-
-	resultJSON, _ := json.Marshal(result)
-	fmt.Println("Result JSON:", string(resultJSON))
-	fmt.Println("=== handleToolsList END ===")
-
 	return sendJSONRPCResponse(req.ID, result)
 }
 
@@ -616,7 +583,7 @@ func handleOpenAPISpec(req *HttpRequestIncoming) HttpResponseWrap {
 	}
 
 	openapi := map[string]interface{}{
-		"openapi": "3.0.0",
+		"openapi": "3.1.0",
 		"info": map[string]interface{}{
 			"title":       "MCP Tools Registry",
 			"description": "API for accessing blockchain-based MCP tools",
