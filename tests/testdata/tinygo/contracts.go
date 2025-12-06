@@ -28,4 +28,7 @@ var (
 
 	//go:embed mcp-userdata.wasm
 	MCPUserdata []byte
+
+	//go:embed wasmx-mcp-search.wasm
+	MCPSearch []byte
 )

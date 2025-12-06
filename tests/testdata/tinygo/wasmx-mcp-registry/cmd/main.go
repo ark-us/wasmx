@@ -92,10 +92,6 @@ func main() {
 		return
 
 	// Server management operations
-	case calldata.GetParams != nil:
-		res := lib.GetParams(*calldata.GetParams)
-		wasmx.Finish(res)
-		return
 	case calldata.RegisterHttpRoutes != nil:
 		res := lib.RegisterHttpRoutes(calldata.RegisterHttpRoutes)
 		wasmx.Finish(res)

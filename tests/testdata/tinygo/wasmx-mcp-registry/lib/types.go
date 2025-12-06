@@ -11,8 +11,7 @@ const (
 	STORAGE_REGISTERED_CONTRACTS = "registered_contracts" // []string of addresses
 	STORAGE_CONTRACT_PREFIX      = "contract:"            // contract:{address} -> ContractRegistration
 	STORAGE_ROUTE_PREFIX         = "route:"               // route:{path} -> address
-	STORAGE_PARAMS               = "params"
-	STORAGE_INIT_DATA            = "init_data" // InitGenesisRequest for RoleChanged
+	STORAGE_INIT_DATA            = "init_data"            // InitGenesisRequest for RoleChanged
 )
 
 // ContractRegistration stores metadata for each registered MCP contract
@@ -56,7 +55,6 @@ type CallData struct {
 	// Server management
 	RegisterHttpRoutes *RegisterHttpRoutesRequest `json:"register_http_routes,omitempty"`
 	InitGenesis        *InitGenesisRequest        `json:"init_genesis,omitempty"`
-	GetParams          *GetParamsRequest          `json:"get_params,omitempty"`
 	RoleChanged        *wasmx.RolesChangedHook    `json:"RoleChanged,omitempty"`
 
 	// HTTP request handling (called by HTTP server registry)
@@ -97,12 +95,8 @@ type RegisterHttpRoutesRequest struct{}
 
 // InitGenesisRequest for initializing genesis state
 type InitGenesisRequest struct {
-	Params           ServerParams                 `json:"params"`
 	InitialContracts []RegisterMCPContractRequest `json:"initial_contracts,omitempty"`
 }
-
-// GetParamsRequest for getting server parameters
-type GetParamsRequest struct{}
 
 // ConnectDatabaseRequest for connecting to PostgreSQL
 type ConnectDatabaseRequest struct {
@@ -112,16 +106,6 @@ type ConnectDatabaseRequest struct {
 
 // InitTablesRequest for initializing database tables
 type InitTablesRequest struct{}
-
-// ServerParams stores server configuration
-type ServerParams struct {
-	ClientID     string   `json:"client_id"`
-	ClientSecret string   `json:"client_secret"`
-	RedirectURIs []string `json:"redirect_uris"`
-	Scopes       []string `json:"scopes"`
-	DbConnection string   `json:"db_connection"` // PostgreSQL connection string
-	DbName       string   `json:"db_name"`       // Database name
-}
 
 // MCP Protocol types (from current MCP)
 type JSONRPCRequest struct {

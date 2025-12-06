@@ -91,16 +91,6 @@ var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 func mcpRegistryInitMsg() []byte {
 	initGenesis := map[string]interface{}{
 		"init_genesis": map[string]interface{}{
-			"params": map[string]interface{}{
-				"client_id":     "",
-				"client_secret": "",
-				"redirect_uris": []string{
-					"https://chat.openai.com/aip/callback",
-					"https://chatgpt.com/connector_platform_oauth_redirect",
-					"http://localhost:3000/callback",
-				},
-				"scopes": []string{"read", "write", "tools"},
-			},
 			"initial_contracts": []interface{}{},
 		},
 	}

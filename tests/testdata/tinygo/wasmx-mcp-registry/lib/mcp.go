@@ -15,12 +15,7 @@ func InitGenesis(req InitGenesisRequest) []byte {
 	initDataBz, _ := json.Marshal(req)
 	wasmx.StorageStore([]byte(STORAGE_INIT_DATA), initDataBz)
 
-	// Store the OAuth client configuration for quick access
-	paramsBz, _ := json.Marshal(req.Params)
-	wasmx.StorageStore([]byte(STORAGE_PARAMS), paramsBz)
-
 	LoggerInfo("MCP Registry init data stored", []string{
-		"redirect_uris_count", fmt.Sprintf("%d", len(req.Params.RedirectURIs)),
 		"initial_contracts_count", fmt.Sprintf("%d", len(req.InitialContracts)),
 	})
 
@@ -93,14 +88,6 @@ func InitializeTables() []byte {
 	return []byte(`{"success": true}`)
 }
 
-func GetParams(req GetParamsRequest) []byte {
-	paramsBz := wasmx.StorageLoad([]byte(STORAGE_PARAMS))
-	if len(paramsBz) == 0 {
-		return []byte(`{"error": "params not initialized"}`)
-	}
-	return paramsBz
-}
-
 func RegisterHttpRoutes(req *RegisterHttpRoutesRequest) []byte {
 	self := string(wasmx.GetAddress())
 	LoggerInfo("RegisterHttpRoutes called", []string{"self", self})
@@ -135,18 +122,6 @@ func RegisterHttpRoutes(req *RegisterHttpRoutesRequest) []byte {
 
 	LoggerInfo("MCP Registry HTTP routes registered", []string{"registry", string(httpRegistryAddr)})
 	return []byte(`{"success": true}`)
-}
-
-func getParams() *ServerParams {
-	paramsBz := wasmx.StorageLoad([]byte(STORAGE_PARAMS))
-	if len(paramsBz) == 0 {
-		return nil
-	}
-	var params ServerParams
-	if err := json.Unmarshal(paramsBz, &params); err != nil {
-		return nil
-	}
-	return &params
 }
 
 func extractToken(req *HttpRequestIncoming) string {
@@ -478,9 +453,9 @@ func handleToolsCall(req *JSONRPCRequest, userID string) HttpResponseWrap {
 	// Call the contract that provides this tool
 	executeMsg := map[string]interface{}{
 		"execute_tool": map[string]interface{}{
-			"tool_name":  toolName,
-			"arguments":  arguments,
-			"user_id":    userID,
+			"tool_name": toolName,
+			"arguments": arguments,
+			"user_id":   userID,
 		},
 	}
 	msgBz, _ := json.Marshal(executeMsg)
@@ -525,35 +500,25 @@ func handleAIPluginManifest(req *HttpRequestIncoming) HttpResponseWrap {
 	}
 	baseURL := fmt.Sprintf("%s://%s", scheme, host)
 
-	params := getParams()
-	if params == nil {
-		return sendJSONResponse(map[string]interface{}{
-			"error": "server not configured",
-		}, 500)
-	}
-
 	manifest := map[string]interface{}{
-		"schema_version": "v1",
-		"name_for_human":  "MCP Tools Registry",
-		"name_for_model":  "mcp_tools",
+		"schema_version":        "v1",
+		"name_for_human":        "MCP Tools Registry",
+		"name_for_model":        "mcp_tools",
 		"description_for_human": "Access to blockchain-based MCP tools for executing code and managing data",
 		"description_for_model": "Provides access to various MCP (Model Context Protocol) tools running on blockchain. Includes code execution, data management, and other utilities.",
 		"auth": map[string]interface{}{
-			"type": "oauth",
-			"client_url": baseURL + "/oauth/authorize",
-			"scope": "",
-			"authorization_url": baseURL + "/oauth/token",
+			"type":                       "oauth",
+			"client_url":                 baseURL + "/oauth/authorize",
+			"scope":                      "",
+			"authorization_url":          baseURL + "/oauth/token",
 			"authorization_content_type": "application/x-www-form-urlencoded",
-			"verification_tokens": map[string]interface{}{
-				"openai": params.ClientID,
-			},
 		},
 		"api": map[string]interface{}{
 			"type": "openapi",
 			"url":  baseURL + "/openapi.json",
 		},
-		"logo_url": baseURL + "/logo.png",
-		"contact_email": "support@provable.dev",
+		"logo_url":       baseURL + "/logo.png",
+		"contact_email":  "contact@mail.provable.dev",
 		"legal_info_url": baseURL + "/legal",
 	}
 
@@ -594,10 +559,10 @@ func handleOpenAPISpec(req *HttpRequestIncoming) HttpResponseWrap {
 			if props, ok := tool.InputSchema["properties"].(map[string]interface{}); ok {
 				for propName, propSchema := range props {
 					param := map[string]interface{}{
-						"name": propName,
-						"in": "query",
+						"name":     propName,
+						"in":       "query",
 						"required": false,
-						"schema": propSchema,
+						"schema":   propSchema,
 					}
 					// Check if this property is required
 					if required, ok := tool.InputSchema["required"].([]interface{}); ok {
@@ -615,7 +580,7 @@ func handleOpenAPISpec(req *HttpRequestIncoming) HttpResponseWrap {
 			paths[pathKey] = map[string]interface{}{
 				"post": map[string]interface{}{
 					"operationId": tool.Name,
-					"summary": tool.Description,
+					"summary":     tool.Description,
 					"description": tool.Description,
 					"requestBody": map[string]interface{}{
 						"required": true,
@@ -653,9 +618,9 @@ func handleOpenAPISpec(req *HttpRequestIncoming) HttpResponseWrap {
 	openapi := map[string]interface{}{
 		"openapi": "3.0.0",
 		"info": map[string]interface{}{
-			"title": "MCP Tools Registry",
+			"title":       "MCP Tools Registry",
 			"description": "API for accessing blockchain-based MCP tools",
-			"version": "1.0.0",
+			"version":     "1.0.0",
 		},
 		"servers": []map[string]interface{}{
 			{
@@ -765,9 +730,9 @@ func handleToolExecution(req *HttpRequestIncoming, path string) HttpResponseWrap
 	// Call the contract that provides this tool
 	executeMsg := map[string]interface{}{
 		"execute_tool": map[string]interface{}{
-			"tool_name":  toolName,
-			"arguments":  arguments,
-			"user_id":    userID,
+			"tool_name": toolName,
+			"arguments": arguments,
+			"user_id":   userID,
 		},
 	}
 	msgBz, _ := json.Marshal(executeMsg)
