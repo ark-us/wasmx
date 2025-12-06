@@ -115,7 +115,7 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 				"https://chatgpt.com/connector_platform_oauth_redirect",
 				"http://localhost:3000/callback",
 			},
-			Scopes: []string{"read", "write", "tools"},
+			Scopes: []string{"read", "tools"},
 		},
 	}
 	registerClientData, err := json.Marshal(registerClientMsg)
@@ -181,6 +181,9 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 	fmt.Println("OAuth Authorize:   http://localhost:8080/oauth/authorize")
 	fmt.Println("OAuth Token:       http://localhost:8080/oauth/token")
 	fmt.Println("MCP SSE Endpoint:  http://localhost:8080/sse")
+	fmt.Println("OpenAPI schema:  http://localhost:8080/openapi.json")
+	fmt.Println("OpenAPI schema:  http://localhost:8080/.well-known/ai-plugin.json")
+
 	fmt.Println("==========================")
 
 	suite.T().Log("MCP registry server running on :8080 with registered tool contracts... Press Ctrl+C to exit")

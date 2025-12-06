@@ -22,6 +22,8 @@ cd mcp-execute && GOWORK=off tinygo build -o ../mcp-execute.wasm -no-debug -sche
 
 cd mcp-userdata && GOWORK=off tinygo build -o ../mcp-userdata.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd && cd ..
 
+cd wasmx-mcp-search && GOWORK=off tinygo build -o ../wasmx-mcp-search.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd && cd ..
+
 tinygo build -o nondeterm.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./add/cmd1
 
 tinygo build -o determ.wasm -no-debug -scheduler=none -gc=leaking -target=wasi ./add/cmd2
