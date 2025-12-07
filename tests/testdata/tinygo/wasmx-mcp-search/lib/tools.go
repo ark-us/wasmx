@@ -94,15 +94,16 @@ func searchKnowledge(userID string, arguments map[string]interface{}) ExecuteToo
 func generateQueryEmbedding(query string) []float32 {
 	LoggerInfo("Generating embedding for query", []string{"query", query})
 
-	// Get the absolute path to the embedding script
-	// In production, this should be configurable via InitGenesis
-	// Using local model (no API key required)
-	scriptPath := "/Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/wasmx-mcp-search/scripts/generate_embedding_local.py"
+	// Load script path from init data environment variables
+	initData := loadInitData()
+	scriptsPath := initData.EnvironmentVars["SCRIPTS_FOLDER"]
+	if scriptsPath == "" {
+		// Fallback to default path if not configured
+		scriptsPath = "./tests/testdata/tinygo/wasmx-mcp-search/scripts"
+	}
+	scriptPath := scriptsPath + "/generate_embedding_local.py"
 
-	// Just run the Python script directly - assume dependencies are already installed
-	// User should run: pip install -r requirements.txt before starting the test
-	cmdStr := fmt.Sprintf("python3 %s %s", scriptPath, query)
-	LoggerInfo("About to execute embedding script", []string{"script", scriptPath, "query", query, "full_command", cmdStr})
+	LoggerInfo("About to execute embedding script", []string{"script", scriptPath, "query", query})
 
 	result, err := wasmxcore.ExecuteCliCommand("python3", []string{scriptPath, query}, "")
 

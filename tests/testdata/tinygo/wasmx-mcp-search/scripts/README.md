@@ -6,7 +6,7 @@ This directory contains Python scripts for generating text embeddings used by th
 
 1. Install dependencies (sentence-transformers will download the model on first use):
 ```bash
-cd /Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/wasmx-mcp-search/scripts
+cd ./wasmx/tests/testdata/tinygo/wasmx-mcp-search/scripts
 pip install -r requirements.txt
 ```
 

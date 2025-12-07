@@ -104,3 +104,15 @@ func OnRoleChanged() []byte {
 
 	return []byte(`{"success": true}`)
 }
+
+// loadInitData loads the stored initialization data
+func loadInitData() InitGenesisRequest {
+	initDataBz := wasmx.StorageLoad([]byte(STORAGE_INIT_DATA))
+	if len(initDataBz) == 0 {
+		return InitGenesisRequest{}
+	}
+
+	var initData InitGenesisRequest
+	json.Unmarshal(initDataBz, &initData)
+	return initData
+}

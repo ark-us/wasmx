@@ -30,7 +30,14 @@ func ExecuteTool(req ExecuteToolRequest) []byte {
 
 // executePy executes the Python hello.py script
 func executePy(arguments map[string]interface{}) ExecuteToolResponse {
-	scriptPath := "/Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/mcp/hello.py"
+	// Load script path from init data environment variables
+	initData := loadInitData()
+	scriptsPath := initData.EnvironmentVars["SCRIPTS_FOLDER"]
+	if scriptsPath == "" {
+		// Fallback to default path if not configured
+		scriptsPath = "./tests/testdata/tinygo/mcp-execute"
+	}
+	scriptPath := scriptsPath + "/hello.py"
 
 	result, err := wasmxcore.ExecuteCliCommand("python3", []string{scriptPath}, "")
 	if err != nil {

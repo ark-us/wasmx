@@ -25,10 +25,19 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
+	// Get scripts folder from environment or use default
+	scriptsFolder := os.Getenv("SCRIPTS_FOLDER")
+	if scriptsFolder == "" {
+		scriptsFolder = "./tests/testdata/tinygo/wasmx-mcp-search/scripts"
+	}
+
 	// Prepare init data for mcp-execute contract
 	executeInitData := &MCPContractInitGenesis{
 		InitGenesis: &MCPContractInitGenesisRequest{
 			RoutePrefix: "/tools/execute",
+			EnvironmentVars: map[string]string{
+				"SCRIPTS_FOLDER": scriptsFolder,
+			},
 		},
 	}
 	executeInitDataJSON, _ := json.Marshal(executeInitData)
@@ -79,6 +88,9 @@ func (suite *KeeperTestSuite) TestMCPRegistry() {
 			RoutePrefix:      "/tools/search",
 			SearchConfig:     searchConfig,
 			ToolDescriptions: toolDescriptions,
+			EnvironmentVars: map[string]string{
+				"SCRIPTS_FOLDER": scriptsFolder,
+			},
 		},
 	}
 	searchInitDataJSON, _ := json.Marshal(searchInitData)
@@ -226,12 +238,21 @@ func (suite *KeeperTestSuite) TestMCPSearch() {
 	// Build tool descriptions for AI agents
 	toolDescriptions := buildToolDescriptions()
 
+	// Get scripts folder from environment or use default
+	scriptsFolder := os.Getenv("SCRIPTS_FOLDER")
+	if scriptsFolder == "" {
+		scriptsFolder = "./tests/testdata/tinygo/wasmx-mcp-search/scripts"
+	}
+
 	// Prepare init data for mcp-search contract
 	searchInitData := &MCPContractInitGenesis{
 		InitGenesis: &MCPSearchInitGenesisRequest{
 			RoutePrefix:      "/tools/search",
 			SearchConfig:     searchConfig,
 			ToolDescriptions: toolDescriptions,
+			EnvironmentVars: map[string]string{
+				"SCRIPTS_FOLDER": scriptsFolder,
+			},
 		},
 	}
 	searchInitDataJSON, _ := json.Marshal(searchInitData)
@@ -347,13 +368,15 @@ type MCPContractInitGenesis struct {
 }
 
 type MCPContractInitGenesisRequest struct {
-	RoutePrefix string `json:"route_prefix"`
+	RoutePrefix     string            `json:"route_prefix"`
+	EnvironmentVars map[string]string `json:"environment_vars"`
 }
 
 type MCPSearchInitGenesisRequest struct {
-	RoutePrefix      string           `json:"route_prefix"`
-	SearchConfig     SearchConfig     `json:"search_config"`
-	ToolDescriptions ToolDescriptions `json:"tool_descriptions"`
+	RoutePrefix      string            `json:"route_prefix"`
+	SearchConfig     SearchConfig      `json:"search_config"`
+	ToolDescriptions ToolDescriptions  `json:"tool_descriptions"`
+	EnvironmentVars  map[string]string `json:"environment_vars"`
 }
 
 type SearchConfig struct {

@@ -21,7 +21,8 @@ type CallData struct {
 
 // InitGenesisRequest for storing initialization data
 type InitGenesisRequest struct {
-	RoutePrefix string `json:"route_prefix"`
+	RoutePrefix     string            `json:"route_prefix"`
+	EnvironmentVars map[string]string `json:"environment_vars,omitempty"` // environment variables for CLI commands
 }
 
 // ExecuteToolRequest represents a request to execute a tool

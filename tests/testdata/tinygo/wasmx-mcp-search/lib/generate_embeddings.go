@@ -12,9 +12,6 @@ import (
 func GenerateEmbeddings(req GenerateEmbeddingsRequest) []byte {
 	LoggerInfo("GenerateEmbeddings called", []string{"items_count", fmt.Sprintf("%d", len(req.Items))})
 
-	// Path to the bulk embedding generation script
-	scriptPath := "/Users/user/dev/blockchain/wasmx/tests/testdata/tinygo/wasmx-mcp-search/scripts/generate_bulk_embeddings.py"
-
 	// Load init data to get database connection parameters
 	initDataBz := wasmx.StorageLoad([]byte(STORAGE_INIT_DATA))
 	if len(initDataBz) == 0 {
@@ -25,6 +22,14 @@ func GenerateEmbeddings(req GenerateEmbeddingsRequest) []byte {
 	if err := json.Unmarshal(initDataBz, &initData); err != nil {
 		return createErrorResponse("Failed to unmarshal init data", err.Error())
 	}
+
+	// Load script path from environment variables
+	scriptsPath := initData.EnvironmentVars["SCRIPTS_FOLDER"]
+	if scriptsPath == "" {
+		// Fallback to default path if not configured
+		scriptsPath = "./tests/testdata/tinygo/wasmx-mcp-search/scripts"
+	}
+	scriptPath := scriptsPath + "/generate_bulk_embeddings.py"
 
 	// Build environment variables map
 	envVars := make(map[string]string)
