@@ -462,6 +462,10 @@ func handleAIPluginManifest(req *HttpRequestIncoming) HttpResponseWrap {
 	host := ""
 	if len(req.Header["X-Forwarded-Host"]) > 0 {
 		host = req.Header["X-Forwarded-Host"][0]
+		// Handle comma-separated hosts (take first one)
+		if idx := strings.Index(host, ","); idx != -1 {
+			host = strings.TrimSpace(host[:idx])
+		}
 	}
 	if host == "" && len(req.Header["Host"]) > 0 {
 		host = req.Header["Host"][0]
@@ -502,6 +506,10 @@ func handleOpenAPISpec(req *HttpRequestIncoming) HttpResponseWrap {
 	host := ""
 	if len(req.Header["X-Forwarded-Host"]) > 0 {
 		host = req.Header["X-Forwarded-Host"][0]
+		// Handle comma-separated hosts (take first one)
+		if idx := strings.Index(host, ","); idx != -1 {
+			host = strings.TrimSpace(host[:idx])
+		}
 	}
 	if host == "" && len(req.Header["Host"]) > 0 {
 		host = req.Header["Host"][0]
