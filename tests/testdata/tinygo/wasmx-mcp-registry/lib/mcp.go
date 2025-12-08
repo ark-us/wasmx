@@ -594,8 +594,8 @@ func handleOpenAPISpec(req *HttpRequestIncoming) HttpResponseWrap {
 	openapi := map[string]interface{}{
 		"openapi": "3.1.0",
 		"info": map[string]interface{}{
-			"title":       "MCP Tools Registry",
-			"description": "API for accessing blockchain-based MCP tools",
+			"title":       "Provable MCP Registry",
+			"description": "API for accessing MCP tools, built on WASM-based blockchain tech wasmx.provable.dev, by provable.dev",
 			"version":     "1.0.0",
 		},
 		"servers": []map[string]interface{}{
