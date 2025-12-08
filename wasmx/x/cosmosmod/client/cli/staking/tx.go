@@ -28,6 +28,7 @@ import (
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	"github.com/loredanacirstea/wasmx/multichain"
 	cmsrvconfig "github.com/loredanacirstea/wasmx/server/config"
+	"github.com/loredanacirstea/wasmx/x/cosmosmod/client/cli/utils"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
@@ -103,7 +104,7 @@ where we can get the pubkey using "%s tendermint show-validator"
 			customValCdc := mcodec.NewValBech32Codec(mcctx.Config.Bech32PrefixValAddr, mcodec.NewAddressPrefixedFromVal)
 			customValCodec := mcodec.MustUnwrapValBech32Codec(customValCdc)
 
-			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			_, appCreator := utils.CreateMockAppCreator(wasmVmMeta, appFactory, 0)
 			chainapp := appCreator(chainId, mcctx.Config)
 			defer chainapp.Teardown()
 
@@ -198,7 +199,7 @@ func NewEditValidatorCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec address.Codec
 
 			chainId := mcctx.ClientCtx.ChainID
 
-			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			_, appCreator := utils.CreateMockAppCreator(wasmVmMeta, appFactory, 0)
 			chainapp := appCreator(chainId, mcctx.Config)
 			defer chainapp.Teardown()
 
@@ -246,7 +247,7 @@ $ %s tx staking delegate cosmosvalopers1l2rsakp388kuv9k8qzq6lrm9taddae7fpx59wm 1
 
 			chainId := mcctx.ClientCtx.ChainID
 
-			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			_, appCreator := utils.CreateMockAppCreator(wasmVmMeta, appFactory, 0)
 			chainapp := appCreator(chainId, mcctx.Config)
 			defer chainapp.Teardown()
 
@@ -330,7 +331,7 @@ $ %s tx staking redelegate cosmosvalopers1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj
 
 			chainId := mcctx.ClientCtx.ChainID
 
-			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			_, appCreator := utils.CreateMockAppCreator(wasmVmMeta, appFactory, 0)
 			chainapp := appCreator(chainId, mcctx.Config)
 			defer chainapp.Teardown()
 
@@ -394,7 +395,7 @@ $ %s tx staking unbond %s1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj 100stake --from
 
 			chainId := mcctx.ClientCtx.ChainID
 
-			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			_, appCreator := utils.CreateMockAppCreator(wasmVmMeta, appFactory, 0)
 			chainapp := appCreator(chainId, mcctx.Config)
 			defer chainapp.Teardown()
 
@@ -465,7 +466,7 @@ $ %s tx staking cancel-unbond %s1gghjut3ccd8ay0zduzj64hwre2fxs9ldmqhffj 100stake
 
 			chainId := mcctx.ClientCtx.ChainID
 
-			_, appCreator := createMockAppCreator(wasmVmMeta, appFactory, 0)
+			_, appCreator := utils.CreateMockAppCreator(wasmVmMeta, appFactory, 0)
 			chainapp := appCreator(chainId, mcctx.Config)
 			defer chainapp.Teardown()
 

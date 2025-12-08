@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/math"
@@ -15,11 +14,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
-
-	mcfg "github.com/loredanacirstea/wasmx/config"
-	menc "github.com/loredanacirstea/wasmx/encoding"
-	"github.com/loredanacirstea/wasmx/multichain"
-	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 // validator struct to define the fields of the validator
@@ -130,13 +124,4 @@ func buildCommissionRates(rateStr, maxRateStr, maxChangeRateStr string) (commiss
 	commission = types.NewCommissionRates(rate, maxRate, maxChangeRate)
 
 	return commission, nil
-}
-
-func createMockAppCreator(wasmVmMeta memc.IWasmVmMeta, appCreatorFactory multichain.NewAppCreator, index int) (*mcfg.MultiChainApp, func(chainId string, chainCfg *menc.ChainConfig) mcfg.MythosApp) {
-	userHomeDir, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
-	}
-	tempNodeHome := filepath.Join(userHomeDir, fmt.Sprintf(".mythostmp_%d", index))
-	return multichain.CreateNoLoggerAppCreator(wasmVmMeta, appCreatorFactory, tempNodeHome)
 }

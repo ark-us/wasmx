@@ -27,7 +27,7 @@ func NewTxCmd(wasmVmMeta memc.IWasmVmMeta, valAddrCodec, ac address.Codec, appCr
 	txCmd.AddCommand(
 		bank.NewTxCmd(ac),
 		staking.NewTxCmd(wasmVmMeta, valAddrCodec, ac, appCreator),
-		gov.NewTxCmd(ac),
+		gov.NewTxCmd(wasmVmMeta, ac, appCreator),
 	)
 
 	return txCmd

@@ -21,6 +21,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
 	"github.com/loredanacirstea/wasmx/multichain"
+	"github.com/loredanacirstea/wasmx/x/cosmosmod/client/cli/utils"
+	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
 // NewTxCmd returns the transaction commands for this module
@@ -28,7 +30,7 @@ import (
 // it contains a slice of legacy "proposal" child commands. These commands are respective
 // to the proposal type handlers that are implemented in other modules but are mounted
 // under the governance CLI (eg. parameter change proposals).
-func NewTxCmd(ac address.Codec) *cobra.Command {
+func NewTxCmd(wasmVmMeta memc.IWasmVmMeta, ac address.Codec, appCreator multichain.NewAppCreator) *cobra.Command {
 	govTxCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Governance transactions subcommands",
@@ -41,7 +43,7 @@ func NewTxCmd(ac address.Codec) *cobra.Command {
 		NewCmdDeposit(ac),
 		NewCmdVote(ac),
 		NewCmdWeightedVote(ac),
-		NewCmdSubmitProposal(ac),
+		NewCmdSubmitProposal(wasmVmMeta, ac, appCreator),
 		cli.NewCmdDraftProposal(),
 		NewCmdCancelProposal(ac),
 	)
@@ -50,7 +52,7 @@ func NewTxCmd(ac address.Codec) *cobra.Command {
 }
 
 // NewCmdSubmitProposal implements submitting a proposal transaction command.
-func NewCmdSubmitProposal(ac address.Codec) *cobra.Command {
+func NewCmdSubmitProposal(wasmVmMeta memc.IWasmVmMeta, ac address.Codec, appFactory multichain.NewAppCreator) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "submit-proposal [path/to/proposal.json]",
 		Short: "Submit a proposal along with some messages, metadata and deposit",
@@ -106,12 +108,16 @@ metadata example:
 				return err
 			}
 
-			proposal, msgs, deposit, err := parseSubmitProposal(mcctx.ClientCtx.Codec, args[0])
+			chainId := mcctx.ClientCtx.ChainID
+			_, appCreator := utils.CreateMockAppCreator(wasmVmMeta, appFactory, 0)
+			chainapp := appCreator(chainId, mcctx.Config)
+			defer chainapp.Teardown()
+
+			proposal, msgs, deposit, err := parseSubmitProposal(chainapp.AppCodec(), args[0])
 			if err != nil {
 				return err
 			}
 			fromAddr := mcctx.CustomAddrCodec.BytesToAccAddressPrefixed(mcctx.ClientCtx.GetFromAddress())
-
 			msg, err := v1.NewMsgSubmitProposal(msgs, deposit, fromAddr.String(), proposal.Metadata, proposal.Title, proposal.Summary, proposal.Expedited)
 			if err != nil {
 				return fmt.Errorf("invalid message: %w", err)
@@ -120,7 +126,6 @@ metadata example:
 			if err != nil {
 				return err
 			}
-
 			return tx.GenerateOrBroadcastTxCLI(mcctx.ClientCtx, cmd.Flags(), msgMultiChain)
 		},
 	}
