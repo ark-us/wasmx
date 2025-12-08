@@ -7,7 +7,6 @@ import (
 	"math/big"
 
 	sdkmath "cosmossdk.io/math"
-	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
@@ -255,19 +254,25 @@ func wasmxExecuteCosmosMsg(_context interface{}, rnh memc.RuntimeHandler, params
 	if err != nil {
 		return nil, err
 	}
-	var msg cdctypes.Any
-	ctx.CosmosHandler.JSONCodec().UnmarshalJSON(reqbz, &msg)
 
-	// TODO ExecuteCosmosMsg and ExecuteCosmosQuery may trigger subcals
-	// which mess up subcall hooks
-	evs, _, err := ctx.CosmosHandler.ExecuteCosmosMsgAny(&msg)
 	errmsg := ""
 	success := 0
+
+	var msg sdk.Msg
+	err = ctx.CosmosHandler.Codec().UnmarshalInterfaceJSON(reqbz, &msg)
 	if err != nil {
 		errmsg = err.Error()
 		success = 1
 	} else {
-		ctx.Ctx.EventManager().EmitEvents(evs)
+		// TODO ExecuteCosmosMsg and ExecuteCosmosQuery may trigger subcals
+		// which mess up subcall hooks
+		evs, _, err := ctx.CosmosHandler.ExecuteCosmosMsg(msg)
+		if err != nil {
+			errmsg = err.Error()
+			success = 1
+		} else {
+			ctx.Ctx.EventManager().EmitEvents(evs)
+		}
 	}
 	response := vmtypes.CallResponse{
 		Success: uint8(success),
