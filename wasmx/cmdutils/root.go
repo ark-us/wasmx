@@ -28,7 +28,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
@@ -63,6 +62,7 @@ import (
 	mcfg "github.com/loredanacirstea/wasmx/config"
 	mctx "github.com/loredanacirstea/wasmx/context"
 	appencoding "github.com/loredanacirstea/wasmx/encoding"
+	"github.com/loredanacirstea/wasmx/keys"
 	"github.com/loredanacirstea/wasmx/multichain"
 	server "github.com/loredanacirstea/wasmx/server"
 	serverconfig "github.com/loredanacirstea/wasmx/server/config"
@@ -86,6 +86,7 @@ func NewRootCmd(wasmVmMeta memc.IWasmVmMeta, defaultNodeHome string, initializeD
 	if err != nil {
 		panic(err)
 	}
+	SetSdkConfig(chainCfg)
 	encodingConfig := appencoding.MakeEncodingConfig(chainCfg, app.GetCustomSigners())
 	addrcodec := mcodec.MustUnwrapAccBech32Codec(encodingConfig.TxConfig.SigningContext().AddressCodec())
 	initClientCtx := client.Context{}.
@@ -504,6 +505,16 @@ func extendUnsafeResetAllCmd(rootCmd *cobra.Command) {
 			}
 		}
 	}
+}
+
+func SetSdkConfig(chainCfg *appencoding.ChainConfig) {
+	config := sdk.GetConfig()
+	config.SetBech32PrefixForAccount(chainCfg.Bech32PrefixAccAddr, chainCfg.Bech32PrefixAccPub)
+	config.SetBech32PrefixForValidator(chainCfg.Bech32PrefixValAddr, chainCfg.Bech32PrefixValPub)
+	config.SetBech32PrefixForConsensusNode(chainCfg.Bech32PrefixConsAddr, chainCfg.Bech32PrefixConsPub)
+	// config.SetPurpose(yourPurpose)
+	// config.SetCoinType(yourCoinType)
+	// config.Seal()
 }
 
 var tempDir = func(defaultNodeHome string) string {
