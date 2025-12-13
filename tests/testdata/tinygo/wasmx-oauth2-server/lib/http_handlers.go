@@ -383,14 +383,53 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
         .hidden { display: none; }
         label { display: block; margin-top: 10px; }
     </style>
+</head>
+<body>
+    <h2>Login</h2>
+    <div id="error" class="error"></div>
+    <div id="success" class="success"></div>
+
+    <form id="loginForm" method="POST" action="/login">
+        <input type="email" id="email" name="email" placeholder="Email" required />
+        <input type="password" id="password" name="password" placeholder="Password" required />
+        <input type="hidden" id="redirect" name="redirect" value="` + escapedRedirect + `" />
+        <button type="submit">Login with Password</button>
+    </form>
+
+    <div id="blockchainSection" class="blockchain-section">
+        <h3>WasmX Blockchain Login</h3>
+        <p>You have blockchain keys registered for this account.</p>
+        <label for="pin">Enter your 4-digit PIN:</label>
+        <input type="password" id="pin" pattern="[0-9]{4}" maxlength="4" placeholder="4-digit PIN" />
+        <button id="wasmxBtn" type="button" class="wasmx-btn">
+            Login with WasmX
+        </button>
+    </div>
+
+    <p style="margin-top: 20px; text-align: center;">
+        Don't have an account? <a href="/register">Register here</a>
+    </p>
+
     <script type="module">
-        import { sha256 } from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/+esm';
+        import { sha256 } from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/sha256/+esm';
+
+        // Check if user has blockchain keys when email is entered
+        function checkBlockchainKeys() {
+            const email = document.getElementById('email').value;
+            const blockchainSection = document.getElementById('blockchainSection');
+
+            if (email && localStorage.getItem('wasmx_encrypted_key_' + email)) {
+                blockchainSection.style.display = 'block';
+            } else {
+                blockchainSection.style.display = 'none';
+            }
+        }
 
         // Derive decryption key from PIN using PBKDF2
         async function deriveKeyFromPIN(pin) {
             const enc = new TextEncoder();
             const pinData = enc.encode(pin);
-            const salt = enc.encode('wasmx-identity-v1'); // Same fixed salt as registration
+            const salt = enc.encode('wasmx-identity-v1');
 
             const keyMaterial = await crypto.subtle.importKey(
                 'raw',
@@ -417,11 +456,7 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
         // Decrypt private key with PIN-derived key
         async function decryptPrivateKey(encryptedHex, pin) {
             const key = await deriveKeyFromPIN(pin);
-
-            // Convert hex to bytes
             const encryptedBytes = new Uint8Array(encryptedHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-
-            // Extract IV (first 12 bytes) and ciphertext
             const iv = encryptedBytes.slice(0, 12);
             const ciphertext = encryptedBytes.slice(12);
 
@@ -439,23 +474,8 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
             }
         }
 
-        // Check if user has blockchain keys when email is entered
-        window.checkBlockchainKeys = function() {
-            const email = document.getElementById('email').value;
-            const blockchainSection = document.getElementById('blockchainSection');
-            const wasmxBtn = document.getElementById('wasmxBtn');
-
-            if (email && localStorage.getItem('wasmx_encrypted_key_' + email)) {
-                blockchainSection.style.display = 'block';
-                wasmxBtn.classList.remove('hidden');
-            } else {
-                blockchainSection.style.display = 'none';
-                wasmxBtn.classList.add('hidden');
-            }
-        };
-
         // Handle traditional login
-        window.handleTraditionalLogin = async function(event) {
+        async function handleTraditionalLogin(event) {
             event.preventDefault();
             const form = document.getElementById('loginForm');
             const errorDiv = document.getElementById('error');
@@ -490,10 +510,10 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
             } catch (err) {
                 errorDiv.textContent = 'Network error: ' + err.message;
             }
-        };
+        }
 
         // Handle WasmX blockchain login
-        window.handleWasmXLogin = async function(event) {
+        async function handleWasmXLogin(event) {
             event.preventDefault();
             const errorDiv = document.getElementById('error');
             const successDiv = document.getElementById('success');
@@ -525,17 +545,13 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
                 const privateKey = await decryptPrivateKey(encryptedKey, pin);
 
                 successDiv.textContent = 'Private key decrypted! Signing in...';
-
-                // TODO: Use the private key to sign a transaction/challenge
-                // For now, we'll store it temporarily for the session
                 sessionStorage.setItem('wasmx_private_key', privateKey);
 
-                // Perform traditional login as well (to establish session)
                 const formData = new URLSearchParams();
                 formData.append('email', email);
                 formData.append('password', document.getElementById('password').value);
                 formData.append('redirect', document.getElementById('redirect').value);
-                formData.append('use_blockchain', 'true'); // Flag to indicate blockchain login
+                formData.append('use_blockchain', 'true');
 
                 const response = await fetch('/login', {
                     method: 'POST',
@@ -560,34 +576,16 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
             } catch (err) {
                 errorDiv.textContent = err.message;
             }
-        };
+        }
+
+        // Attach event listeners
+        document.getElementById('email').addEventListener('input', checkBlockchainKeys);
+        document.getElementById('loginForm').addEventListener('submit', handleTraditionalLogin);
+        document.getElementById('wasmxBtn').addEventListener('click', handleWasmXLogin);
+
+        // Check on page load if email field has value
+        checkBlockchainKeys();
     </script>
-</head>
-<body>
-    <h2>Login</h2>
-    <div id="error" class="error"></div>
-    <div id="success" class="success"></div>
-
-    <form id="loginForm" method="POST" action="/login" onsubmit="handleTraditionalLogin(event)">
-        <input type="email" id="email" name="email" placeholder="Email" required onchange="checkBlockchainKeys()" />
-        <input type="password" id="password" name="password" placeholder="Password" required />
-        <input type="hidden" id="redirect" name="redirect" value="` + escapedRedirect + `" />
-        <button type="submit">Login with Password</button>
-    </form>
-
-    <div id="blockchainSection" class="blockchain-section">
-        <h3>WasmX Blockchain Login</h3>
-        <p>You have blockchain keys registered for this account.</p>
-        <label for="pin">Enter your 4-digit PIN:</label>
-        <input type="password" id="pin" pattern="[0-9]{4}" maxlength="4" placeholder="4-digit PIN" />
-        <button id="wasmxBtn" type="button" class="wasmx-btn" onclick="handleWasmXLogin(event)">
-            Login with WasmX
-        </button>
-    </div>
-
-    <p style="margin-top: 20px; text-align: center;">
-        Don't have an account? <a href="/register">Register here</a>
-    </p>
 </body>
 </html>`
 		return marshalHTTP(wasmxhttp.HttpResponseWrap{
