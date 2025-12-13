@@ -26,6 +26,7 @@ func registerHttpRoutes(registryAddr wasmx.Bech32String) {
 		"/.well-known/oauth-protected-resource/sse",
 		"/oauth/authorize",
 		"/oauth/token",
+		"/register",
 		"/auth/register",
 		"/auth/login",
 		"/auth/logout",

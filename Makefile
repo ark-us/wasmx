@@ -16,7 +16,9 @@ TINYGO_TARGETS := \
 	emailchain:63.wasmx_email_0.0.1.wasm \
 	wasmx-oauth2-server:66.wasmx_oauth2_server_0.0.1.wasm \
 	wasmx-mcp-registry:67.wasmx_mcp_registry_0.0.1.wasm \
-	wasmx-httpserver-registry:68.wasmx_httpserver_registry_0.0.2.wasm
+	wasmx-httpserver-registry:68.wasmx_httpserver_registry_0.0.2.wasm \
+	wasmx-identity:69.wasmx_identity_0.0.1.wasm \
+	wasmx-oauth2-keys:6a.wasmx_oauth2_keys_0.0.1.wasm
 
 # wasmx-gov:35.gov_0.0.1.wasm \
 # wasmx-gov-continuous:37.gov_cont_0.0.1.wasm \

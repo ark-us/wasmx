@@ -116,15 +116,19 @@ type OAuthClient struct {
 // User Account Types
 
 type RegisterUserRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Username string `json:"username,omitempty"`
+	Email      string `json:"email"`
+	Password   string `json:"password"`
+	Username   string `json:"username,omitempty"`
+	PublicKey  string `json:"public_key,omitempty"`  // For WasmX blockchain registration
+	Address    string `json:"address,omitempty"`     // Blockchain address derived from public key
 }
 
 type RegisterUserResponse struct {
-	UserID   string `json:"user_id"`
-	Email    string `json:"email"`
-	Username string `json:"username,omitempty"`
+	UserID            string `json:"user_id"`
+	Email             string `json:"email"`
+	Username          string `json:"username,omitempty"`
+	IdentityUserID    string `json:"identity_user_id,omitempty"`    // WasmX identity contract user ID
+	BlockchainAddress string `json:"blockchain_address,omitempty"`  // Primary blockchain address
 }
 
 type LoginRequest struct {
@@ -133,10 +137,12 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	SessionID string `json:"session_id"`
-	UserID    string `json:"user_id"`
-	Email     string `json:"email"`
-	ExpiresAt int64  `json:"expires_at"`
+	SessionID         string `json:"session_id"`
+	UserID            string `json:"user_id"`
+	Email             string `json:"email"`
+	ExpiresAt         int64  `json:"expires_at"`
+	IdentityUserID    string `json:"identity_user_id,omitempty"`
+	BlockchainAddress string `json:"blockchain_address,omitempty"`
 }
 
 type LogoutRequest struct {
@@ -148,12 +154,14 @@ type GetCurrentUserRequest struct {
 }
 
 type User struct {
-	UserID       string `json:"user_id"`
-	Email        string `json:"email"`
-	Username     string `json:"username,omitempty"`
-	PasswordHash string `json:"password_hash"`
-	CreatedAt    int64  `json:"created_at"`
-	Active       bool   `json:"active"`
+	UserID         string `json:"user_id"`
+	Email          string `json:"email"`
+	Username       string `json:"username,omitempty"`
+	PasswordHash   string `json:"password_hash"`
+	CreatedAt      int64  `json:"created_at"`
+	Active         bool   `json:"active"`
+	IdentityUserID string `json:"identity_user_id,omitempty"` // WasmX identity contract user ID
+	Address        string `json:"address,omitempty"`           // Primary blockchain address
 }
 
 type Session struct {

@@ -37,14 +37,28 @@ func RegisterUser(req RegisterUserRequest) []byte {
 	// Get current block height
 	currentBlock := wasmx.GetCurrentBlock()
 
+	// Register in identity contract if public key provided
+	var identityUserID string
+	var blockchainAddress string
+
+	if req.PublicKey != "" && req.Address != "" {
+		identityUserID, blockchainAddress = registerInIdentityContract(req.PublicKey, req.Address)
+		LoggerInfo("User registered in identity contract", []string{
+			"identity_user_id", identityUserID,
+			"address", blockchainAddress,
+		})
+	}
+
 	// Create user account
 	user := User{
-		UserID:       userID,
-		Email:        req.Email,
-		Username:     req.Username,
-		PasswordHash: passwordHash,
-		CreatedAt:    int64(currentBlock.Height),
-		Active:       true,
+		UserID:         userID,
+		Email:          req.Email,
+		Username:       req.Username,
+		PasswordHash:   passwordHash,
+		CreatedAt:      int64(currentBlock.Height),
+		Active:         true,
+		IdentityUserID: identityUserID,
+		Address:        blockchainAddress,
 	}
 
 	// Store user
@@ -55,13 +69,16 @@ func RegisterUser(req RegisterUserRequest) []byte {
 	LoggerInfo("User registered", []string{
 		"user_id", userID,
 		"email", req.Email,
+		"identity_user_id", identityUserID,
 	})
 
 	// Return response (without password hash)
 	response := RegisterUserResponse{
-		UserID:   userID,
-		Email:    req.Email,
-		Username: req.Username,
+		UserID:            userID,
+		Email:             req.Email,
+		Username:          req.Username,
+		IdentityUserID:    identityUserID,
+		BlockchainAddress: blockchainAddress,
 	}
 
 	data, _ := json.Marshal(response)
@@ -122,10 +139,12 @@ func Login(req LoginRequest) []byte {
 
 	// Return response
 	response := LoginResponse{
-		SessionID: sessionID,
-		UserID:    user.UserID,
-		Email:     user.Email,
-		ExpiresAt: expiresAt,
+		SessionID:         sessionID,
+		UserID:            user.UserID,
+		Email:             user.Email,
+		ExpiresAt:         expiresAt,
+		IdentityUserID:    user.IdentityUserID,
+		BlockchainAddress: user.Address,
 	}
 
 	data, _ := json.Marshal(response)
@@ -384,4 +403,56 @@ func validateSessionInternal(sessionID string) (string, error) {
 	}
 
 	return session.UserID, nil
+}
+
+// registerInIdentityContract registers a user in the identity contract
+func registerInIdentityContract(publicKey string, address string) (string, string) {
+	// Get identity contract address
+	identityAddr := wasmx.GetAddressByRole(wasmx.ROLE_IDENTITY)
+	if identityAddr == "" {
+		LoggerError("Identity contract not found", nil)
+		return "", ""
+	}
+
+	// Convert public key hex string to bytes
+	pubKeyBytes, err := hex.DecodeString(publicKey)
+	if err != nil {
+		LoggerError("Invalid public key format", []string{"error", err.Error()})
+		return "", ""
+	}
+
+	// Create register_user message for identity contract
+	registerMsg := map[string]interface{}{
+		"register_user": map[string]interface{}{
+			"address":   address,
+			"public_key": pubKeyBytes,
+			"service_domain": "", // Empty for regular user address
+			"permissions": []map[string]interface{}{}, // No special permissions initially
+			"expires_at": int64(0), // Non-expiring
+		},
+	}
+
+	msgBz, err := json.Marshal(registerMsg)
+	if err != nil {
+		LoggerError("Failed to marshal identity message", []string{"error", err.Error()})
+		return "", ""
+	}
+
+	// Call identity contract
+	ok, data := wasmx.CallSimple(identityAddr, msgBz, false, MODULE_NAME)
+	if !ok {
+		LoggerError("Failed to register in identity contract", []string{"error", string(data)})
+		return "", ""
+	}
+
+	// Parse response
+	var response struct {
+		UserID string `json:"user_id"`
+	}
+	if err := json.Unmarshal(data, &response); err != nil {
+		LoggerError("Failed to parse identity response", []string{"error", err.Error()})
+		return "", ""
+	}
+
+	return response.UserID, address
 }

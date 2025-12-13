@@ -297,6 +297,8 @@ var ROLE_OAUTH2_SERVER = "oauth2_server"
 var ROLE_MCP_REGISTRY = "mcp_registry"
 var ROLE_MCP = "mcp"
 var ROLE_HTTP_SERVER = "httpserver"
+var ROLE_IDENTITY = "identity"
+var ROLE_OAUTH2_KEYS = "oauth2_keys"
 
 // interpreter_<code type>_<encoding>_<version>
 // code type = "solidity" | "evm" | "python" | "pythonbz"

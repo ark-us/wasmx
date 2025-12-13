@@ -80,14 +80,271 @@ func handleWellKnown(req wasmxhttp.HttpRequestIncoming) []byte {
 }
 
 func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
+	if req.Method == "GET" {
+		// Return HTML registration form with blockchain key generation
+		html := `<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #28a745; color: white; border: none; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #218838; }
+        .error { color: red; margin: 10px 0; }
+        .success { color: green; margin: 10px 0; }
+        .checkbox-label { display: flex; align-items: center; margin: 15px 0; }
+        .checkbox-label input { width: auto; margin-right: 10px; }
+        #blockchainOptions { display: none; padding: 15px; background: #f8f9fa; border-radius: 5px; margin: 15px 0; }
+        .info { background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <h2>Register</h2>
+    <form id="registerForm">
+        <input type="email" id="email" name="email" placeholder="Email" required />
+        <input type="password" id="password" name="password" placeholder="Password (min 8 characters)" required minlength="8" />
+        <input type="text" id="username" name="username" placeholder="Username (optional)" />
+
+        <label class="checkbox-label">
+            <input type="checkbox" id="enableBlockchain" />
+            Enable WasmX Blockchain Account
+        </label>
+
+        <div id="blockchainOptions">
+            <div class="info">
+                A cryptographic key pair will be generated in your browser and encrypted with a 4-digit PIN.
+                Your private key never leaves your browser and is never sent to the server.
+            </div>
+            <input type="text" id="pin" placeholder="4-digit PIN" pattern="[0-9]{4}" maxlength="4" />
+            <input type="text" id="pinConfirm" placeholder="Confirm PIN" pattern="[0-9]{4}" maxlength="4" />
+        </div>
+
+        <button type="submit">Register</button>
+        <div id="error" class="error"></div>
+        <div id="success" class="success"></div>
+    </form>
+    <p>Already have an account? <a href="/login">Login here</a></p>
+
+    <script type="module">
+        import * as secp from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@2.1.0/+esm';
+        import { sha256 } from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/sha256/+esm';
+
+        document.getElementById('enableBlockchain').addEventListener('change', function(e) {
+            document.getElementById('blockchainOptions').style.display = e.target.checked ? 'block' : 'none';
+            document.getElementById('pin').required = e.target.checked;
+            document.getElementById('pinConfirm').required = e.target.checked;
+        });
+
+        // Derive encryption key from PIN using PBKDF2
+        async function deriveKeyFromPIN(pin) {
+            const enc = new TextEncoder();
+            const pinData = enc.encode(pin);
+            const salt = enc.encode('wasmx-identity-v1'); // Fixed salt for deterministic derivation
+
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                pinData,
+                'PBKDF2',
+                false,
+                ['deriveBits', 'deriveKey']
+            );
+
+            return await crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: salt,
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        // Encrypt private key with PIN-derived key
+        async function encryptPrivateKey(privateKeyHex, pin) {
+            const key = await deriveKeyFromPIN(pin);
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const enc = new TextEncoder();
+            const data = enc.encode(privateKeyHex);
+
+            const encrypted = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                key,
+                data
+            );
+
+            // Combine IV and encrypted data
+            const combined = new Uint8Array(iv.length + encrypted.byteLength);
+            combined.set(iv);
+            combined.set(new Uint8Array(encrypted), iv.length);
+
+            // Return as hex
+            return Array.from(combined).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Generate secp256k1 key pair
+        function generateKeyPair() {
+            const privateKey = secp.utils.randomPrivateKey();
+            const publicKey = secp.getPublicKey(privateKey, true); // compressed
+            return {
+                privateKey: Array.from(privateKey).map(b => b.toString(16).padStart(2, '0')).join(''),
+                publicKey: Array.from(publicKey).map(b => b.toString(16).padStart(2, '0')).join('')
+            };
+        }
+
+        // Derive blockchain address from public key (simplified - just hash for now)
+        function deriveAddress(publicKeyHex) {
+            const pubKeyBytes = new Uint8Array(publicKeyHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            const hash = sha256(pubKeyBytes);
+            const addressBytes = hash.slice(0, 20); // Take first 20 bytes
+            return 'wasmx1' + Array.from(addressBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+            errorDiv.textContent = '';
+            successDiv.textContent = '';
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const username = document.getElementById('username').value;
+            const enableBlockchain = document.getElementById('enableBlockchain').checked;
+
+            let requestData = { email, password, username };
+
+            if (enableBlockchain) {
+                const pin = document.getElementById('pin').value;
+                const pinConfirm = document.getElementById('pinConfirm').value;
+
+                if (pin !== pinConfirm) {
+                    errorDiv.textContent = 'PINs do not match';
+                    return;
+                }
+
+                if (!/^[0-9]{4}$/.test(pin)) {
+                    errorDiv.textContent = 'PIN must be exactly 4 digits';
+                    return;
+                }
+
+                try {
+                    successDiv.textContent = 'Generating cryptographic keys...';
+
+                    // Generate key pair
+                    const keyPair = generateKeyPair();
+                    const address = deriveAddress(keyPair.publicKey);
+
+                    // Encrypt private key with PIN
+                    const encryptedPrivateKey = await encryptPrivateKey(keyPair.privateKey, pin);
+
+                    // Store encrypted private key in localStorage
+                    localStorage.setItem('wasmx_encrypted_key_' + email, encryptedPrivateKey);
+
+                    // Add blockchain info to registration
+                    requestData.public_key = keyPair.publicKey;
+                    requestData.address = address;
+
+                    successDiv.textContent = 'Keys generated and encrypted. Registering...';
+                } catch (err) {
+                    errorDiv.textContent = 'Failed to generate keys: ' + err.message;
+                    return;
+                }
+            }
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.user_id) {
+                    successDiv.textContent = 'Registration successful! Redirecting to login...';
+                    setTimeout(() => window.location.href = '/login', 1500);
+                } else {
+                    errorDiv.textContent = result.error || 'Registration failed';
+                    successDiv.textContent = '';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error: ' + err.message;
+                successDiv.textContent = '';
+            }
+        });
+    </script>
+</body>
+</html>`
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "200 OK",
+				StatusCode: 200,
+				Header:     http.Header{"Content-Type": []string{"text/html; charset=utf-8"}},
+				Data:       []byte(html),
+			},
+		})
+	}
+
 	if req.Method != "POST" {
 		return methodNotAllowed()
 	}
+
+	// Parse form data or JSON
 	var r RegisterUserRequest
-	if err := json.Unmarshal(req.Data, &r); err != nil {
-		return badRequest("invalid json")
+	contentType := req.Header.Get("Content-Type")
+	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
+		form, _ := url.ParseQuery(string(req.Data))
+		r.Email = form.Get("email")
+		r.Password = form.Get("password")
+		r.Username = form.Get("username")
+		r.PublicKey = form.Get("public_key")
+		r.Address = form.Get("address")
+	} else {
+		if err := json.Unmarshal(req.Data, &r); err != nil {
+			return badRequest("invalid json")
+		}
 	}
+
 	resp := RegisterUser(r)
+
+	// Parse response to check for errors
+	var registerResp map[string]interface{}
+	json.Unmarshal(resp, &registerResp)
+
+	// If registration failed, return error
+	if _, hasError := registerResp["error"]; hasError {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "400 Bad Request",
+				StatusCode: 400,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       resp,
+			},
+		})
+	}
+
+	// If form submission, redirect to login
+	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:      "302 Found",
+				StatusCode:  302,
+				Header:      http.Header{"Location": []string{"/login"}},
+				RedirectUrl: "/login",
+			},
+		})
+	}
+
+	// JSON request - return JSON response
 	return marshalHTTP(wasmxhttp.HttpResponseWrap{
 		Error: "",
 		Data: wasmxhttp.HttpResponse{
@@ -106,7 +363,7 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
 	redirectURL := q.Get("redirect")
 
 	if req.Method == "GET" {
-		// Return HTML login form with hidden redirect field
+		// Return HTML login form with hidden redirect field and WasmX blockchain option
 		// Escape HTML to prevent XSS and format string issues
 		escapedRedirect := strings.ReplaceAll(redirectURL, `"`, `&quot;`)
 		html := `<!DOCTYPE html>
@@ -116,19 +373,221 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
     <style>
         body { font-family: Arial, sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; }
         input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; margin: 5px 0; }
         button:hover { background: #0056b3; }
-        .error { color: red; }
+        button.wasmx-btn { background: #28a745; }
+        button.wasmx-btn:hover { background: #218838; }
+        .error { color: red; margin: 10px 0; }
+        .success { color: green; margin: 10px 0; }
+        .blockchain-section { margin-top: 20px; padding-top: 20px; border-top: 2px solid #ddd; display: none; }
+        .hidden { display: none; }
+        label { display: block; margin-top: 10px; }
     </style>
+    <script type="module">
+        import { sha256 } from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/+esm';
+
+        // Derive decryption key from PIN using PBKDF2
+        async function deriveKeyFromPIN(pin) {
+            const enc = new TextEncoder();
+            const pinData = enc.encode(pin);
+            const salt = enc.encode('wasmx-identity-v1'); // Same fixed salt as registration
+
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                pinData,
+                'PBKDF2',
+                false,
+                ['deriveBits', 'deriveKey']
+            );
+
+            return await crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: salt,
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        // Decrypt private key with PIN-derived key
+        async function decryptPrivateKey(encryptedHex, pin) {
+            const key = await deriveKeyFromPIN(pin);
+
+            // Convert hex to bytes
+            const encryptedBytes = new Uint8Array(encryptedHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+
+            // Extract IV (first 12 bytes) and ciphertext
+            const iv = encryptedBytes.slice(0, 12);
+            const ciphertext = encryptedBytes.slice(12);
+
+            try {
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    ciphertext
+                );
+
+                const dec = new TextDecoder();
+                return dec.decode(decrypted);
+            } catch (err) {
+                throw new Error('Invalid PIN or corrupted key data');
+            }
+        }
+
+        // Check if user has blockchain keys when email is entered
+        window.checkBlockchainKeys = function() {
+            const email = document.getElementById('email').value;
+            const blockchainSection = document.getElementById('blockchainSection');
+            const wasmxBtn = document.getElementById('wasmxBtn');
+
+            if (email && localStorage.getItem('wasmx_encrypted_key_' + email)) {
+                blockchainSection.style.display = 'block';
+                wasmxBtn.classList.remove('hidden');
+            } else {
+                blockchainSection.style.display = 'none';
+                wasmxBtn.classList.add('hidden');
+            }
+        };
+
+        // Handle traditional login
+        window.handleTraditionalLogin = async function(event) {
+            event.preventDefault();
+            const form = document.getElementById('loginForm');
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+
+            errorDiv.textContent = '';
+            successDiv.textContent = '';
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams(formData)
+                });
+
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else if (response.ok) {
+                    const redirect = formData.get('redirect');
+                    if (redirect) {
+                        window.location.href = redirect;
+                    } else {
+                        successDiv.textContent = 'Login successful!';
+                        setTimeout(() => window.location.href = '/', 1000);
+                    }
+                } else {
+                    const data = await response.json();
+                    errorDiv.textContent = data.error || 'Login failed';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error: ' + err.message;
+            }
+        };
+
+        // Handle WasmX blockchain login
+        window.handleWasmXLogin = async function(event) {
+            event.preventDefault();
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+
+            errorDiv.textContent = '';
+            successDiv.textContent = '';
+
+            const email = document.getElementById('email').value;
+            const pin = document.getElementById('pin').value;
+
+            if (!email || !pin) {
+                errorDiv.textContent = 'Email and PIN are required for WasmX login';
+                return;
+            }
+
+            if (!/^[0-9]{4}$/.test(pin)) {
+                errorDiv.textContent = 'PIN must be exactly 4 digits';
+                return;
+            }
+
+            const encryptedKey = localStorage.getItem('wasmx_encrypted_key_' + email);
+            if (!encryptedKey) {
+                errorDiv.textContent = 'No blockchain keys found for this account';
+                return;
+            }
+
+            try {
+                successDiv.textContent = 'Decrypting private key...';
+                const privateKey = await decryptPrivateKey(encryptedKey, pin);
+
+                successDiv.textContent = 'Private key decrypted! Signing in...';
+
+                // TODO: Use the private key to sign a transaction/challenge
+                // For now, we'll store it temporarily for the session
+                sessionStorage.setItem('wasmx_private_key', privateKey);
+
+                // Perform traditional login as well (to establish session)
+                const formData = new URLSearchParams();
+                formData.append('email', email);
+                formData.append('password', document.getElementById('password').value);
+                formData.append('redirect', document.getElementById('redirect').value);
+                formData.append('use_blockchain', 'true'); // Flag to indicate blockchain login
+
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else if (response.ok) {
+                    const redirect = document.getElementById('redirect').value;
+                    if (redirect) {
+                        window.location.href = redirect;
+                    } else {
+                        successDiv.textContent = 'WasmX login successful!';
+                        setTimeout(() => window.location.href = '/', 1000);
+                    }
+                } else {
+                    const data = await response.json();
+                    errorDiv.textContent = data.error || 'Login failed';
+                }
+            } catch (err) {
+                errorDiv.textContent = err.message;
+            }
+        };
+    </script>
 </head>
 <body>
     <h2>Login</h2>
-    <form method="POST" action="/login">
-        <input type="email" name="email" placeholder="Email" required />
-        <input type="password" name="password" placeholder="Password" required />
-        <input type="hidden" name="redirect" value="` + escapedRedirect + `" />
-        <button type="submit">Login</button>
+    <div id="error" class="error"></div>
+    <div id="success" class="success"></div>
+
+    <form id="loginForm" method="POST" action="/login" onsubmit="handleTraditionalLogin(event)">
+        <input type="email" id="email" name="email" placeholder="Email" required onchange="checkBlockchainKeys()" />
+        <input type="password" id="password" name="password" placeholder="Password" required />
+        <input type="hidden" id="redirect" name="redirect" value="` + escapedRedirect + `" />
+        <button type="submit">Login with Password</button>
     </form>
+
+    <div id="blockchainSection" class="blockchain-section">
+        <h3>WasmX Blockchain Login</h3>
+        <p>You have blockchain keys registered for this account.</p>
+        <label for="pin">Enter your 4-digit PIN:</label>
+        <input type="password" id="pin" pattern="[0-9]{4}" maxlength="4" placeholder="4-digit PIN" />
+        <button id="wasmxBtn" type="button" class="wasmx-btn" onclick="handleWasmXLogin(event)">
+            Login with WasmX
+        </button>
+    </div>
+
+    <p style="margin-top: 20px; text-align: center;">
+        Don't have an account? <a href="/register">Register here</a>
+    </p>
 </body>
 </html>`
 		return marshalHTTP(wasmxhttp.HttpResponseWrap{
@@ -149,16 +608,25 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
 	// Parse form data or JSON
 	var r LoginRequest
 	var formRedirect string
+	var useBlockchain bool
 	contentType := req.Header.Get("Content-Type")
 	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
 		form, _ := url.ParseQuery(string(req.Data))
 		r.Email = form.Get("email")
 		r.Password = form.Get("password")
 		formRedirect = form.Get("redirect")
+		useBlockchain = form.Get("use_blockchain") == "true"
 	} else {
 		if err := json.Unmarshal(req.Data, &r); err != nil {
 			return badRequest("invalid json")
 		}
+	}
+
+	// If using blockchain login, the private key was decrypted in the browser
+	// and stored in sessionStorage. The actual authentication still uses the
+	// password for now, but we can enhance this later to support pure blockchain auth.
+	if useBlockchain {
+		LoggerInfo("WasmX blockchain login requested", []string{"email", r.Email})
 	}
 
 	resp := Login(r)

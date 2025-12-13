@@ -173,6 +173,22 @@ func loadSearchConfig() *SearchConfig {
 
 // ensureDatabaseConnection ensures a database connection exists, creating one if needed
 func ensureDatabaseConnection() string {
+	connID := "mcp_search_main"
+
+	// First check if connection already exists using Ping
+	pingReq := &postgresql.SqlPingRequest{
+		Id: connID,
+	}
+	pingResp := postgresql.Ping(pingReq)
+
+	// If ping succeeds (no error), connection already exists
+	if pingResp.Error == "" {
+		return connID
+	}
+
+	// Connection doesn't exist, create it
+	LoggerInfo("Creating new database connection", []string{"conn_id", connID})
+
 	// Load search configuration
 	searchConfig := loadSearchConfig()
 	if searchConfig == nil {
@@ -198,7 +214,7 @@ func ensureDatabaseConnection() string {
 	connReq := &postgresql.SqlConnectionRequest{
 		Connection: searchConfig.Database.ConnectionString,
 		DbName:     searchConfig.Database.DatabaseName,
-		Id:         "mcp_search_main",
+		Id:         connID,
 		Options:    options,
 	}
 
@@ -208,9 +224,6 @@ func ensureDatabaseConnection() string {
 		LoggerError("Failed to connect to PostgreSQL", []string{"error", connResp.Error})
 		return ""
 	}
-
-	// Connection ID is always the same
-	connID := "mcp_search_main"
 
 	LoggerInfo("Database connection established", []string{"conn_id", connID})
 	return connID

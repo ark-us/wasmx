@@ -1,0 +1,286 @@
+package lib
+
+import (
+	"fmt"
+)
+
+// InitGenesis initializes the contract with genesis state
+func InitGenesis(msg *MsgInitGenesis) []byte {
+	LoggerInfo("InitGenesis called", nil)
+
+	// Generate or use provided server secret
+	serverSecret := msg.ServerSecret
+	if serverSecret == "" {
+		var err error
+		serverSecret, err = GenerateRandomSecret()
+		if err != nil {
+			LoggerError("Failed to generate server secret", []string{"error", err.Error()})
+			return MarshalJSON(map[string]string{"error": "failed to generate server secret"})
+		}
+	}
+
+	// Save server secret
+	SaveServerSecret(serverSecret)
+
+	LoggerInfo("Server secret initialized", nil)
+	return MarshalJSON(map[string]bool{"success": true})
+}
+
+// GenerateEphemeralKey generates a new ephemeral key pair
+func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
+	LoggerInfo("GenerateEphemeralKey called", []string{"user_id", msg.UserID, "service_domain", msg.ServiceDomain})
+
+	// Check if OAuth token already has a key
+	existingPubKey := LoadPublicKeyByToken(msg.OAuthToken)
+	if existingPubKey != "" {
+		LoggerError("OAuth token already has a key", []string{"oauth_token", msg.OAuthToken})
+		return MarshalJSON(map[string]string{"error": "OAuth token already has an associated key"})
+	}
+
+	// Generate key pair
+	publicKey, privateKey, err := GenerateKeyPair()
+	if err != nil {
+		LoggerError("Failed to generate key pair", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to generate key pair"})
+	}
+
+	// Load server secret
+	serverSecret := LoadServerSecret()
+	if serverSecret == "" {
+		LoggerError("Server secret not initialized", nil)
+		return MarshalJSON(map[string]string{"error": "server secret not initialized"})
+	}
+
+	// Derive encryption key from server secret and OAuth token
+	encryptionKey, err := DeriveEncryptionKey(serverSecret, msg.OAuthToken)
+	if err != nil {
+		LoggerError("Failed to derive encryption key", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to derive encryption key"})
+	}
+
+	// Encrypt private key
+	encryptedPrivateKey, err := EncryptPrivateKey(privateKey, encryptionKey)
+	if err != nil {
+		LoggerError("Failed to encrypt private key", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to encrypt private key"})
+	}
+
+	// Create key pair record
+	keyPair := &EphemeralKeyPair{
+		PublicKey:     publicKey,
+		PrivateKey:    encryptedPrivateKey,
+		UserID:        msg.UserID,
+		ServiceDomain: msg.ServiceDomain,
+		CreatedAt:     GetBlockTime(),
+		ExpiresAt:     msg.ExpiresAt,
+		OAuthToken:    msg.OAuthToken,
+	}
+
+	// Save key pair
+	if err := SaveKeyPair(keyPair); err != nil {
+		LoggerError("Failed to save key pair", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to save key pair"})
+	}
+
+	// Save token mapping
+	SaveTokenMapping(msg.OAuthToken, publicKey)
+
+	LoggerInfo("Ephemeral key generated", []string{"public_key", publicKey, "user_id", msg.UserID})
+
+	return MarshalJSON(MsgGenerateEphemeralKeyResponse{
+		PublicKey:  publicKey,
+		PrivateKey: privateKey, // Return plaintext for browser storage
+		Success:    true,
+	})
+}
+
+// RegisterExternalKey registers a key pair generated externally (e.g., in browser)
+func RegisterExternalKey(msg *MsgRegisterExternalKey) []byte {
+	LoggerInfo("RegisterExternalKey called", []string{"user_id", msg.UserID, "public_key", msg.PublicKey})
+
+	// Check if OAuth token already has a key
+	existingPubKey := LoadPublicKeyByToken(msg.OAuthToken)
+	if existingPubKey != "" {
+		LoggerError("OAuth token already has a key", []string{"oauth_token", msg.OAuthToken})
+		return MarshalJSON(map[string]string{"error": "OAuth token already has an associated key"})
+	}
+
+	// Load server secret
+	serverSecret := LoadServerSecret()
+	if serverSecret == "" {
+		LoggerError("Server secret not initialized", nil)
+		return MarshalJSON(map[string]string{"error": "server secret not initialized"})
+	}
+
+	// Derive encryption key from server secret and OAuth token
+	encryptionKey, err := DeriveEncryptionKey(serverSecret, msg.OAuthToken)
+	if err != nil {
+		LoggerError("Failed to derive encryption key", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to derive encryption key"})
+	}
+
+	// Encrypt private key
+	encryptedPrivateKey, err := EncryptPrivateKey(msg.PrivateKey, encryptionKey)
+	if err != nil {
+		LoggerError("Failed to encrypt private key", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to encrypt private key"})
+	}
+
+	// Create key pair record
+	keyPair := &EphemeralKeyPair{
+		PublicKey:     msg.PublicKey,
+		PrivateKey:    encryptedPrivateKey,
+		UserID:        msg.UserID,
+		ServiceDomain: msg.ServiceDomain,
+		CreatedAt:     GetBlockTime(),
+		ExpiresAt:     msg.ExpiresAt,
+		OAuthToken:    msg.OAuthToken,
+	}
+
+	// Save key pair
+	if err := SaveKeyPair(keyPair); err != nil {
+		LoggerError("Failed to save key pair", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to save key pair"})
+	}
+
+	// Save token mapping
+	SaveTokenMapping(msg.OAuthToken, msg.PublicKey)
+
+	LoggerInfo("External key registered", []string{"public_key", msg.PublicKey, "user_id", msg.UserID})
+
+	return MarshalJSON(MsgRegisterExternalKeyResponse{Success: true})
+}
+
+// SignTransaction signs a transaction using an ephemeral key
+func SignTransaction(msg *MsgSignTransaction) []byte {
+	LoggerInfo("SignTransaction called", []string{"oauth_token", msg.OAuthToken})
+
+	// Get public key from OAuth token
+	publicKey := LoadPublicKeyByToken(msg.OAuthToken)
+	if publicKey == "" {
+		LoggerError("No key found for OAuth token", []string{"oauth_token", msg.OAuthToken})
+		return MarshalJSON(map[string]string{"error": "no key found for OAuth token"})
+	}
+
+	// Load key pair
+	keyPair, err := LoadKeyPair(publicKey)
+	if err != nil || keyPair == nil {
+		LoggerError("Failed to load key pair", []string{"public_key", publicKey})
+		return MarshalJSON(map[string]string{"error": "failed to load key pair"})
+	}
+
+	// Check expiry
+	if keyPair.ExpiresAt > 0 && GetBlockTime() > keyPair.ExpiresAt {
+		LoggerError("Key expired", []string{"public_key", publicKey})
+		return MarshalJSON(map[string]string{"error": "key has expired"})
+	}
+
+	// Load server secret
+	serverSecret := LoadServerSecret()
+	if serverSecret == "" {
+		LoggerError("Server secret not initialized", nil)
+		return MarshalJSON(map[string]string{"error": "server secret not initialized"})
+	}
+
+	// Derive encryption key
+	encryptionKey, err := DeriveEncryptionKey(serverSecret, msg.OAuthToken)
+	if err != nil {
+		LoggerError("Failed to derive encryption key", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to derive encryption key"})
+	}
+
+	// Decrypt private key
+	privateKey, err := DecryptPrivateKey(keyPair.PrivateKey, encryptionKey)
+	if err != nil {
+		LoggerError("Failed to decrypt private key", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to decrypt private key"})
+	}
+
+	// Sign transaction
+	signature, err := SignData(privateKey, msg.TransactionData)
+	if err != nil {
+		LoggerError("Failed to sign transaction", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to sign transaction"})
+	}
+
+	LoggerInfo("Transaction signed", []string{"public_key", publicKey})
+
+	return MarshalJSON(MsgSignTransactionResponse{
+		Signature: signature,
+		Success:   true,
+	})
+}
+
+// RevokeKey revokes an ephemeral key
+func RevokeKey(msg *MsgRevokeKey) []byte {
+	LoggerInfo("RevokeKey called", []string{"oauth_token", msg.OAuthToken})
+
+	// Get public key from OAuth token
+	publicKey := LoadPublicKeyByToken(msg.OAuthToken)
+	if publicKey == "" {
+		LoggerError("No key found for OAuth token", []string{"oauth_token", msg.OAuthToken})
+		return MarshalJSON(map[string]string{"error": "no key found for OAuth token"})
+	}
+
+	// Delete key pair
+	DeleteKeyPair(publicKey)
+
+	// Delete token mapping
+	DeleteTokenMapping(msg.OAuthToken)
+
+	LoggerInfo("Key revoked", []string{"public_key", publicKey})
+
+	return MarshalJSON(MsgRevokeKeyResponse{Success: true})
+}
+
+// DeleteExpiredKeys cleans up expired keys
+func DeleteExpiredKeys(msg *MsgDeleteExpiredKeys) []byte {
+	LoggerInfo("DeleteExpiredKeys called", nil)
+
+	// Note: In a real implementation, we would iterate through all keys
+	// For now, this is a placeholder that returns 0 deleted
+	// Proper implementation would require iteration support in storage
+
+	deletedCount := 0
+
+	LoggerInfo("Expired keys deleted", []string{"count", fmt.Sprintf("%d", deletedCount)})
+
+	return MarshalJSON(MsgDeleteExpiredKeysResponse{DeletedCount: deletedCount})
+}
+
+// QueryGetPublicKey retrieves public key for an OAuth token
+func QueryGetPublicKey(msg *MsgQueryGetPublicKey) []byte {
+	publicKey := LoadPublicKeyByToken(msg.OAuthToken)
+	if publicKey == "" {
+		return MarshalJSON(map[string]string{"error": "no key found for OAuth token"})
+	}
+
+	keyPair, err := LoadKeyPair(publicKey)
+	if err != nil || keyPair == nil {
+		return MarshalJSON(map[string]string{"error": "failed to load key pair"})
+	}
+
+	return MarshalJSON(QueryGetPublicKeyResponse{
+		PublicKey: publicKey,
+		UserID:    keyPair.UserID,
+		ExpiresAt: keyPair.ExpiresAt,
+	})
+}
+
+// QueryGetKeyInfo retrieves key information (without private key)
+func QueryGetKeyInfo(msg *MsgQueryGetKeyInfo) []byte {
+	keyPair, err := LoadKeyPair(msg.PublicKey)
+	if err != nil {
+		return MarshalJSON(map[string]string{"error": "failed to load key pair"})
+	}
+	if keyPair == nil {
+		return MarshalJSON(map[string]string{"error": "key not found"})
+	}
+
+	return MarshalJSON(QueryGetKeyInfoResponse{
+		UserID:        keyPair.UserID,
+		ServiceDomain: keyPair.ServiceDomain,
+		ExpiresAt:     keyPair.ExpiresAt,
+		CreatedAt:     keyPair.CreatedAt,
+	})
+}
