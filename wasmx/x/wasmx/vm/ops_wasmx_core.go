@@ -2,6 +2,7 @@ package vm
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,8 +12,14 @@ import (
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/tx"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
+	"github.com/loredanacirstea/wasmx/crypto/ethsecp256k1"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
@@ -703,6 +710,19 @@ type ExecuteCliCommandResponse struct {
 	Error    string `json:"error"`
 }
 
+type PrepareTxRequest struct {
+	FromAddress   string `json:"from_address"`
+	ToAddress     string `json:"to_address"`
+	Data          []byte `json:"data"`
+	GasLimit      uint64 `json:"gas_limit"`
+	PrivateKeyHex string `json:"private_key_hex"`
+}
+
+type PrepareTxResponse struct {
+	Error   string `json:"error"`
+	TxBytes []byte `json:"tx_bytes"`
+}
+
 func coreExecuteCliCommand(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	resp := ExecuteCliCommandResponse{ExitCode: -1}
@@ -759,6 +779,166 @@ func coreExecuteCliCommand(_context interface{}, rnh memc.RuntimeHandler, params
 	}
 
 	responsebz, err := json.Marshal(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return rnh.AllocateWriteMem(responsebz)
+}
+
+func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	resp := PrepareTxResponse{Error: "", TxBytes: nil}
+
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		resp.Error = err.Error()
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	var req PrepareTxRequest
+	err = json.Unmarshal(reqbz, &req)
+	if err != nil {
+		resp.Error = err.Error()
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	// Decode private key from hex
+	privKeyBytes, err := hex.DecodeString(req.PrivateKeyHex)
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to decode private key hex: %s", err.Error())
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	// Create private key
+	privKey := &ethsecp256k1.PrivKey{Key: privKeyBytes}
+	pubKey := privKey.PubKey()
+
+	// Parse from address
+	fromAddr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.FromAddress)
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to parse from address: %s", err.Error())
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	// Parse to address
+	toAddr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.ToAddress)
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to parse to address: %s", err.Error())
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	// Create MsgExecute message
+	msgExecute := &types.MsgExecute{
+		Contract: toAddr.String(),
+		Sender:   fromAddr.String(),
+		Msg:      req.Data,
+	}
+
+	// Get TxConfig
+	txConfig := ctx.App.(mcfg.MythosApp).TxConfig()
+	txBuilder := txConfig.NewTxBuilder()
+
+	// Set gas limit
+	txBuilder.SetGasLimit(req.GasLimit)
+
+	// Calculate and set fees (using default gas price)
+	parsedGasPrices, err := sdk.ParseDecCoins("1000000000000amyt")
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to parse gas prices: %s", err.Error())
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	feeAmount := parsedGasPrices.AmountOf("amyt").MulInt64(int64(req.GasLimit)).RoundInt()
+	fees := sdk.NewCoins(sdk.NewCoin("amyt", feeAmount))
+	txBuilder.SetFeeAmount(fees)
+
+	// Set message
+	err = txBuilder.SetMsgs(msgExecute)
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to set messages: %s", err.Error())
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	// Get account and sequence (nonce)
+	accP, err := ctx.App.(mcfg.MythosApp).AccountKeeper.GetAccountPrefixed(ctx.Ctx, fromAddr)
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to get account: %s", err.Error())
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+	if accP == nil {
+		resp.Error = "account does not exist"
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+	seq := accP.GetSequence()
+
+	// First round: set empty signature
+	sigV2 := signing.SignatureV2{
+		PubKey: pubKey,
+		Data: &signing.SingleSignatureData{
+			SignMode:  signing.SignMode(txConfig.SignModeHandler().DefaultMode()),
+			Signature: nil,
+		},
+		Sequence: seq,
+	}
+
+	err = txBuilder.SetSignatures(sigV2)
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to set empty signatures: %s", err.Error())
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	// Second round: sign transaction
+	signerData := authsigning.SignerData{
+		ChainID:       ctx.Ctx.ChainID(),
+		AccountNumber: accP.GetAccountNumber(),
+		Sequence:      seq,
+		PubKey:        pubKey,
+		Address:       accP.String(),
+	}
+
+	sigV2, err = tx.SignWithPrivKey(
+		ctx.Ctx.Context(),
+		signing.SignMode(txConfig.SignModeHandler().DefaultMode()),
+		signerData,
+		txBuilder,
+		privKey.(cryptotypes.PrivKey),
+		txConfig,
+		seq,
+	)
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to sign transaction: %s", err.Error())
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	err = txBuilder.SetSignatures(sigV2)
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to set final signatures: %s", err.Error())
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	// Encode transaction
+	txBytes, err := txConfig.TxEncoder()(txBuilder.GetTx())
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to encode transaction: %s", err.Error())
+		responsebz, _ := json.Marshal(&resp)
+		return rnh.AllocateWriteMem(responsebz)
+	}
+
+	resp.TxBytes = txBytes
+	responsebz, err = json.Marshal(&resp)
 	if err != nil {
 		return nil, err
 	}

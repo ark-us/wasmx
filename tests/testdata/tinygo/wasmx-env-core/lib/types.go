@@ -155,3 +155,16 @@ type BroadcastTxAsyncResponse struct {
 	Error    string             `json:"error"`
 	Response *ResultBroadcastTx `json:"response"`
 }
+
+type PrepareTxRequest struct {
+	FromAddress  string `json:"from_address"`
+	ToAddress    string `json:"to_address"`
+	Data         []byte `json:"data"`
+	GasLimit     uint64 `json:"gas_limit"`
+	PrivateKeyHex string `json:"private_key_hex"`
+}
+
+type PrepareTxResponse struct {
+	Error string `json:"error"`
+	TxBytes []byte `json:"tx_bytes"`
+}

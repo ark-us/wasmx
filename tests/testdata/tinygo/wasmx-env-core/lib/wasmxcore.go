@@ -55,3 +55,6 @@ func executeCliCommand_(reqPtr int64) int64
 
 //go:wasmimport wasmxcore BroadcastTxAsync
 func broadcastTxAsync_(reqPtr int64) int64
+
+//go:wasmimport wasmxcore PrepareTx
+func prepareTx_(reqPtr int64) int64

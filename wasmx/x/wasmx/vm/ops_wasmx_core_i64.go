@@ -28,6 +28,7 @@ func BuildWasmxCoreEnvi64(context *Context, rnh memc.RuntimeHandler) (interface{
 		vm.BuildFn("UpdateSystemCache", coreUpdateSystemCache, []interface{}{vm.ValType_I64()}, []interface{}{}, 0),
 		vm.BuildFn("BroadcastTxAsync", coreBroadcastTxAsync, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 		vm.BuildFn("executeCliCommand", coreExecuteCliCommand, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
+		vm.BuildFn("PrepareTx", corePrepareTx, []interface{}{vm.ValType_I64()}, []interface{}{vm.ValType_I64()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "wasmxcore", context, fndefs)
