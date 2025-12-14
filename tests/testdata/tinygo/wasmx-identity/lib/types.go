@@ -6,14 +6,14 @@ import (
 	utils "github.com/loredanacirstea/wasmx/tests/testdata/tinygo/wasmx-utils"
 )
 
-const MODULE_NAME = "identity"
+const MODULE_NAME = "account_identity"
 
 // Storage keys
 const (
-	STORAGE_USER_PREFIX    = "user:"      // user:<user_id> -> UserIdentity
-	STORAGE_ADDR_PREFIX    = "addr:"      // addr:<address> -> user_id
-	STORAGE_ADDR_INFO_PREFIX = "addrinfo:" // addrinfo:<user_id>:<address> -> AddressInfo
-	STORAGE_USER_COUNTER   = "user_counter" // counter for generating user IDs
+	STORAGE_USER_PREFIX      = "user:"        // user:<user_id> -> UserIdentity
+	STORAGE_ADDR_PREFIX      = "addr:"        // addr:<address> -> user_id
+	STORAGE_ADDR_INFO_PREFIX = "addrinfo:"    // addrinfo:<user_id>:<address> -> AddressInfo
+	STORAGE_USER_COUNTER     = "user_counter" // counter for generating user IDs
 )
 
 // UserIdentity represents a user's identity with associated addresses
@@ -27,12 +27,12 @@ type UserIdentity struct {
 
 // AddressInfo contains detailed information about an address associated with a user
 type AddressInfo struct {
-	Address       string              `json:"address"`
-	PublicKey     []byte              `json:"public_key"`      // Public key bytes for this address
-	ServiceDomain string              `json:"service_domain"`  // Empty for regular addresses, domain for ephemeral keys
-	Permissions   []Permission        `json:"permissions"`     // Permissions granted to this address
-	ExpiresAt     int64               `json:"expires_at"`      // 0 for non-expiring addresses
-	CreatedAt     int64               `json:"created_at"`
+	Address       string       `json:"address"`
+	PublicKey     []byte       `json:"public_key"`     // Public key bytes for this address
+	ServiceDomain string       `json:"service_domain"` // Empty for regular addresses, domain for ephemeral keys
+	Permissions   []Permission `json:"permissions"`    // Permissions granted to this address
+	ExpiresAt     int64        `json:"expires_at"`     // 0 for non-expiring addresses
+	CreatedAt     int64        `json:"created_at"`
 }
 
 // Permission represents a specific permission granted to an address

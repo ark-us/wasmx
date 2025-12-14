@@ -14,10 +14,20 @@ func LoggerError(message string, keyvals []string) {
 	wasmx.LoggerError(MODULE_NAME, message, keyvals)
 }
 
+// LoggerDebug logs an error message
+func LoggerDebug(message string, keyvals []string) {
+	wasmx.LoggerDebug(MODULE_NAME, message, keyvals)
+}
+
+func Revert(message string) {
+	LoggerDebug("revert", []string{"err", message, "module", MODULE_NAME})
+	wasmx.RevertWithModule(MODULE_NAME, message)
+}
+
 // GetBlockTime returns the current block time
 func GetBlockTime() int64 {
 	block := wasmx.GetCurrentBlock()
-	return int64(block.Height)
+	return int64(block.Timestamp)
 }
 
 // AddressInList checks if an address is in a list of addresses

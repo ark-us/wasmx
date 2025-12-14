@@ -49,8 +49,8 @@ func RouteCallData(data []byte) []byte {
 		return QueryGetKeyInfo(callData.QueryGetKeyInfo)
 	}
 
-	LoggerError("Unknown calldata", nil)
-	return MarshalJSON(map[string]string{"error": "unknown calldata"})
+	Revert("invalid call data: " + string(data))
+	return []byte{}
 }
 
 // Main entry point for the contract

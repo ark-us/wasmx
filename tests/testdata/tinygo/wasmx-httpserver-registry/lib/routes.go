@@ -172,7 +172,7 @@ func HandleHttpRequestIncoming() {
 	calld, _ := json.Marshal(call)
 	ok, respData := wasmx.CallSimple(wasmx.Bech32String(best.ContractAddress), calld, false, MODULE_NAME)
 	if !ok {
-		wasmx.Revert(respData)
+		wasmx.Revert([]byte("httpserver forward failed: " + string(respData) + "; address: " + best.ContractAddress + "; calldata: " + string(calld)))
 		return
 	}
 	wasmx.Finish(respData)

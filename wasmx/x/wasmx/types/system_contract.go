@@ -24,7 +24,7 @@ var ADDR_ECRECOVER = "0x0000000000000000000000000000000000000001"
 var ADDR_SHA2_256 = "0x0000000000000000000000000000000000000002"
 var ADDR_RIPMD160 = "0x0000000000000000000000000000000000000003"
 
-// var ADDR_IDENTITY = "0x0000000000000000000000000000000000000004"
+var ADDR_IDENTITY = "0x0000000000000000000000000000000000000004"
 var ADDR_MODEXP = "0x0000000000000000000000000000000000000005"
 var ADDR_ECADD = "0x0000000000000000000000000000000000000006"
 var ADDR_ECMUL = "0x0000000000000000000000000000000000000007"
@@ -87,7 +87,7 @@ var ADDR_ONDEMAND_SINGLE = "0x0000000000000000000000000000000000000065"
 var ADDR_OAUTH2_SERVER = "0x0000000000000000000000000000000000000066"
 var ADDR_MCP_REGISTRY = "0x0000000000000000000000000000000000000067"
 var ADDR_HTTPSERVER_REGISTRY = "0x0000000000000000000000000000000000000068"
-var ADDR_IDENTITY = "0x0000000000000000000000000000000000000069"
+var ADDR_ACCOUNT_IDENTITY = "0x0000000000000000000000000000000000000069"
 var ADDR_OAUTH2_KEYS = "0x000000000000000000000000000000000000006a"
 
 var ADDR_CONSENSUS_KAYROSP2P_LIBRARY = "0x0000000000000000000000000000000000000071"
@@ -203,15 +203,15 @@ func SimplePrecompiles() SystemContracts {
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
-		// {
-		// 	Address:     ADDR_IDENTITY,
-		// 	Label:       "identity",
-		// 	InitMessage: initMsg,
-		// 	Pinned:      true,
-		// 	MeteringOff: true,
-		// 	StorageType: ContractStorageType_CoreConsensus,
-		// 	Deps:        []string{},
-		// },
+		{
+			Address:     ADDR_IDENTITY,
+			Label:       "identity",
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
 		{
 			Address:     ADDR_MODEXP,
 			Label:       "modexp",
@@ -1014,6 +1014,26 @@ func SpecialPrecompiles() SystemContracts {
 			Role:        &SystemContractRole{Role: ROLE_MCP_REGISTRY, Label: ROLE_MCP_REGISTRY, Primary: true},
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_ACCOUNT_IDENTITY,
+			Label:       ACCOUNT_IDENTITY_v001,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+			Role:        &SystemContractRole{Role: ROLE_ACCOUNT_IDENTITY, Label: ROLE_ACCOUNT_IDENTITY, Primary: true},
+		},
+		{
+			Address:     ADDR_OAUTH2_KEYS,
+			Label:       OAUTH2_KEYS_v001,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+			Role:        &SystemContractRole{Role: ROLE_OAUTH2_KEYS, Label: ROLE_OAUTH2_KEYS, Primary: true},
 		},
 	}
 }

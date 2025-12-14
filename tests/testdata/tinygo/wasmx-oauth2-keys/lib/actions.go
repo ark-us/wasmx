@@ -6,7 +6,7 @@ import (
 
 // InitGenesis initializes the contract with genesis state
 func InitGenesis(msg *MsgInitGenesis) []byte {
-	LoggerInfo("InitGenesis called", nil)
+	fmt.Println("InitGenesis called", nil)
 
 	// Generate or use provided server secret
 	serverSecret := msg.ServerSecret
@@ -22,13 +22,13 @@ func InitGenesis(msg *MsgInitGenesis) []byte {
 	// Save server secret
 	SaveServerSecret(serverSecret)
 
-	LoggerInfo("Server secret initialized", nil)
+	fmt.Println("Server secret initialized", nil)
 	return MarshalJSON(map[string]bool{"success": true})
 }
 
 // GenerateEphemeralKey generates a new ephemeral key pair
 func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
-	LoggerInfo("GenerateEphemeralKey called", []string{"user_id", msg.UserID, "service_domain", msg.ServiceDomain})
+	fmt.Println("GenerateEphemeralKey called", []string{"user_id", msg.UserID, "service_domain", msg.ServiceDomain})
 
 	// Check if OAuth token already has a key
 	existingPubKey := LoadPublicKeyByToken(msg.OAuthToken)
@@ -85,7 +85,7 @@ func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
 	// Save token mapping
 	SaveTokenMapping(msg.OAuthToken, publicKey)
 
-	LoggerInfo("Ephemeral key generated", []string{"public_key", publicKey, "user_id", msg.UserID})
+	fmt.Println("Ephemeral key generated", []string{"public_key", publicKey, "user_id", msg.UserID})
 
 	return MarshalJSON(MsgGenerateEphemeralKeyResponse{
 		PublicKey:  publicKey,
@@ -96,7 +96,7 @@ func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
 
 // RegisterExternalKey registers a key pair generated externally (e.g., in browser)
 func RegisterExternalKey(msg *MsgRegisterExternalKey) []byte {
-	LoggerInfo("RegisterExternalKey called", []string{"user_id", msg.UserID, "public_key", msg.PublicKey})
+	fmt.Println("RegisterExternalKey called", []string{"user_id", msg.UserID, "public_key", msg.PublicKey})
 
 	// Check if OAuth token already has a key
 	existingPubKey := LoadPublicKeyByToken(msg.OAuthToken)
@@ -146,14 +146,14 @@ func RegisterExternalKey(msg *MsgRegisterExternalKey) []byte {
 	// Save token mapping
 	SaveTokenMapping(msg.OAuthToken, msg.PublicKey)
 
-	LoggerInfo("External key registered", []string{"public_key", msg.PublicKey, "user_id", msg.UserID})
+	fmt.Println("External key registered", []string{"public_key", msg.PublicKey, "user_id", msg.UserID})
 
 	return MarshalJSON(MsgRegisterExternalKeyResponse{Success: true})
 }
 
 // SignTransaction signs a transaction using an ephemeral key
 func SignTransaction(msg *MsgSignTransaction) []byte {
-	LoggerInfo("SignTransaction called", []string{"oauth_token", msg.OAuthToken})
+	fmt.Println("SignTransaction called", []string{"oauth_token", msg.OAuthToken})
 
 	// Get public key from OAuth token
 	publicKey := LoadPublicKeyByToken(msg.OAuthToken)
@@ -203,7 +203,7 @@ func SignTransaction(msg *MsgSignTransaction) []byte {
 		return MarshalJSON(map[string]string{"error": "failed to sign transaction"})
 	}
 
-	LoggerInfo("Transaction signed", []string{"public_key", publicKey})
+	fmt.Println("Transaction signed", []string{"public_key", publicKey})
 
 	return MarshalJSON(MsgSignTransactionResponse{
 		Signature: signature,
@@ -213,7 +213,7 @@ func SignTransaction(msg *MsgSignTransaction) []byte {
 
 // RevokeKey revokes an ephemeral key
 func RevokeKey(msg *MsgRevokeKey) []byte {
-	LoggerInfo("RevokeKey called", []string{"oauth_token", msg.OAuthToken})
+	fmt.Println("RevokeKey called", []string{"oauth_token", msg.OAuthToken})
 
 	// Get public key from OAuth token
 	publicKey := LoadPublicKeyByToken(msg.OAuthToken)
@@ -228,14 +228,14 @@ func RevokeKey(msg *MsgRevokeKey) []byte {
 	// Delete token mapping
 	DeleteTokenMapping(msg.OAuthToken)
 
-	LoggerInfo("Key revoked", []string{"public_key", publicKey})
+	fmt.Println("Key revoked", []string{"public_key", publicKey})
 
 	return MarshalJSON(MsgRevokeKeyResponse{Success: true})
 }
 
 // DeleteExpiredKeys cleans up expired keys
 func DeleteExpiredKeys(msg *MsgDeleteExpiredKeys) []byte {
-	LoggerInfo("DeleteExpiredKeys called", nil)
+	fmt.Println("DeleteExpiredKeys called", nil)
 
 	// Note: In a real implementation, we would iterate through all keys
 	// For now, this is a placeholder that returns 0 deleted
@@ -243,7 +243,7 @@ func DeleteExpiredKeys(msg *MsgDeleteExpiredKeys) []byte {
 
 	deletedCount := 0
 
-	LoggerInfo("Expired keys deleted", []string{"count", fmt.Sprintf("%d", deletedCount)})
+	fmt.Println("Expired keys deleted", []string{"count", fmt.Sprintf("%d", deletedCount)})
 
 	return MarshalJSON(MsgDeleteExpiredKeysResponse{DeletedCount: deletedCount})
 }

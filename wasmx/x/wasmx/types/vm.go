@@ -297,7 +297,7 @@ var ROLE_OAUTH2_SERVER = "oauth2_server"
 var ROLE_MCP_REGISTRY = "mcp_registry"
 var ROLE_MCP = "mcp"
 var ROLE_HTTP_SERVER = "httpserver"
-var ROLE_IDENTITY = "identity"
+var ROLE_ACCOUNT_IDENTITY = "account_identity"
 var ROLE_OAUTH2_KEYS = "oauth2_keys"
 
 // interpreter_<code type>_<encoding>_<version>
@@ -388,6 +388,8 @@ var OAUTH2_SERVER_v001 = "oauth2_server_0.0.1"
 var MCP_REGISTRY_v001 = "mcp_registry_0.0.1"
 var HTTPSERVER_REGISTRY_v001 = "httpserver_registry_0.0.1"
 var HTTPSERVER_REGISTRY_v002 = "httpserver_registry_0.0.2"
+var ACCOUNT_IDENTITY_v001 = "account_identity_0.0.1"
+var OAUTH2_KEYS_v001 = "oauth2_keys_0.0.1"
 
 // var ALLOC_TYPE_AS = "alloc_assemblyscript_1"
 // var ALLOC_DEFAULT = "alloc_default"

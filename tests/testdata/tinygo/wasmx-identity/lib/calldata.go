@@ -2,25 +2,34 @@ package lib
 
 import (
 	"encoding/json"
+	"fmt"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // RouteCallData routes incoming call data to the appropriate handler
 func RouteCallData(data []byte) []byte {
+	fmt.Println("=== IDENTITY: RouteCallData ===")
+	fmt.Println("Received data:", string(data))
+	fmt.Println("Data length:", len(data))
+	fmt.Println("================================")
+
 	var callData CallData
 	if err := json.Unmarshal(data, &callData); err != nil {
 		LoggerError("Failed to unmarshal calldata", []string{"error", err.Error()})
+		fmt.Println("ERROR: Failed to unmarshal calldata:", err.Error())
 		return MarshalJSON(map[string]string{"error": "invalid calldata"})
 	}
 
 	// Handle initialization
 	if callData.InitGenesis != nil {
+		fmt.Println("Routing to InitGenesis")
 		return InitGenesis(callData.InitGenesis)
 	}
 
 	// Handle user registration and management
 	if callData.RegisterUser != nil {
+		fmt.Println("Routing to RegisterUser")
 		return RegisterUser(callData.RegisterUser)
 	}
 
@@ -57,8 +66,8 @@ func RouteCallData(data []byte) []byte {
 		return QueryValidatePermission(callData.QueryValidatePermission)
 	}
 
-	LoggerError("Unknown calldata", nil)
-	return MarshalJSON(map[string]string{"error": "unknown calldata"})
+	Revert("invalid call data: " + string(data))
+	return []byte{}
 }
 
 // Main entry point for the contract

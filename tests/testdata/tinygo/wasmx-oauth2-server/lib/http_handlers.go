@@ -12,6 +12,7 @@ import (
 
 // HandleHttpRequestWrap handles HTTP requests forwarded from HTTP server registry via HttpRequestHandler
 func HandleHttpRequestWrap(req wasmxhttp.HttpRequestIncoming) []byte {
+	fmt.Println("--wasmx.oauth2server.HandleHttpRequestWrap--")
 	path := req.RequestURI
 	if path == "" {
 		path = req.Url
@@ -80,6 +81,7 @@ func handleWellKnown(req wasmxhttp.HttpRequestIncoming) []byte {
 }
 
 func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
+	fmt.Println("--wasmx.oauth2server.handleRegister--")
 	if req.Method == "GET" {
 		// Return HTML registration form with blockchain key generation
 		html := `<!DOCTYPE html>
@@ -129,6 +131,8 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
     <script type="module">
         import * as secp from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@2.1.0/+esm';
         import { sha256 } from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/sha256/+esm';
+        import { ripemd160 } from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/ripemd160/+esm';
+        import { bech32 } from 'https://cdn.jsdelivr.net/npm/bech32@2.0.0/+esm';
 
         document.getElementById('enableBlockchain').addEventListener('change', function(e) {
             document.getElementById('blockchainOptions').style.display = e.target.checked ? 'block' : 'none';
@@ -196,12 +200,21 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
             };
         }
 
-        // Derive blockchain address from public key (simplified - just hash for now)
+        // Derive Cosmos SDK-compatible bech32 address from public key
+        // This follows the standard Cosmos SDK address derivation (coin type 118)
         function deriveAddress(publicKeyHex) {
+            // Convert hex public key to bytes
             const pubKeyBytes = new Uint8Array(publicKeyHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-            const hash = sha256(pubKeyBytes);
-            const addressBytes = hash.slice(0, 20); // Take first 20 bytes
-            return 'wasmx1' + Array.from(addressBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
+            // Cosmos SDK uses sha256 then ripemd160
+            const sha256Hash = sha256(pubKeyBytes);
+            const ripemd160Hash = ripemd160(sha256Hash);
+
+            // Convert to bech32 with 'wasmx' prefix
+            const words = bech32.toWords(ripemd160Hash);
+            const address = bech32.encode('wasmx', words);
+
+            return address;
         }
 
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
@@ -239,6 +252,14 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
                     // Generate key pair
                     const keyPair = generateKeyPair();
                     const address = deriveAddress(keyPair.publicKey);
+
+                    // LOG: Show generated keys in console
+                    console.log('=== BROWSER-SIDE KEY GENERATION ===');
+                    console.log('Private Key (hex):', keyPair.privateKey);
+                    console.log('Public Key (compressed, hex):', keyPair.publicKey);
+                    console.log('Derived Address (Cosmos SDK bech32):', address);
+                    console.log('✓ Address format IS Cosmos SDK coin 118 compatible!');
+                    console.log('===================================');
 
                     // Encrypt private key with PIN
                     const encryptedPrivateKey = await encryptPrivateKey(keyPair.privateKey, pin);
@@ -295,6 +316,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 	if req.Method != "POST" {
 		return methodNotAllowed()
 	}
+	fmt.Println("--wasmx.oauth2server.handleRegister.POST--")
 
 	// Parse form data or JSON
 	var r RegisterUserRequest

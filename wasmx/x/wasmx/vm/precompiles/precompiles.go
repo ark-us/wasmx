@@ -180,6 +180,12 @@ var (
 	//go:embed 68.wasmx_httpserver_registry_0.0.2.wasm
 	wasmx_httpserver_registry_v002 []byte
 
+	//go:embed 69.wasmx_identity_0.0.1.wasm
+	wasmx_identity_001 []byte
+
+	//go:embed 70.wasmx_oauth2_keys_0.0.1.wasm
+	wasmx_oauth2_keys_001 []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -378,6 +384,10 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = wasmx_oauth2_server
 	case types.MCP_REGISTRY_v001:
 		wasmbin = wasmx_mcp_registry
+	case types.ACCOUNT_IDENTITY_v001:
+		wasmbin = wasmx_identity_001
+	case types.OAUTH2_KEYS_v001:
+		wasmbin = wasmx_oauth2_keys_001
 	}
 	return wasmbin
 }

@@ -51,34 +51,49 @@ func InitGenesis(msg *MsgInitGenesis) []byte {
 
 // RegisterUser registers a new user with an initial address
 func RegisterUser(msg *MsgRegisterUser) []byte {
+	fmt.Println("=== IDENTITY: RegisterUser called ===")
+	fmt.Println("Address:", msg.Address)
+	fmt.Println("PublicKey:", msg.PublicKey)
+	fmt.Println("==================================888==")
 	LoggerInfo("RegisterUser called", []string{"address", msg.Address})
 
+	fmt.Println("Step 1: Check existing user---")
 	// Check if address is already associated with a user
 	existingUserID := LoadUserIDByAddress(msg.Address)
 	if existingUserID != "" {
+		fmt.Println("Address already registered:", existingUserID)
 		LoggerError("Address already registered", []string{"address", msg.Address, "user_id", existingUserID})
 		return MarshalJSON(map[string]string{"error": "address already registered"})
 	}
 
+	fmt.Println("Step 2: Generate user ID")
 	// Generate new user ID
 	userID := GetNextUserID()
-	blockTime := GetBlockTime()
+	fmt.Println("Generated userID:", userID)
 
+	timestamp := GetBlockTime()
+
+	fmt.Println("Step 4: Create user identity")
 	// Create user identity
 	user := &UserIdentity{
 		UserID:         userID,
 		PrimaryAddress: msg.Address, // First address is primary
 		Addresses:      []string{msg.Address},
-		CreatedAt:      blockTime,
-		UpdatedAt:      blockTime,
+		CreatedAt:      timestamp,
+		UpdatedAt:      timestamp,
 	}
+	fmt.Println("User created:", userID)
 
+	fmt.Println("Step 5: Save user")
 	// Save user
 	if err := SaveUser(user); err != nil {
+		fmt.Println("ERROR saving user:", err.Error())
 		LoggerError("Failed to save user", []string{"error", err.Error()})
 		return MarshalJSON(map[string]string{"error": "failed to save user"})
 	}
+	fmt.Println("User saved")
 
+	fmt.Println("Step 6: Create address info")
 	// Create address info
 	addrInfo := &AddressInfo{
 		Address:       msg.Address,
@@ -86,21 +101,31 @@ func RegisterUser(msg *MsgRegisterUser) []byte {
 		ServiceDomain: msg.ServiceDomain,
 		Permissions:   msg.Permissions,
 		ExpiresAt:     msg.ExpiresAt,
-		CreatedAt:     blockTime,
+		CreatedAt:     timestamp,
 	}
+	fmt.Println("Address info created")
 
+	fmt.Println("Step 7: Save address info")
 	// Save address info
 	if err := SaveAddressInfo(userID, addrInfo); err != nil {
+		fmt.Println("ERROR saving address info:", err.Error())
 		LoggerError("Failed to save address info", []string{"error", err.Error()})
 		return MarshalJSON(map[string]string{"error": "failed to save address info"})
 	}
+	fmt.Println("Address info saved")
 
+	fmt.Println("Step 8: Save address to user ID mapping")
 	// Save address to user ID mapping
 	SaveUserIDByAddress(msg.Address, userID)
+	fmt.Println("Mapping saved")
 
+	fmt.Println("Step 9: Prepare response")
 	LoggerInfo("User registered", []string{"user_id", userID, "address", msg.Address})
 
-	return MarshalJSON(MsgRegisterUserResponse{UserID: userID})
+	response := MarshalJSON(MsgRegisterUserResponse{UserID: userID})
+	fmt.Println("Response prepared, length:", len(response))
+	fmt.Println("Response content:", string(response))
+	return response
 }
 
 // AddAddress adds a new address to an existing user

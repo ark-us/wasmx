@@ -6,12 +6,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // RegisterUser creates a new user account
 func RegisterUser(req RegisterUserRequest) []byte {
+	fmt.Println("--wasmx.oauth2server.RegisterUser--")
 	// Validate request
 	if req.Email == "" {
 		Revert("email is required")
@@ -27,6 +29,7 @@ func RegisterUser(req RegisterUserRequest) []byte {
 	if getUserByEmail(req.Email) != nil {
 		Revert("email already registered")
 	}
+	fmt.Println("--wasmx.oauth2server.RegisterUser2--")
 
 	// Generate user ID
 	userID := generateUserID(req.Email)
@@ -34,12 +37,11 @@ func RegisterUser(req RegisterUserRequest) []byte {
 	// Hash password
 	passwordHash := hashPassword(req.Password)
 
-	// Get current block height
-	currentBlock := wasmx.GetCurrentBlock()
-
 	// Register in identity contract if public key provided
 	var identityUserID string
 	var blockchainAddress string
+
+	fmt.Println("--wasmx.oauth2server.RegisterUser3--")
 
 	if req.PublicKey != "" && req.Address != "" {
 		identityUserID, blockchainAddress = registerInIdentityContract(req.PublicKey, req.Address)
@@ -48,6 +50,7 @@ func RegisterUser(req RegisterUserRequest) []byte {
 			"address", blockchainAddress,
 		})
 	}
+	fmt.Println("--wasmx.oauth2server.RegisterUser4--")
 
 	// Create user account
 	user := User{
@@ -55,7 +58,7 @@ func RegisterUser(req RegisterUserRequest) []byte {
 		Email:          req.Email,
 		Username:       req.Username,
 		PasswordHash:   passwordHash,
-		CreatedAt:      int64(currentBlock.Height),
+		CreatedAt:      time.Now().Unix(),
 		Active:         true,
 		IdentityUserID: identityUserID,
 		Address:        blockchainAddress,
@@ -63,8 +66,11 @@ func RegisterUser(req RegisterUserRequest) []byte {
 
 	// Store user
 	storeUser(user)
+	fmt.Println("--wasmx.oauth2server.RegisterUser5--")
 	storeEmailMapping(req.Email, userID)
+	fmt.Println("--wasmx.oauth2server.RegisterUser6--")
 	addToUserList(userID)
+	fmt.Println("--wasmx.oauth2server.RegisterUser7--")
 
 	LoggerInfo("User registered", []string{
 		"user_id", userID,
@@ -135,7 +141,20 @@ func Login(req LoginRequest) []byte {
 	LoggerInfo("User logged in", []string{
 		"user_id", user.UserID,
 		"email", user.Email,
+		"session_id", sessionID,
 	})
+
+	// SERVER-SIDE LOG: Print OAuth session token
+	fmt.Println("=== SERVER-SIDE LOGIN ===")
+	fmt.Println("Session ID (OAuth token):", sessionID)
+	fmt.Println("User ID:", user.UserID)
+	fmt.Println("Identity User ID:", user.IdentityUserID)
+	fmt.Println("Blockchain Address:", user.Address)
+	fmt.Println("========================")
+
+	// Generate ephemeral key pair for this session
+	// Call wasmx-oauth2-keys contract to generate server-side ephemeral key
+	generateEphemeralKey(sessionID, user.UserID, user.IdentityUserID, expiresAt)
 
 	// Return response
 	response := LoginResponse{
@@ -407,34 +426,38 @@ func validateSessionInternal(sessionID string) (string, error) {
 
 // registerInIdentityContract registers a user in the identity contract
 func registerInIdentityContract(publicKey string, address string) (string, string) {
+	fmt.Println("--wasmx.oauth2server.registerInIdentityContract--")
 	// Get identity contract address
-	identityAddr := wasmx.GetAddressByRole(wasmx.ROLE_IDENTITY)
+	identityAddr := wasmx.GetAddressByRole(wasmx.ROLE_ACCOUNT_IDENTITY)
 	if identityAddr == "" {
 		LoggerError("Identity contract not found", nil)
+		Revert(wasmx.ROLE_ACCOUNT_IDENTITY + ` contract not found`)
 		return "", ""
 	}
 
-	// Convert public key hex string to bytes
-	pubKeyBytes, err := hex.DecodeString(publicKey)
-	if err != nil {
-		LoggerError("Invalid public key format", []string{"error", err.Error()})
+	// Convert hex public key to bytes
+	pubKeyBytes := hexToBytes(publicKey)
+	if len(pubKeyBytes) == 0 {
+		LoggerError("Invalid public key hex", []string{"public_key", publicKey})
+		Revert(`Invalid public key hex: ` + publicKey)
 		return "", ""
 	}
 
 	// Create register_user message for identity contract
 	registerMsg := map[string]interface{}{
 		"register_user": map[string]interface{}{
-			"address":   address,
-			"public_key": pubKeyBytes,
-			"service_domain": "", // Empty for regular user address
-			"permissions": []map[string]interface{}{}, // No special permissions initially
-			"expires_at": int64(0), // Non-expiring
+			"address":        address,
+			"public_key":     pubKeyBytes, // Send as bytes (will be base64 in JSON)
+			"service_domain": "",          // Empty for regular user address
+			"permissions":    []string{},  // Empty permissions array
+			"expires_at":     int64(0),    // Non-expiring
 		},
 	}
 
 	msgBz, err := json.Marshal(registerMsg)
 	if err != nil {
 		LoggerError("Failed to marshal identity message", []string{"error", err.Error()})
+		Revert(`Failed to marshal identity message: ` + err.Error())
 		return "", ""
 	}
 
@@ -442,17 +465,104 @@ func registerInIdentityContract(publicKey string, address string) (string, strin
 	ok, data := wasmx.CallSimple(identityAddr, msgBz, false, MODULE_NAME)
 	if !ok {
 		LoggerError("Failed to register in identity contract", []string{"error", string(data)})
+		fmt.Println("ERROR: Identity contract call failed:", string(data))
+		Revert("ERROR: Identity contract call failed:" + string(data))
 		return "", ""
 	}
+
+	// Log raw response
+	fmt.Println("=== IDENTITY CONTRACT RESPONSE ===")
+	fmt.Println("Raw data:", string(data))
+	fmt.Println("Data length:", len(data))
+	fmt.Println("==================================")
 
 	// Parse response
 	var response struct {
 		UserID string `json:"user_id"`
 	}
 	if err := json.Unmarshal(data, &response); err != nil {
-		LoggerError("Failed to parse identity response", []string{"error", err.Error()})
+		LoggerError("Failed to parse identity response", []string{"error", err.Error(), "data", string(data)})
+		fmt.Println("ERROR: Failed to parse identity response:", err.Error())
+		fmt.Println("Raw data was:", string(data))
+		Revert("ERROR: Failed to parse identity response:" + err.Error())
 		return "", ""
 	}
 
 	return response.UserID, address
+}
+
+// generateEphemeralKey generates a server-side ephemeral key for the user session
+func generateEphemeralKey(oauthToken, userID, identityUserID string, expiresAt int64) {
+	// Get oauth2-keys contract address
+	keysAddr := wasmx.GetAddressByRole(wasmx.ROLE_OAUTH2_KEYS)
+	if keysAddr == "" {
+		LoggerError("OAuth2 keys contract not found", nil)
+		fmt.Println("ERROR: OAuth2 keys contract not found by role")
+		return
+	}
+
+	// Create message to generate ephemeral key
+	generateMsg := map[string]interface{}{
+		"generate_ephemeral_key": map[string]interface{}{
+			"user_id":        userID,
+			"oauth_token":    oauthToken,
+			"service_domain": "", // Empty for general use
+			"expires_at":     expiresAt,
+		},
+	}
+
+	msgBz, err := json.Marshal(generateMsg)
+	if err != nil {
+		LoggerError("Failed to marshal ephemeral key message", []string{"error", err.Error()})
+		fmt.Println("ERROR: Failed to marshal ephemeral key message:", err.Error())
+		return
+	}
+
+	// Call oauth2-keys contract to generate ephemeral key
+	ok, data := wasmx.CallSimple(keysAddr, msgBz, false, MODULE_NAME)
+	if !ok {
+		LoggerError("Failed to generate ephemeral key", []string{"error", string(data)})
+		fmt.Println("ERROR: Failed to generate ephemeral key:", string(data))
+		return
+	}
+
+	// Log raw response
+	fmt.Println("=== OAUTH2-KEYS CONTRACT RESPONSE ===")
+	fmt.Println("Raw data:", string(data))
+	fmt.Println("Data length:", len(data))
+	fmt.Println("=====================================")
+
+	// Parse response
+	var response struct {
+		Success    bool   `json:"success"`
+		PublicKey  string `json:"public_key"`
+		PrivateKey string `json:"private_key"`
+	}
+	if err := json.Unmarshal(data, &response); err != nil {
+		LoggerError("Failed to parse ephemeral key response", []string{"error", err.Error(), "data", string(data)})
+		fmt.Println("ERROR: Failed to parse ephemeral key response:", err.Error())
+		fmt.Println("Raw data was:", string(data))
+		return
+	}
+
+	if !response.Success {
+		LoggerError("Ephemeral key generation failed", nil)
+		fmt.Println("ERROR: Ephemeral key generation failed")
+		return
+	}
+
+	LoggerInfo("Ephemeral key generated", []string{
+		"user_id", userID,
+		"public_key", response.PublicKey,
+	})
+
+	// SERVER-SIDE LOG: Print ephemeral key info
+	fmt.Println("=== EPHEMERAL KEY GENERATED ===")
+	fmt.Println("OAuth Token:", oauthToken)
+	fmt.Println("User ID:", userID)
+	fmt.Println("Identity User ID:", identityUserID)
+	fmt.Println("Public Key (hex):", response.PublicKey)
+	fmt.Println("Private Key (hex, first 16 chars):", response.PrivateKey[:16]+"...")
+	fmt.Println("Expires At:", expiresAt)
+	fmt.Println("===============================")
 }

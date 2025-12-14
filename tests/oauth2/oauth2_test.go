@@ -41,6 +41,19 @@ func (suite *KeeperTestSuite) TestOauth2() {
 	fmt.Println("Database:", dbName)
 	fmt.Println("====================================")
 
+	// Prepare init data for mcp-userdata contract
+	userdataInitData := &MCPContractInitGenesis{
+		InitGenesis: &MCPContractInitGenesisRequest{
+			RoutePrefix: "/tools/userdata",
+		},
+	}
+	userdataInitDataJSON, _ := json.Marshal(userdataInitData)
+
+	// Instantiate mcp-userdata with init data
+	userCodeId := appA.StoreCode(sender, testdata.MCPUserdata, nil)
+	userAddress := appA.InstantiateCode(sender, userCodeId, types.WasmxExecutionMessage{Data: userdataInitDataJSON}, "mcp_userdata", nil)
+	fmt.Println("Instantiated mcp-userdata contract:", userAddress.String())
+
 	// Build search configuration
 	searchConfig := buildSearchConfig(dbConnection, dbName)
 
@@ -76,17 +89,21 @@ func (suite *KeeperTestSuite) TestOauth2() {
 	utils.RegisterRole(suite, appA, types.ROLE_MCP, searchAddress, sender)
 	fmt.Println("MCP role assigned to search contract - auto-registration triggered via RoleChanged hook")
 
+	fmt.Println("Assigning MCP role to userdata contract...")
+	utils.RegisterRole(suite, appA, types.ROLE_MCP, userAddress, sender)
+	fmt.Println("MCP role assigned to userdata contract - auto-registration triggered via RoleChanged hook")
+
 	// Assign roles to identity and oauth2_keys contracts
-	identityAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_IDENTITY))
-	oauth2KeysAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_OAUTH2_KEYS))
+	// identityAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_IDENTITY))
+	// oauth2KeysAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_OAUTH2_KEYS))
 
-	fmt.Println("Assigning IDENTITY role to identity contract...")
-	utils.RegisterRole(suite, appA, types.ROLE_IDENTITY, identityAddr, sender)
-	fmt.Println("IDENTITY role assigned to contract:", identityAddr.String())
+	// fmt.Println("Assigning IDENTITY role to identity contract...")
+	// utils.RegisterRole(suite, appA, types.ROLE_ACCOUNT_IDENTITY, identityAddr, sender)
+	// fmt.Println("IDENTITY role assigned to contract:", identityAddr.String())
 
-	fmt.Println("Assigning OAUTH2_KEYS role to oauth2_keys contract...")
-	utils.RegisterRole(suite, appA, types.ROLE_OAUTH2_KEYS, oauth2KeysAddr, sender)
-	fmt.Println("OAUTH2_KEYS role assigned to contract:", oauth2KeysAddr.String())
+	// fmt.Println("Assigning OAUTH2_KEYS role to oauth2_keys contract...")
+	// utils.RegisterRole(suite, appA, types.ROLE_OAUTH2_KEYS, oauth2KeysAddr, sender)
+	// fmt.Println("OAUTH2_KEYS role assigned to contract:", oauth2KeysAddr.String())
 
 	// Register OAuth client
 	oauth2Addr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_OAUTH2_SERVER))
