@@ -3,6 +3,7 @@ package wasmxcore
 import (
 	sdkmath "cosmossdk.io/math"
 
+	"github.com/cometbft/cometbft/libs/bytes"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -139,4 +140,18 @@ type ExecuteCliCommandResponse struct {
 	Stderr   string `json:"stderr"`
 	ExitCode int    `json:"exit_code"`
 	Error    string `json:"error"`
+}
+
+type ResultBroadcastTx struct {
+	Code      uint32         `json:"code"`
+	Data      bytes.HexBytes `json:"data"`
+	Log       string         `json:"log"`
+	Codespace string         `json:"codespace"`
+
+	Hash bytes.HexBytes `json:"hash"`
+}
+
+type BroadcastTxAsyncResponse struct {
+	Error    string             `json:"error"`
+	Response *ResultBroadcastTx `json:"response"`
 }

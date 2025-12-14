@@ -27,6 +27,7 @@ func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{
 		vm.BuildFn("storageResetGlobal", coreWasmxStorageResetGlobal, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 
 		vm.BuildFn("updateSystemCache", coreUpdateSystemCache, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("BroadcastTxAsync", coreBroadcastTxAsync, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("executeCliCommand", coreExecuteCliCommand, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 	}
 

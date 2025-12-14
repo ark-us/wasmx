@@ -2,6 +2,7 @@ package wasmxcore
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -63,6 +64,10 @@ func storageResetGlobalWrap(bz []byte) []byte {
 
 func updateSystemCacheWrap(bz []byte) []byte {
 	return utils.PackedPtrToBytes(updateSystemCache_(utils.BytesToPackedPtr(bz)))
+}
+
+func broadcastTxAsyncWrap(bz []byte) []byte {
+	return utils.PackedPtrToBytes(broadcastTxAsync_(utils.BytesToPackedPtr(bz)))
 }
 
 func externalCallWrap(bz []byte) []byte {
@@ -284,6 +289,21 @@ func UpdateSystemCache(req UpdateSystemCacheRequest) (*UpdateSystemCacheResponse
 	LoggerInfo("update system cache: ", []string{"data", string(reqJSON), "host_response", string(result)})
 
 	var response UpdateSystemCacheResponse
+	if err := json.Unmarshal(result, &response); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+func BroadcastTxAsync(txbz []byte) (*BroadcastTxAsyncResponse, error) {
+	LoggerInfo("broadcast tx: ", []string{"data", hex.EncodeToString(txbz)})
+
+	result := broadcastTxAsyncWrap(txbz)
+
+	LoggerInfo("broadcast tx: ", []string{"data", hex.EncodeToString(txbz), "host_response", string(result)})
+
+	var response BroadcastTxAsyncResponse
 	if err := json.Unmarshal(result, &response); err != nil {
 		return nil, err
 	}

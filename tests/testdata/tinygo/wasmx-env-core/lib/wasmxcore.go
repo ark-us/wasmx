@@ -52,3 +52,6 @@ func updateSystemCache_(reqPtr int64) int64
 
 //go:wasmimport wasmxcore executeCliCommand
 func executeCliCommand_(reqPtr int64) int64
+
+//go:wasmimport wasmxcore BroadcastTxAsync
+func broadcastTxAsync_(reqPtr int64) int64

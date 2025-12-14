@@ -10,12 +10,15 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
+	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 	vmtypes "github.com/loredanacirstea/wasmx/x/wasmx/vm/types"
+
+	mcfg "github.com/loredanacirstea/wasmx/config"
 )
 
 type MigrateContractStateByStorageRequest struct {
@@ -517,6 +520,11 @@ type UpdateSystemCacheResponse struct {
 	Error string `json:"error"`
 }
 
+type BroadcastTxAsyncResponse struct {
+	Error    string                      `json:"error"`
+	Response *rpctypes.ResultBroadcastTx `json:"response"`
+}
+
 func coreWasmxStorageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
 	ctx := _context.(*Context)
 	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
@@ -651,6 +659,28 @@ func coreUpdateSystemCache(_context interface{}, rnh memc.RuntimeHandler, params
 	if err != nil {
 		// TODO maybe we should shut down the system here, if the cache was not updated correctly
 		resp.Error = err.Error()
+	}
+	responsebz, err := json.Marshal(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return rnh.AllocateWriteMem(responsebz)
+}
+
+func coreBroadcastTxAsync(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	resp := BroadcastTxAsyncResponse{Error: ""}
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	txbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	res, err := ctx.App.(mcfg.MythosApp).GetRpcClient().BroadcastTxAsync(ctx.GoContextParent, txbz)
+	if err != nil {
+		resp.Error = err.Error()
+	}
+	if res != nil {
+		resp.Response = res
 	}
 	responsebz, err := json.Marshal(&resp)
 	if err != nil {
