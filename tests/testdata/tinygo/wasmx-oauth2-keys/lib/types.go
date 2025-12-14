@@ -106,6 +106,19 @@ type QueryGetKeyInfoResponse struct {
 	CreatedAt     int64  `json:"created_at"`
 }
 
+// MsgQueryValidateAndGetKey validates OAuth token and returns ephemeral key with private key
+type MsgQueryValidateAndGetKey struct {
+	OAuthToken string `json:"oauth_token"`
+}
+
+type QueryValidateAndGetKeyResponse struct {
+	Valid         bool   `json:"valid"`
+	PublicKey     string `json:"public_key"`
+	PrivateKeyHex string `json:"private_key_hex"` // Decrypted private key in hex format
+	Address       string `json:"address"`         // Bech32 address derived from public key
+	Reason        string `json:"reason,omitempty"`
+}
+
 // CallData structure for routing
 type CallData struct {
 	GenerateEphemeralKey *MsgGenerateEphemeralKey `json:"generate_ephemeral_key,omitempty"`
@@ -114,8 +127,9 @@ type CallData struct {
 	RevokeKey            *MsgRevokeKey            `json:"revoke_key,omitempty"`
 	DeleteExpiredKeys    *MsgDeleteExpiredKeys    `json:"delete_expired_keys,omitempty"`
 
-	QueryGetPublicKey *MsgQueryGetPublicKey `json:"query_get_public_key,omitempty"`
-	QueryGetKeyInfo   *MsgQueryGetKeyInfo   `json:"query_get_key_info,omitempty"`
+	QueryGetPublicKey      *MsgQueryGetPublicKey      `json:"query_get_public_key,omitempty"`
+	QueryGetKeyInfo        *MsgQueryGetKeyInfo        `json:"query_get_key_info,omitempty"`
+	QueryValidateAndGetKey *MsgQueryValidateAndGetKey `json:"query_validate_and_get_key,omitempty"`
 
 	InitGenesis *MsgInitGenesis `json:"init_genesis,omitempty"`
 }

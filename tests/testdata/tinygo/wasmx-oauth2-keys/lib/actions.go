@@ -284,3 +284,76 @@ func QueryGetKeyInfo(msg *MsgQueryGetKeyInfo) []byte {
 		CreatedAt:     keyPair.CreatedAt,
 	})
 }
+
+// QueryValidateAndGetKey validates OAuth token and returns ephemeral key with private key
+func QueryValidateAndGetKey(msg *MsgQueryValidateAndGetKey) []byte {
+	// Get public key from OAuth token
+	publicKey := LoadPublicKeyByToken(msg.OAuthToken)
+	if publicKey == "" {
+		return MarshalJSON(QueryValidateAndGetKeyResponse{
+			Valid:  false,
+			Reason: "no key found for OAuth token",
+		})
+	}
+
+	// Load key pair
+	keyPair, err := LoadKeyPair(publicKey)
+	if err != nil || keyPair == nil {
+		return MarshalJSON(QueryValidateAndGetKeyResponse{
+			Valid:  false,
+			Reason: "failed to load key pair",
+		})
+	}
+
+	// Check if key has expired
+	currentTime := GetBlockTime()
+	if keyPair.ExpiresAt > 0 && currentTime > keyPair.ExpiresAt {
+		return MarshalJSON(QueryValidateAndGetKeyResponse{
+			Valid:  false,
+			Reason: "key has expired",
+		})
+	}
+
+	// Load server secret
+	serverSecret := LoadServerSecret()
+	if serverSecret == "" {
+		return MarshalJSON(QueryValidateAndGetKeyResponse{
+			Valid:  false,
+			Reason: "server secret not initialized",
+		})
+	}
+
+	// Derive encryption key
+	encryptionKey, err := DeriveEncryptionKey(serverSecret, msg.OAuthToken)
+	if err != nil {
+		return MarshalJSON(QueryValidateAndGetKeyResponse{
+			Valid:  false,
+			Reason: "failed to derive encryption key",
+		})
+	}
+
+	// Decrypt private key
+	privateKeyHex, err := DecryptPrivateKey(keyPair.PrivateKey, encryptionKey)
+	if err != nil {
+		return MarshalJSON(QueryValidateAndGetKeyResponse{
+			Valid:  false,
+			Reason: "failed to decrypt private key",
+		})
+	}
+
+	// Derive address from public key
+	address, err := DeriveAddressFromPublicKey(publicKey)
+	if err != nil {
+		return MarshalJSON(QueryValidateAndGetKeyResponse{
+			Valid:  false,
+			Reason: "failed to derive address from public key",
+		})
+	}
+
+	return MarshalJSON(QueryValidateAndGetKeyResponse{
+		Valid:         true,
+		PublicKey:     publicKey,
+		PrivateKeyHex: privateKeyHex,
+		Address:       address,
+	})
+}

@@ -49,6 +49,10 @@ func RouteCallData(data []byte) []byte {
 		return QueryGetKeyInfo(callData.QueryGetKeyInfo)
 	}
 
+	if callData.QueryValidateAndGetKey != nil {
+		return QueryValidateAndGetKey(callData.QueryValidateAndGetKey)
+	}
+
 	Revert("invalid call data: " + string(data))
 	return []byte{}
 }

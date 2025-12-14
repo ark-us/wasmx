@@ -110,3 +110,24 @@ func SignData(privateKey string, data []byte) ([]byte, error) {
 
 	return signature, nil
 }
+
+// DeriveAddressFromPublicKey derives a bech32 address from a public key
+// NOTE: This uses a simplified approach. In production, use proper secp256k1 address derivation
+func DeriveAddressFromPublicKey(publicKeyHex string) (string, error) {
+	// Decode public key from hex
+	pubKeyBytes, err := hex.DecodeString(publicKeyHex)
+	if err != nil {
+		return "", err
+	}
+
+	// Hash the public key with SHA256
+	hash := sha256.Sum256(pubKeyBytes)
+
+	// Take first 20 bytes as the address
+	addrBytes := hash[:20]
+
+	// Convert to hex for address
+	// In production, this would be converted to bech32 format with proper prefix
+	// For now, we'll create a placeholder bech32-like string
+	return "wasmx" + hex.EncodeToString(addrBytes), nil
+}
