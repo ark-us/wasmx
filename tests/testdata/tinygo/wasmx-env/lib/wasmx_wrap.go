@@ -146,6 +146,14 @@ func Log(data []byte, topics [][32]byte) {
 	Log_(utils.BytesToPackedPtr(encoded))
 }
 
+func LogWithMsgTopic(msg string, data []byte, topics [][32]byte) {
+	topic0Bytes := Sha256([]byte(msg))
+	var topic0 [32]byte
+	copy(topic0[:], topic0Bytes)
+	newtopics := append([][32]byte{topic0}, topics...)
+	Log(data, newtopics)
+}
+
 func EmitCosmosEvents(events []Event) {
 	bz, err := json.Marshal(events)
 	if err != nil {

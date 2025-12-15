@@ -6,6 +6,7 @@ PRECOMPILE_DIR := ./wasmx/x/wasmx/vm/precompiles
 # Mapping of tinygo modules to precompile wasm filenames
 # Format: module_path:output_filename
 TINYGO_TARGETS := \
+	wasmx-erc20:32.erc20json_go_0.0.2.wasm \
 	wasmx-fsm:28.finite_state_machine.wasm \
 	wasmx-raft-lib:2a.raft_library.wasm \
 	wasmx-raftp2p-lib:36.raftp2p_library.wasm \

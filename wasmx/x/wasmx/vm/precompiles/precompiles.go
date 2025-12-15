@@ -87,7 +87,7 @@ var (
 	//go:embed 31.bank_0.0.1.wasm
 	bank_contract []byte
 
-	//go:embed 32.erc20json_0.0.1.wasm
+	//go:embed 32.erc20json_go_0.0.2.wasm
 	erc20json_contract []byte
 
 	//go:embed 33.derc20json_0.0.1.wasm
