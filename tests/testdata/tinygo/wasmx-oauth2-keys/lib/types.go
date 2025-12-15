@@ -8,8 +8,8 @@ const MODULE_NAME = "oauth2_keys"
 
 // Storage keys (non-deterministic storage)
 const (
-	STORAGE_KEY_PREFIX    = "key:"          // key:<public_key> -> EphemeralKeyPair
-	STORAGE_TOKEN_PREFIX  = "token:"        // token:<oauth_token> -> public_key
+	STORAGE_KEY_PREFIX    = "key."          // key:<public_key> -> EphemeralKeyPair
+	STORAGE_TOKEN_PREFIX  = "token."        // token:<oauth_token> -> public_key
 	STORAGE_SERVER_SECRET = "server_secret" // Master secret for key encryption
 )
 

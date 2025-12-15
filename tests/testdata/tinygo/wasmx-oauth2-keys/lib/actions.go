@@ -33,8 +33,8 @@ func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
 
 	// Check if OAuth token already has a key
 	existingPubKey := LoadPublicKeyByToken(msg.OAuthToken)
-	if existingPubKey != nil {
-		LoggerError("OAuth token already has a key", []string{"oauth_token", msg.OAuthToken})
+	if len(existingPubKey) > 0 {
+		fmt.Println("OAuth token already has a key", "oauth_token", msg.OAuthToken, "existingPubKey", hex.EncodeToString(existingPubKey))
 		return MarshalJSON(map[string]string{"error": "OAuth token already has an associated key"})
 	}
 

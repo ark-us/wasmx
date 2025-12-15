@@ -152,9 +152,8 @@ func Login(req LoginRequest) []byte {
 	fmt.Println("Blockchain Address:", user.Address)
 	fmt.Println("========================")
 
-	// Generate ephemeral key pair for this session
-	// Call wasmx-oauth2-keys contract to generate server-side ephemeral key
-	generateEphemeralKey(sessionID, user.UserID, user.IdentityUserID, expiresAt)
+	// Note: Ephemeral key generation moved to ExchangeCodeForToken
+	// where the actual OAuth access token is created
 
 	// Return response
 	response := LoginResponse{
@@ -565,4 +564,42 @@ func generateEphemeralKey(oauthToken, userID, identityUserID string, expiresAt i
 	fmt.Println("Private Key (hex, first 16 chars):", response.PrivateKey[:16]+"...")
 	fmt.Println("Expires At:", expiresAt)
 	fmt.Println("===============================")
+}
+
+// revokeEphemeralKey revokes an ephemeral key associated with an OAuth token
+func revokeEphemeralKey(oauthToken string) {
+	// Get oauth2-keys contract address
+	keysAddr := wasmx.GetAddressByRole(wasmx.ROLE_OAUTH2_KEYS)
+	if keysAddr == "" {
+		LoggerError("OAuth2 keys contract not found", nil)
+		fmt.Println("ERROR: OAuth2 keys contract not found by role")
+		return
+	}
+
+	// Create message to revoke ephemeral key
+	revokeMsg := map[string]interface{}{
+		"revoke_key": map[string]interface{}{
+			"oauth_token": oauthToken,
+		},
+	}
+
+	msgBz, err := json.Marshal(revokeMsg)
+	if err != nil {
+		LoggerError("Failed to marshal revoke key message", []string{"error", err.Error()})
+		fmt.Println("ERROR: Failed to marshal revoke key message:", err.Error())
+		return
+	}
+
+	// Call oauth2-keys contract to revoke ephemeral key
+	ok, data := wasmx.CallSimple(keysAddr, msgBz, false, MODULE_NAME)
+	if !ok {
+		LoggerError("Failed to revoke ephemeral key", []string{"error", string(data)})
+		fmt.Println("ERROR: Failed to revoke ephemeral key:", string(data))
+		return
+	}
+
+	LoggerInfo("Ephemeral key revoked", []string{"oauth_token", oauthToken})
+	fmt.Println("=== EPHEMERAL KEY REVOKED ===")
+	fmt.Println("OAuth Token:", oauthToken)
+	fmt.Println("=============================")
 }

@@ -400,3 +400,27 @@ func PrepareTx(fromAddress string, toAddress string, data []byte, gasLimit uint6
 
 	return response.TxBytes, nil
 }
+
+func generateKeyPairWrap() []byte {
+	return utils.PackedPtrToBytes(generateKeyPair_())
+}
+
+func GenerateKeyPair() (publicKey []byte, privateKey []byte, err error) {
+	LoggerInfo("generate key pair", []string{})
+
+	result := generateKeyPairWrap()
+
+	var response GenerateKeyPairResponse
+	if err := json.Unmarshal(result, &response); err != nil {
+		return nil, nil, err
+	}
+
+	if response.Error != "" {
+		LoggerError("generate key pair failed: ", []string{"error", response.Error})
+		return nil, nil, fmt.Errorf("generate key pair failed: %s", response.Error)
+	}
+
+	LoggerInfo("generate key pair success: ", []string{"pubkey_len", fmt.Sprintf("%d", len(response.PublicKey)), "privkey_len", fmt.Sprintf("%d", len(response.PrivateKey))})
+
+	return response.PublicKey, response.PrivateKey, nil
+}

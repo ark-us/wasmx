@@ -213,9 +213,10 @@ type ValidateAccessTokenResponse struct {
 }
 
 type RefreshAccessTokenRequest struct {
-	RefreshToken string `json:"refresh_token"`
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+	RefreshToken   string `json:"refresh_token"`
+	ClientID       string `json:"client_id"`
+	ClientSecret   string `json:"client_secret"`
+	OldAccessToken string `json:"old_access_token,omitempty"` // Optional: old access token to revoke its ephemeral key
 }
 
 type RefreshAccessTokenResponse struct {

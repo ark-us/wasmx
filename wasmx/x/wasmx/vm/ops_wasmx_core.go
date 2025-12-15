@@ -932,3 +932,31 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	}
 	return rnh.AllocateWriteMem(responsebz)
 }
+
+type GenerateKeyPairResponse struct {
+	Error      string `json:"error"`
+	PublicKey  []byte `json:"public_key"`
+	PrivateKey []byte `json:"private_key"`
+}
+
+// coreGenerateKeyPair generates a secp256k1 key pair
+func coreGenerateKeyPair(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	resp := GenerateKeyPairResponse{Error: "", PublicKey: nil, PrivateKey: nil}
+
+	// Generate secp256k1 private key
+	privKey := secp256k1.GenPrivKey()
+
+	// Get the private key bytes (32 bytes)
+	resp.PrivateKey = privKey.Bytes()
+
+	// Get the public key bytes (33 bytes compressed)
+	resp.PublicKey = privKey.PubKey().Bytes()
+
+	responsebz, err := json.Marshal(&resp)
+	if err != nil {
+		resp.Error = fmt.Sprintf("failed to marshal response: %s", err.Error())
+		responsebz, _ = json.Marshal(&resp)
+	}
+
+	return rnh.AllocateWriteMem(responsebz)
+}

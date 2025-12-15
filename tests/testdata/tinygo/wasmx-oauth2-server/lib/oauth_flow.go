@@ -203,6 +203,16 @@ func ExchangeCodeForToken(req ExchangeCodeForTokenRequest) []byte {
 		"client_id", authCode.ClientID,
 	})
 
+	// Generate ephemeral key for this access token
+	// Get user details to retrieve identity user ID
+	user := getUser(authCode.UserID)
+	if user != nil {
+		// Call wasmx-oauth2-keys contract to generate ephemeral key mapped to access token
+		generateEphemeralKey(accessToken, user.UserID, user.IdentityUserID, accessExpiresAt)
+	} else {
+		LoggerError("Failed to get user for ephemeral key generation", []string{"user_id", authCode.UserID})
+	}
+
 	// Return response
 	response := ExchangeCodeForTokenResponse{
 		AccessToken:  accessToken,
@@ -310,6 +320,22 @@ func RefreshAccessToken(req RefreshAccessTokenRequest) []byte {
 		"user_id", refreshToken.UserID,
 		"client_id", refreshToken.ClientID,
 	})
+
+	// Revoke old ephemeral key if old access token provided
+	if req.OldAccessToken != "" {
+		LoggerInfo("Revoking old ephemeral key", []string{"old_access_token", req.OldAccessToken})
+		revokeEphemeralKey(req.OldAccessToken)
+	}
+
+	// Generate new ephemeral key for this refreshed access token
+	// Get user details to retrieve identity user ID
+	user := getUser(refreshToken.UserID)
+	if user != nil {
+		// Call wasmx-oauth2-keys contract to generate ephemeral key mapped to new access token
+		generateEphemeralKey(accessToken, user.UserID, user.IdentityUserID, expiresAt)
+	} else {
+		LoggerError("Failed to get user for ephemeral key generation on refresh", []string{"user_id", refreshToken.UserID})
+	}
 
 	// Return response (optionally issue new refresh token too)
 	response := RefreshAccessTokenResponse{

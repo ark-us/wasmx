@@ -8,6 +8,14 @@ import (
 	lib "github.com/loredanacirstea/wasmx/tests/testdata/tinygo/wasmx-oauth2-keys/lib"
 )
 
+//go:wasm-module wasmxcore
+//export wasmx_nondeterministic_1
+func Wasmx_nondeterministic_1() {}
+
+//go:wasm-module wasmxcore
+//export wasmx_env_core_i64_1
+func Wasmx_env_core_i64_1() {}
+
 //go:wasm-module wasmx
 //export memory_ptrlen_i64_1
 func Memory_ptrlen_i64_1() {}

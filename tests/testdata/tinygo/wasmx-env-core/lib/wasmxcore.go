@@ -58,3 +58,6 @@ func broadcastTxAsync_(reqPtr int64) int64
 
 //go:wasmimport wasmxcore PrepareTx
 func prepareTx_(reqPtr int64) int64
+
+//go:wasmimport wasmxcore GenerateKeyPair
+func generateKeyPair_() int64

@@ -30,6 +30,7 @@ func BuildWasmxCoreEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{
 		vm.BuildFn("BroadcastTxAsync", coreBroadcastTxAsync, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("executeCliCommand", coreExecuteCliCommand, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("PrepareTx", corePrepareTx, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("GenerateKeyPair", coreGenerateKeyPair, []interface{}{}, []interface{}{vm.ValType_I32()}, 0),
 	}
 
 	return vm.BuildModule(rnh, "wasmxcore", context, fndefs)

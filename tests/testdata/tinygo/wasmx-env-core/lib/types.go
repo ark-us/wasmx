@@ -166,3 +166,9 @@ type PrepareTxResponse struct {
 	Error   string `json:"error"`
 	TxBytes []byte `json:"tx_bytes"`
 }
+
+type GenerateKeyPairResponse struct {
+	Error      string `json:"error"`
+	PublicKey  []byte `json:"public_key"`
+	PrivateKey []byte `json:"private_key"`
+}
