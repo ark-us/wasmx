@@ -19,7 +19,8 @@ TINYGO_TARGETS := \
 	wasmx-mcp-registry:67.wasmx_mcp_registry_0.0.1.wasm \
 	wasmx-httpserver-registry:68.wasmx_httpserver_registry_0.0.2.wasm \
 	wasmx-identity:69.wasmx_identity_0.0.1.wasm \
-	wasmx-oauth2-keys:70.wasmx_oauth2_keys_0.0.1.wasm
+	wasmx-oauth2-keys:70.wasmx_oauth2_keys_0.0.1.wasm \
+	wasmx-erc20x:71.erc20xjson_go_0.0.1.wasm
 
 # wasmx-gov:35.gov_0.0.1.wasm \
 # wasmx-gov-continuous:37.gov_cont_0.0.1.wasm \
