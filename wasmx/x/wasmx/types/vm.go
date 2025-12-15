@@ -139,6 +139,7 @@ type WasmxCosmosHandler interface {
 	VerifyCosmosTx(bz []byte) (bool, error)
 	WasmVMQueryHandler(caller mcodec.AccAddressPrefixed, request cw8types.QueryRequest) ([]byte, error)
 	GetAccount(addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error)
+	NewAccountWithAddressPrefixed(addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error)
 	GetCodeHash(contractAddress mcodec.AccAddressPrefixed) Checksum
 	GetCode(contractAddress mcodec.AccAddressPrefixed) []byte
 	GetBlockHash(blockNumber uint64) Checksum

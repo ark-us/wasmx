@@ -863,9 +863,12 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		return rnh.AllocateWriteMem(responsebz)
 	}
 	if accP == nil {
-		resp.Error = "account does not exist"
-		responsebz, _ := json.Marshal(&resp)
-		return rnh.AllocateWriteMem(responsebz)
+		accP, err = ctx.CosmosHandler.NewAccountWithAddressPrefixed(fromAddr)
+		if err != nil {
+			resp.Error = fmt.Sprintf("failed to create account: %s", err.Error())
+			responsebz, _ := json.Marshal(&resp)
+			return rnh.AllocateWriteMem(responsebz)
+		}
 	}
 	seq := accP.GetSequence()
 

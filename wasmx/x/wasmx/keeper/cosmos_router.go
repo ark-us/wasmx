@@ -93,6 +93,17 @@ func (h *WasmxCosmosHandler) GetAccount(addr mcodec.AccAddressPrefixed) (mcodec.
 	}
 	return h.Keeper.ak.GetAccountPrefixed(h.Ctx, addr)
 }
+func (h *WasmxCosmosHandler) NewAccountWithAddressPrefixed(addr mcodec.AccAddressPrefixed) (mcodec.AccountI, error) {
+	existingAcct, err := h.Keeper.GetAccountKeeper().NewAccountWithAddressPrefixed(h.Ctx, addr)
+	if err != nil {
+		return nil, err
+	}
+	err = h.Keeper.GetAccountKeeper().SetAccountPrefixed(h.Ctx, existingAcct)
+	if err != nil {
+		return nil, err
+	}
+	return existingAcct, nil
+}
 func (h *WasmxCosmosHandler) GetCodeHash(contractAddress mcodec.AccAddressPrefixed) types.Checksum {
 	_, codeInfo, _, err := h.Keeper.ContractInstance(h.Ctx, contractAddress)
 	if err != nil {
