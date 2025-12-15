@@ -20,24 +20,20 @@ func GenerateRandomSecret() (string, error) {
 
 // GenerateKeyPair generates a new secp256k1 key pair
 // For now, we generate random bytes - in production, use proper secp256k1 key generation
-func GenerateKeyPair() (publicKey string, privateKey string, err error) {
+func GenerateKeyPair() (publicKey []byte, privateKey []byte, err error) {
 	// Generate random private key (32 bytes for secp256k1)
 	privKeyBytes := make([]byte, 32)
 	if _, err := rand.Read(privKeyBytes); err != nil {
-		return "", "", err
+		return nil, nil, err
 	}
 
 	// In a real implementation, derive the public key from private key using secp256k1
 	// For now, we'll just generate random bytes as a placeholder
 	pubKeyBytes := make([]byte, 33) // Compressed public key
 	if _, err := rand.Read(pubKeyBytes); err != nil {
-		return "", "", err
+		return nil, nil, err
 	}
-
-	publicKey = hex.EncodeToString(pubKeyBytes)
-	privateKey = hex.EncodeToString(privKeyBytes)
-
-	return publicKey, privateKey, nil
+	return pubKeyBytes, privKeyBytes, nil
 }
 
 // DeriveEncryptionKey derives an encryption key from server secret and OAuth token
@@ -68,8 +64,7 @@ func DeriveEncryptionKey(serverSecret string, oauthToken string) ([]byte, error)
 // EncryptPrivateKey encrypts a private key using XOR with derived key
 // NOTE: This is a simple XOR encryption for demonstration.
 // In production, use AES-GCM or ChaCha20-Poly1305
-func EncryptPrivateKey(privateKey string, encryptionKey []byte) (string, error) {
-	privKeyBytes := []byte(privateKey)
+func EncryptPrivateKey(privKeyBytes []byte, encryptionKey []byte) ([]byte, error) {
 	encrypted := make([]byte, len(privKeyBytes))
 
 	// Simple XOR encryption (expand key if needed)
@@ -77,16 +72,11 @@ func EncryptPrivateKey(privateKey string, encryptionKey []byte) (string, error) 
 		encrypted[i] = privKeyBytes[i] ^ encryptionKey[i%len(encryptionKey)]
 	}
 
-	return base64.StdEncoding.EncodeToString(encrypted), nil
+	return encrypted, nil
 }
 
 // DecryptPrivateKey decrypts a private key using XOR with derived key
-func DecryptPrivateKey(encryptedPrivateKey string, encryptionKey []byte) (string, error) {
-	encrypted, err := base64.StdEncoding.DecodeString(encryptedPrivateKey)
-	if err != nil {
-		return "", err
-	}
-
+func DecryptPrivateKey(encrypted []byte, encryptionKey []byte) ([]byte, error) {
 	decrypted := make([]byte, len(encrypted))
 
 	// XOR decryption (same as encryption for XOR)
@@ -94,32 +84,12 @@ func DecryptPrivateKey(encryptedPrivateKey string, encryptionKey []byte) (string
 		decrypted[i] = encrypted[i] ^ encryptionKey[i%len(encryptionKey)]
 	}
 
-	return string(decrypted), nil
-}
-
-// SignData signs data with a private key
-// NOTE: This is a placeholder. In production, use proper secp256k1 signing
-func SignData(privateKey string, data []byte) ([]byte, error) {
-	// Hash the data
-	hash := sha256.Sum256(data)
-
-	// In a real implementation, sign the hash with secp256k1
-	// For now, return the hash as a placeholder signature
-	signature := make([]byte, 64) // secp256k1 signature is 64 bytes
-	copy(signature, hash[:])
-
-	return signature, nil
+	return decrypted, nil
 }
 
 // DeriveAddressFromPublicKey derives a bech32 address from a public key
 // NOTE: This uses a simplified approach. In production, use proper secp256k1 address derivation
-func DeriveAddressFromPublicKey(publicKeyHex string) (string, error) {
-	// Decode public key from hex
-	pubKeyBytes, err := hex.DecodeString(publicKeyHex)
-	if err != nil {
-		return "", err
-	}
-
+func DeriveAddressFromPublicKey(pubKeyBytes []byte) (string, error) {
 	// Hash the public key with SHA256
 	hash := sha256.Sum256(pubKeyBytes)
 

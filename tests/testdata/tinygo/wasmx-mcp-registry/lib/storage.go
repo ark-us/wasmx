@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/json"
+	"fmt"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
@@ -10,6 +11,7 @@ import (
 func storeContractRegistration(reg ContractRegistration) {
 	key := []byte(STORAGE_CONTRACT_PREFIX + reg.Address)
 	data, _ := json.Marshal(reg)
+	fmt.Println("--wasmx-mcp-registry.data--", string(data))
 	wasmx.StorageStore(key, data)
 }
 

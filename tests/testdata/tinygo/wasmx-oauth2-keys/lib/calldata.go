@@ -28,10 +28,6 @@ func RouteCallData(data []byte) []byte {
 		return RegisterExternalKey(callData.RegisterExternalKey)
 	}
 
-	if callData.SignTransaction != nil {
-		return SignTransaction(callData.SignTransaction)
-	}
-
 	if callData.RevokeKey != nil {
 		return RevokeKey(callData.RevokeKey)
 	}

@@ -368,13 +368,13 @@ func prepareTxWrap(bz []byte) []byte {
 	return utils.PackedPtrToBytes(prepareTx_(utils.BytesToPackedPtr(bz)))
 }
 
-func PrepareTx(fromAddress string, toAddress string, data []byte, gasLimit uint64, privateKeyHex string) ([]byte, error) {
+func PrepareTx(fromAddress string, toAddress string, data []byte, gasLimit uint64, privateKey []byte) ([]byte, error) {
 	req := PrepareTxRequest{
-		FromAddress:   fromAddress,
-		ToAddress:     toAddress,
-		Data:          data,
-		GasLimit:      gasLimit,
-		PrivateKeyHex: privateKeyHex,
+		FromAddress: fromAddress,
+		ToAddress:   toAddress,
+		Data:        data,
+		GasLimit:    gasLimit,
+		PrivateKey:  privateKey,
 	}
 
 	reqJSON, err := json.Marshal(req)

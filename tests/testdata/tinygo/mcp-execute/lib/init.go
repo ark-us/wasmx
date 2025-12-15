@@ -82,13 +82,27 @@ func OnRoleChanged() []byte {
 	tools := getToolDefinitions()
 	toolsJSON, _ := json.Marshal(tools)
 
+	// Define subpaths with per-path configuration
+	subpaths := []map[string]interface{}{
+		{
+			"path":            "/execute_py",
+			"use_oauth2":      true,
+			"use_transaction": false, // POST but read-only call, no transaction needed
+		},
+		{
+			"path":            "/execute_cli",
+			"use_oauth2":      true,
+			"use_transaction": false, // POST but read-only call, no transaction needed
+		},
+	}
+
 	// Register with MCP registry
 	registerMsg := map[string]interface{}{
 		"register_mcp_contract": map[string]interface{}{
 			"contract_address": string(wasmx.GetAddress()),
 			"route_prefix":     initData.RoutePrefix,
 			"tools_json":       string(toolsJSON),
-			"use_oauth2":       true,
+			"subpaths":         subpaths,
 		},
 	}
 	msgBz, _ := json.Marshal(registerMsg)

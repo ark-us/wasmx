@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"encoding/hex"
 	"fmt"
 )
 
@@ -32,7 +33,7 @@ func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
 
 	// Check if OAuth token already has a key
 	existingPubKey := LoadPublicKeyByToken(msg.OAuthToken)
-	if existingPubKey != "" {
+	if existingPubKey != nil {
 		LoggerError("OAuth token already has a key", []string{"oauth_token", msg.OAuthToken})
 		return MarshalJSON(map[string]string{"error": "OAuth token already has an associated key"})
 	}
@@ -85,7 +86,7 @@ func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
 	// Save token mapping
 	SaveTokenMapping(msg.OAuthToken, publicKey)
 
-	fmt.Println("Ephemeral key generated", []string{"public_key", publicKey, "user_id", msg.UserID})
+	fmt.Println("Ephemeral key generated", []string{"public_key", hex.EncodeToString(publicKey), "user_id", msg.UserID})
 
 	return MarshalJSON(MsgGenerateEphemeralKeyResponse{
 		PublicKey:  publicKey,
@@ -96,11 +97,11 @@ func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
 
 // RegisterExternalKey registers a key pair generated externally (e.g., in browser)
 func RegisterExternalKey(msg *MsgRegisterExternalKey) []byte {
-	fmt.Println("RegisterExternalKey called", []string{"user_id", msg.UserID, "public_key", msg.PublicKey})
+	fmt.Println("RegisterExternalKey called", []string{"user_id", msg.UserID, "public_key", hex.EncodeToString(msg.PublicKey)})
 
 	// Check if OAuth token already has a key
 	existingPubKey := LoadPublicKeyByToken(msg.OAuthToken)
-	if existingPubKey != "" {
+	if existingPubKey != nil {
 		LoggerError("OAuth token already has a key", []string{"oauth_token", msg.OAuthToken})
 		return MarshalJSON(map[string]string{"error": "OAuth token already has an associated key"})
 	}
@@ -146,69 +147,9 @@ func RegisterExternalKey(msg *MsgRegisterExternalKey) []byte {
 	// Save token mapping
 	SaveTokenMapping(msg.OAuthToken, msg.PublicKey)
 
-	fmt.Println("External key registered", []string{"public_key", msg.PublicKey, "user_id", msg.UserID})
+	fmt.Println("External key registered", []string{"public_key", hex.EncodeToString(msg.PublicKey), "user_id", msg.UserID})
 
 	return MarshalJSON(MsgRegisterExternalKeyResponse{Success: true})
-}
-
-// SignTransaction signs a transaction using an ephemeral key
-func SignTransaction(msg *MsgSignTransaction) []byte {
-	fmt.Println("SignTransaction called", []string{"oauth_token", msg.OAuthToken})
-
-	// Get public key from OAuth token
-	publicKey := LoadPublicKeyByToken(msg.OAuthToken)
-	if publicKey == "" {
-		LoggerError("No key found for OAuth token", []string{"oauth_token", msg.OAuthToken})
-		return MarshalJSON(map[string]string{"error": "no key found for OAuth token"})
-	}
-
-	// Load key pair
-	keyPair, err := LoadKeyPair(publicKey)
-	if err != nil || keyPair == nil {
-		LoggerError("Failed to load key pair", []string{"public_key", publicKey})
-		return MarshalJSON(map[string]string{"error": "failed to load key pair"})
-	}
-
-	// Check expiry
-	if keyPair.ExpiresAt > 0 && GetBlockTime() > keyPair.ExpiresAt {
-		LoggerError("Key expired", []string{"public_key", publicKey})
-		return MarshalJSON(map[string]string{"error": "key has expired"})
-	}
-
-	// Load server secret
-	serverSecret := LoadServerSecret()
-	if serverSecret == "" {
-		LoggerError("Server secret not initialized", nil)
-		return MarshalJSON(map[string]string{"error": "server secret not initialized"})
-	}
-
-	// Derive encryption key
-	encryptionKey, err := DeriveEncryptionKey(serverSecret, msg.OAuthToken)
-	if err != nil {
-		LoggerError("Failed to derive encryption key", []string{"error", err.Error()})
-		return MarshalJSON(map[string]string{"error": "failed to derive encryption key"})
-	}
-
-	// Decrypt private key
-	privateKey, err := DecryptPrivateKey(keyPair.PrivateKey, encryptionKey)
-	if err != nil {
-		LoggerError("Failed to decrypt private key", []string{"error", err.Error()})
-		return MarshalJSON(map[string]string{"error": "failed to decrypt private key"})
-	}
-
-	// Sign transaction
-	signature, err := SignData(privateKey, msg.TransactionData)
-	if err != nil {
-		LoggerError("Failed to sign transaction", []string{"error", err.Error()})
-		return MarshalJSON(map[string]string{"error": "failed to sign transaction"})
-	}
-
-	fmt.Println("Transaction signed", []string{"public_key", publicKey})
-
-	return MarshalJSON(MsgSignTransactionResponse{
-		Signature: signature,
-		Success:   true,
-	})
 }
 
 // RevokeKey revokes an ephemeral key
@@ -217,7 +158,7 @@ func RevokeKey(msg *MsgRevokeKey) []byte {
 
 	// Get public key from OAuth token
 	publicKey := LoadPublicKeyByToken(msg.OAuthToken)
-	if publicKey == "" {
+	if publicKey == nil {
 		LoggerError("No key found for OAuth token", []string{"oauth_token", msg.OAuthToken})
 		return MarshalJSON(map[string]string{"error": "no key found for OAuth token"})
 	}
@@ -228,7 +169,7 @@ func RevokeKey(msg *MsgRevokeKey) []byte {
 	// Delete token mapping
 	DeleteTokenMapping(msg.OAuthToken)
 
-	fmt.Println("Key revoked", []string{"public_key", publicKey})
+	fmt.Println("Key revoked", []string{"public_key", hex.EncodeToString(publicKey)})
 
 	return MarshalJSON(MsgRevokeKeyResponse{Success: true})
 }
@@ -251,7 +192,7 @@ func DeleteExpiredKeys(msg *MsgDeleteExpiredKeys) []byte {
 // QueryGetPublicKey retrieves public key for an OAuth token
 func QueryGetPublicKey(msg *MsgQueryGetPublicKey) []byte {
 	publicKey := LoadPublicKeyByToken(msg.OAuthToken)
-	if publicKey == "" {
+	if publicKey == nil {
 		return MarshalJSON(map[string]string{"error": "no key found for OAuth token"})
 	}
 
@@ -289,7 +230,7 @@ func QueryGetKeyInfo(msg *MsgQueryGetKeyInfo) []byte {
 func QueryValidateAndGetKey(msg *MsgQueryValidateAndGetKey) []byte {
 	// Get public key from OAuth token
 	publicKey := LoadPublicKeyByToken(msg.OAuthToken)
-	if publicKey == "" {
+	if publicKey == nil {
 		return MarshalJSON(QueryValidateAndGetKeyResponse{
 			Valid:  false,
 			Reason: "no key found for OAuth token",
@@ -333,7 +274,7 @@ func QueryValidateAndGetKey(msg *MsgQueryValidateAndGetKey) []byte {
 	}
 
 	// Decrypt private key
-	privateKeyHex, err := DecryptPrivateKey(keyPair.PrivateKey, encryptionKey)
+	privateKey, err := DecryptPrivateKey(keyPair.PrivateKey, encryptionKey)
 	if err != nil {
 		return MarshalJSON(QueryValidateAndGetKeyResponse{
 			Valid:  false,
@@ -351,9 +292,9 @@ func QueryValidateAndGetKey(msg *MsgQueryValidateAndGetKey) []byte {
 	}
 
 	return MarshalJSON(QueryValidateAndGetKeyResponse{
-		Valid:         true,
-		PublicKey:     publicKey,
-		PrivateKeyHex: privateKeyHex,
-		Address:       address,
+		Valid:      true,
+		PublicKey:  publicKey,
+		PrivateKey: privateKey,
+		Address:    address,
 	})
 }

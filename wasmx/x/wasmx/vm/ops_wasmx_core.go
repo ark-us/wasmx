@@ -2,7 +2,6 @@ package vm
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,14 +11,12 @@ import (
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
-	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
-	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
-	"github.com/loredanacirstea/wasmx/crypto/ethsecp256k1"
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
@@ -711,11 +708,11 @@ type ExecuteCliCommandResponse struct {
 }
 
 type PrepareTxRequest struct {
-	FromAddress   string `json:"from_address"`
-	ToAddress     string `json:"to_address"`
-	Data          []byte `json:"data"`
-	GasLimit      uint64 `json:"gas_limit"`
-	PrivateKeyHex string `json:"private_key_hex"`
+	FromAddress string `json:"from_address"`
+	ToAddress   string `json:"to_address"`
+	Data        []byte `json:"data"`
+	GasLimit    uint64 `json:"gas_limit"`
+	PrivateKey  []byte `json:"private_key"`
 }
 
 type PrepareTxResponse struct {
@@ -805,16 +802,7 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		return rnh.AllocateWriteMem(responsebz)
 	}
 
-	// Decode private key from hex
-	privKeyBytes, err := hex.DecodeString(req.PrivateKeyHex)
-	if err != nil {
-		resp.Error = fmt.Sprintf("failed to decode private key hex: %s", err.Error())
-		responsebz, _ := json.Marshal(&resp)
-		return rnh.AllocateWriteMem(responsebz)
-	}
-
-	// Create private key
-	privKey := &ethsecp256k1.PrivKey{Key: privKeyBytes}
+	privKey := &secp256k1.PrivKey{Key: req.PrivateKey}
 	pubKey := privKey.PubKey()
 
 	// Parse from address
@@ -834,7 +822,7 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	}
 
 	// Create MsgExecute message
-	msgExecute := &types.MsgExecute{
+	msgExecute := &types.MsgExecuteContract{
 		Contract: toAddr.String(),
 		Sender:   fromAddr.String(),
 		Msg:      req.Data,
@@ -868,7 +856,7 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	}
 
 	// Get account and sequence (nonce)
-	accP, err := ctx.App.(mcfg.MythosApp).AccountKeeper.GetAccountPrefixed(ctx.Ctx, fromAddr)
+	accP, err := ctx.CosmosHandler.GetAccount(fromAddr)
 	if err != nil {
 		resp.Error = fmt.Sprintf("failed to get account: %s", err.Error())
 		responsebz, _ := json.Marshal(&resp)
@@ -912,7 +900,7 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		signing.SignMode(txConfig.SignModeHandler().DefaultMode()),
 		signerData,
 		txBuilder,
-		privKey.(cryptotypes.PrivKey),
+		privKey,
 		txConfig,
 		seq,
 	)
@@ -938,7 +926,7 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	}
 
 	resp.TxBytes = txBytes
-	responsebz, err = json.Marshal(&resp)
+	responsebz, err := json.Marshal(&resp)
 	if err != nil {
 		return nil, err
 	}

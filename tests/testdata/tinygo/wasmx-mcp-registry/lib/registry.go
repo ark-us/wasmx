@@ -11,6 +11,7 @@ import (
 
 // RegisterMCPContract registers a new MCP contract with the registry
 func RegisterMCPContract(req RegisterMCPContractRequest) []byte {
+	fmt.Println("--wasmx.mcpregistry.RegisterMCPContract--", req.RoutePrefix, req.SubPaths)
 	caller := wasmx.GetCaller()
 
 	// Check mcp role - only contracts with mcp role can register themselves
@@ -62,16 +63,20 @@ func RegisterMCPContract(req RegisterMCPContractRequest) []byte {
 		registration.LastUpdatedAt = int64(currentBlock.Height)
 		registration.Active = true
 		registration.UseOAuth2 = req.UseOAuth2
+		registration.UseTransaction = req.UseTransaction
+		registration.SubPaths = req.SubPaths
 	} else {
 		// Create new registration
 		registration = ContractRegistration{
-			Address:       req.ContractAddress,
-			RoutePrefix:   req.RoutePrefix,
-			Tools:         tools,
-			RegisteredAt:  int64(currentBlock.Height),
-			LastUpdatedAt: int64(currentBlock.Height),
-			Active:        true,
-			UseOAuth2:     req.UseOAuth2,
+			Address:        req.ContractAddress,
+			RoutePrefix:    req.RoutePrefix,
+			Tools:          tools,
+			RegisteredAt:   int64(currentBlock.Height),
+			LastUpdatedAt:  int64(currentBlock.Height),
+			Active:         true,
+			UseOAuth2:      req.UseOAuth2,
+			UseTransaction: req.UseTransaction,
+			SubPaths:       req.SubPaths,
 		}
 	}
 
@@ -214,31 +219,63 @@ func GetAllTools(_ GetAllToolsRequest) []byte {
 	return data
 }
 
-// updateHttpRoute registers an HTTP route for a contract
+// updateHttpRoute registers HTTP routes for a contract
 func updateHttpRoute(routePrefix, contractAddress string) {
-	// Use wildcard route to match all paths under the prefix
-	route := routePrefix + "/*"
+	// Get the registration to check settings
+	registration := getContractRegistration(contractAddress)
+	if registration == nil {
+		LoggerError("Registration not found for contract", []string{"contract", contractAddress})
+		return
+	}
 
 	// Get HTTP registry address by role
 	httpRegistryAddr := wasmx.GetAddressByRole(wasmx.ROLE_HTTP_SERVER)
 
-	// Call HTTP server registry contract to set the route
-	msg := map[string]interface{}{
-		"set_route": map[string]interface{}{
+	// Build routes list
+	var routes []map[string]interface{}
+
+	fmt.Println("--wasmx-mcp-registry.registration.subpaths--", registration.SubPaths)
+
+	// If subpaths are defined, create a route for each subpath
+	if len(registration.SubPaths) > 0 {
+		for _, subpath := range registration.SubPaths {
+			// Concatenate route_prefix with subpath to form full route
+			route := routePrefix + subpath.Path
+			fmt.Println("--wasmx.mcpregistry.subpath--", route, subpath.UseTransaction)
+			routes = append(routes, map[string]interface{}{
+				"route":            route,
+				"contract_address": contractAddress,
+				"use_oauth2":       subpath.UseOAuth2,
+				"use_transaction":  subpath.UseTransaction,
+			})
+		}
+	} else {
+		// Backward compatibility: use wildcard route with registration-level settings
+		route := routePrefix + "/*"
+		routes = append(routes, map[string]interface{}{
 			"route":            route,
 			"contract_address": contractAddress,
+			"use_oauth2":       registration.UseOAuth2,
+			"use_transaction":  registration.UseTransaction,
+		})
+	}
+
+	// Call HTTP server registry contract to set routes in batch
+	msg := map[string]interface{}{
+		"set_routes": map[string]interface{}{
+			"routes": routes,
 		},
 	}
 	msgBz, _ := json.Marshal(msg)
 	ok, data := wasmx.CallSimple(httpRegistryAddr, msgBz, false, MODULE_NAME)
 	if !ok {
-		LoggerError("Failed to register HTTP route", []string{"route", route, "error", string(data)})
+		LoggerError("Failed to register HTTP routes", []string{"error", string(data)})
 		return
 	}
 
-	LoggerInfo("HTTP route registered", []string{
-		"route", route,
+	LoggerInfo("HTTP routes registered", []string{
 		"contract", contractAddress,
+		"route_count", fmt.Sprintf("%d", len(routes)),
 	})
 }
 

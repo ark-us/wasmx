@@ -62,6 +62,11 @@ func main() {
 		res := lib.SetRoute(*calldata.SetRoute)
 		wasmx.Finish(res)
 		return
+	case calldata.SetRoutes != nil:
+		wasmx.OnlyInternal(lib.MODULE_NAME, "SetRoutes")
+		res := lib.SetRoutes(*calldata.SetRoutes)
+		wasmx.Finish(res)
+		return
 	case calldata.RemoveRoute != nil:
 		wasmx.OnlyInternal(lib.MODULE_NAME, "SetRoute")
 		res := lib.RemoveRoute(*calldata.RemoveRoute)

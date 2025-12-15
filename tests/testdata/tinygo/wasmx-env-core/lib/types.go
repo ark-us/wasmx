@@ -2,8 +2,6 @@ package wasmxcore
 
 import (
 	sdkmath "cosmossdk.io/math"
-
-	"github.com/cometbft/cometbft/libs/bytes"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -143,12 +141,12 @@ type ExecuteCliCommandResponse struct {
 }
 
 type ResultBroadcastTx struct {
-	Code      uint32         `json:"code"`
-	Data      bytes.HexBytes `json:"data"`
-	Log       string         `json:"log"`
-	Codespace string         `json:"codespace"`
+	Code      uint32   `json:"code"`
+	Data      HexBytes `json:"data"`
+	Log       string   `json:"log"`
+	Codespace string   `json:"codespace"`
 
-	Hash bytes.HexBytes `json:"hash"`
+	Hash HexBytes `json:"hash"`
 }
 
 type BroadcastTxAsyncResponse struct {
@@ -157,14 +155,14 @@ type BroadcastTxAsyncResponse struct {
 }
 
 type PrepareTxRequest struct {
-	FromAddress  string `json:"from_address"`
-	ToAddress    string `json:"to_address"`
-	Data         []byte `json:"data"`
-	GasLimit     uint64 `json:"gas_limit"`
-	PrivateKeyHex string `json:"private_key_hex"`
+	FromAddress string `json:"from_address"`
+	ToAddress   string `json:"to_address"`
+	Data        []byte `json:"data"`
+	GasLimit    uint64 `json:"gas_limit"`
+	PrivateKey  []byte `json:"private_key"`
 }
 
 type PrepareTxResponse struct {
-	Error string `json:"error"`
+	Error   string `json:"error"`
 	TxBytes []byte `json:"tx_bytes"`
 }

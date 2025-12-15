@@ -16,13 +16,15 @@ const (
 
 // ContractRegistration stores metadata for each registered MCP contract
 type ContractRegistration struct {
-	Address       string              `json:"address"`
-	RoutePrefix   string              `json:"route_prefix"`    // e.g., "/tools/execute"
-	Tools         []MCPToolDefinition `json:"tools"`           // Tool definitions from contract
-	RegisteredAt  int64               `json:"registered_at"`   // Block height
-	LastUpdatedAt int64               `json:"last_updated_at"` // Block height
-	Active        bool                `json:"active"`          // Enable/disable
-	UseOAuth2     bool                `json:"use_oauth2"`      // Require OAuth2 authentication
+	Address        string              `json:"address"`
+	RoutePrefix    string              `json:"route_prefix"`     // e.g., "/tools/execute"
+	Tools          []MCPToolDefinition `json:"tools"`            // Tool definitions from contract
+	RegisteredAt   int64               `json:"registered_at"`    // Block height
+	LastUpdatedAt  int64               `json:"last_updated_at"`  // Block height
+	Active         bool                `json:"active"`           // Enable/disable
+	UseOAuth2      bool                `json:"use_oauth2"`       // Default OAuth2 setting (deprecated, use SubPaths)
+	UseTransaction bool                `json:"use_transaction"`  // Default transaction setting (deprecated, use SubPaths)
+	SubPaths       []SubPath           `json:"subpaths,omitempty"` // Per-path configuration
 }
 
 // MCPToolDefinition represents a tool from MCP protocol
@@ -62,12 +64,21 @@ type CallData struct {
 	HttpRequestHandler *HttpRequestIncoming `json:"HttpRequestHandler,omitempty"`
 }
 
+// SubPath defines route configuration for a specific path under the contract
+type SubPath struct {
+	Path           string `json:"path"`            // Subpath (e.g., "/get_favorite_color")
+	UseOAuth2      bool   `json:"use_oauth2"`      // Require OAuth2 authentication
+	UseTransaction bool   `json:"use_transaction"` // Require transaction signing for mutating requests
+}
+
 // RegisterMCPContractRequest for registering a new MCP contract
 type RegisterMCPContractRequest struct {
-	ContractAddress string `json:"contract_address"` // Address of MCP contract
-	RoutePrefix     string `json:"route_prefix"`     // e.g., "/tools/execute"
-	ToolsJSON       string `json:"tools_json"`       // JSON array of MCPToolDefinition
-	UseOAuth2       bool   `json:"use_oauth2"`       // Require OAuth2 authentication for this contract's tools
+	ContractAddress string    `json:"contract_address"`          // Address of MCP contract
+	RoutePrefix     string    `json:"route_prefix"`              // e.g., "/tools/userdata"
+	ToolsJSON       string    `json:"tools_json"`                // JSON array of MCPToolDefinition
+	UseOAuth2       bool      `json:"use_oauth2,omitempty"`      // Default OAuth2 setting (deprecated, use SubPaths)
+	UseTransaction  bool      `json:"use_transaction,omitempty"` // Default transaction setting (deprecated, use SubPaths)
+	SubPaths        []SubPath `json:"subpaths,omitempty"`        // Per-path configuration
 }
 
 // DeregisterMCPContractRequest for removing an MCP contract

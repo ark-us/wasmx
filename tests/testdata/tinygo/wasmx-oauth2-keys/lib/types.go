@@ -8,20 +8,20 @@ const MODULE_NAME = "oauth2_keys"
 
 // Storage keys (non-deterministic storage)
 const (
-	STORAGE_KEY_PREFIX     = "key:"      // key:<public_key> -> EphemeralKeyPair
-	STORAGE_TOKEN_PREFIX   = "token:"    // token:<oauth_token> -> public_key
-	STORAGE_SERVER_SECRET  = "server_secret" // Master secret for key encryption
+	STORAGE_KEY_PREFIX    = "key:"          // key:<public_key> -> EphemeralKeyPair
+	STORAGE_TOKEN_PREFIX  = "token:"        // token:<oauth_token> -> public_key
+	STORAGE_SERVER_SECRET = "server_secret" // Master secret for key encryption
 )
 
 // EphemeralKeyPair stores an ephemeral key pair with metadata
 type EphemeralKeyPair struct {
-	PublicKey        string `json:"public_key"`
-	PrivateKey       string `json:"private_key"`        // Encrypted with derived key
-	UserID           string `json:"user_id"`
-	ServiceDomain    string `json:"service_domain"`
-	CreatedAt        int64  `json:"created_at"`
-	ExpiresAt        int64  `json:"expires_at"`
-	OAuthToken       string `json:"oauth_token"`        // Associated OAuth token
+	PublicKey     []byte `json:"public_key"`
+	PrivateKey    []byte `json:"private_key"` // Encrypted with derived key
+	UserID        string `json:"user_id"`
+	ServiceDomain string `json:"service_domain"`
+	CreatedAt     int64  `json:"created_at"`
+	ExpiresAt     int64  `json:"expires_at"`
+	OAuthToken    string `json:"oauth_token"` // Associated OAuth token
 }
 
 // Message types
@@ -35,8 +35,8 @@ type MsgGenerateEphemeralKey struct {
 }
 
 type MsgGenerateEphemeralKeyResponse struct {
-	PublicKey  string `json:"public_key"`
-	PrivateKey string `json:"private_key"` // Only returned on generation, for browser storage
+	PublicKey  []byte `json:"public_key"`
+	PrivateKey []byte `json:"private_key"` // Only returned on generation, for browser storage
 	Success    bool   `json:"success"`
 }
 
@@ -55,8 +55,8 @@ type MsgSignTransactionResponse struct {
 type MsgRegisterExternalKey struct {
 	OAuthToken    string `json:"oauth_token"`
 	UserID        string `json:"user_id"`
-	PublicKey     string `json:"public_key"`
-	PrivateKey    string `json:"private_key"` // Will be encrypted
+	PublicKey     []byte `json:"public_key"`
+	PrivateKey    []byte `json:"private_key"` // Will be encrypted
 	ServiceDomain string `json:"service_domain"`
 	ExpiresAt     int64  `json:"expires_at"`
 }
@@ -89,14 +89,14 @@ type MsgQueryGetPublicKey struct {
 }
 
 type QueryGetPublicKeyResponse struct {
-	PublicKey string `json:"public_key"`
+	PublicKey []byte `json:"public_key"`
 	UserID    string `json:"user_id"`
 	ExpiresAt int64  `json:"expires_at"`
 }
 
 // MsgQueryGetKeyInfo retrieves key information (without private key)
 type MsgQueryGetKeyInfo struct {
-	PublicKey string `json:"public_key"`
+	PublicKey []byte `json:"public_key"`
 }
 
 type QueryGetKeyInfoResponse struct {
@@ -112,11 +112,11 @@ type MsgQueryValidateAndGetKey struct {
 }
 
 type QueryValidateAndGetKeyResponse struct {
-	Valid         bool   `json:"valid"`
-	PublicKey     string `json:"public_key"`
-	PrivateKeyHex string `json:"private_key_hex"` // Decrypted private key in hex format
-	Address       string `json:"address"`         // Bech32 address derived from public key
-	Reason        string `json:"reason,omitempty"`
+	Valid      bool   `json:"valid"`
+	PublicKey  []byte `json:"public_key"`
+	PrivateKey []byte `json:"private_key"`
+	Address    string `json:"address"` // Bech32 address derived from public key
+	Reason     string `json:"reason,omitempty"`
 }
 
 // CallData structure for routing

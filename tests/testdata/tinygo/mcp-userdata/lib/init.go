@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/json"
+	"fmt"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
@@ -57,8 +58,10 @@ func InitGenesis(req InitGenesisRequest) []byte {
 
 // OnRoleChanged registers this contract with the MCP registry when role is assigned
 func OnRoleChanged() []byte {
+	fmt.Println("---wasmx.mcpuserdata.OnRoleChanged--")
 	// Load stored init data
 	initDataBz := wasmx.StorageLoad([]byte(STORAGE_INIT_DATA))
+	fmt.Println("---wasmx.mcpuserdata.initDataBz--", string(initDataBz))
 	if len(initDataBz) == 0 {
 		LoggerError("Init data not found", nil)
 		return []byte(`{"error": "init data not found"}`)
@@ -80,6 +83,28 @@ func OnRoleChanged() []byte {
 	// Get hardcoded tool definitions
 	tools := getToolDefinitions()
 	toolsJSON, _ := json.Marshal(tools)
+	fmt.Println("---wasmx.mcpuserdata.onRoleChanged.toolsJSON--", string(toolsJSON))
+
+	// Define subpaths with per-path configuration
+	// Paths are relative to route_prefix, will be concatenated to form full route
+	// e.g., route_prefix "/tools/userdata" + path "/set_favorite_color" = "/tools/userdata/set_favorite_color"
+	subpaths := []map[string]interface{}{
+		{
+			"path":            "/set_favorite_color",
+			"use_oauth2":      true,
+			"use_transaction": true, // Mutating operation - requires transaction
+		},
+		{
+			"path":            "/get_favorite_color",
+			"use_oauth2":      true,
+			"use_transaction": false, // Read-only call, no transaction needed
+		},
+		{
+			"path":            "/list_items",
+			"use_oauth2":      false,
+			"use_transaction": false, // Read-only call, no transaction needed
+		},
+	}
 
 	// Register with MCP registry
 	registerMsg := map[string]interface{}{
@@ -87,11 +112,12 @@ func OnRoleChanged() []byte {
 			"contract_address": string(wasmx.GetAddress()),
 			"route_prefix":     initData.RoutePrefix,
 			"tools_json":       string(toolsJSON),
-			"use_oauth2":       true,
+			"subpaths":         subpaths,
 		},
 	}
 	msgBz, _ := json.Marshal(registerMsg)
 	ok, data := wasmx.CallSimple(mcpRegistryAddr, msgBz, false, MODULE_NAME)
+	fmt.Println("---wasmx.mcpuserdata.onRoleChanged.registermcp--", ok, string(data))
 	if !ok {
 		LoggerError("Failed to register with MCP registry", []string{"error", string(data)})
 		return []byte(`{"error": "failed to register"}`)

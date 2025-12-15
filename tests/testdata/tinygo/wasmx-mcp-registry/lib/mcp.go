@@ -57,13 +57,15 @@ func InitializeTables() []byte {
 
 			// Create registration
 			registration := ContractRegistration{
-				Address:       contract.ContractAddress,
-				RoutePrefix:   contract.RoutePrefix,
-				Tools:         tools,
-				RegisteredAt:  int64(currentBlock.Height),
-				LastUpdatedAt: int64(currentBlock.Height),
-				Active:        true,
-				UseOAuth2:     contract.UseOAuth2,
+				Address:        contract.ContractAddress,
+				RoutePrefix:    contract.RoutePrefix,
+				Tools:          tools,
+				RegisteredAt:   int64(currentBlock.Height),
+				LastUpdatedAt:  int64(currentBlock.Height),
+				Active:         true,
+				UseOAuth2:      contract.UseOAuth2,
+				UseTransaction: contract.UseTransaction,
+				SubPaths:       contract.SubPaths,
 			}
 
 			// Store registration
@@ -413,10 +415,8 @@ func handleToolsCall(req *JSONRPCRequest, userID string) HttpResponseWrap {
 		return sendJSONRPCError(req.ID, -32602, "Tool not found: "+toolName)
 	}
 
-	// Check if OAuth2 authentication is required for this tool
-	if targetContract.UseOAuth2 && userID == "" {
-		return sendJSONRPCError(req.ID, -32600, "Authentication required: this tool requires OAuth2 authentication")
-	}
+	// OAuth2 authentication is handled by HTTP server based on route's UseOAuth2 field
+	// No need to check here - just pass user_id to the tool contract
 
 	// Call the contract that provides this tool
 	executeMsg := map[string]interface{}{
@@ -528,7 +528,7 @@ func handleOpenAPISpec(req *HttpRequestIncoming) HttpResponseWrap {
 
 		// Create an endpoint for each tool
 		for _, tool := range registration.Tools {
-			pathKey := fmt.Sprintf("/tools/%s", tool.Name)
+			pathKey := fmt.Sprintf("%s/%s", registration.RoutePrefix, tool.Name)
 
 			// Convert JSON Schema properties to OpenAPI parameters
 			parameters := []map[string]interface{}{}
@@ -675,40 +675,13 @@ func handleToolExecution(req *HttpRequestIncoming, path string) HttpResponseWrap
 		}
 	}
 
-	// Check if OAuth2 authentication is required for this tool
+	// OAuth2 authentication is handled by HTTP server based on route's UseOAuth2 field
+	// Extract user_id from token if provided (HTTP server already validated it)
 	var userID string
-	if targetContract.UseOAuth2 {
-		// Extract and validate token
-		token := extractToken(req)
-		if token == "" {
-			return HttpResponseWrap{
-				Error: "",
-				Data: HttpResponse{
-					StatusCode: 401,
-					Status:     "401 Unauthorized",
-					Header:     http.Header{"Content-Type": []string{"application/json"}},
-					Data:       []byte(`{"error":"missing authorization token"}`),
-				},
-			}
-		}
-
-		// Validate token and get user_id
-		var valid bool
-		userID, valid = validateToken(token)
-		if !valid {
-			return HttpResponseWrap{
-				Error: "",
-				Data: HttpResponse{
-					StatusCode: 401,
-					Status:     "401 Unauthorized",
-					Header:     http.Header{"Content-Type": []string{"application/json"}},
-					Data:       []byte(`{"error":"invalid token"}`),
-				},
-			}
-		}
-	} else {
-		// No authentication required - use empty user_id
-		userID = ""
+	token := extractToken(req)
+	if token != "" {
+		// Token was already validated by HTTP server, just extract user_id
+		userID, _ = validateToken(token)
 	}
 
 	// Call the contract that provides this tool
