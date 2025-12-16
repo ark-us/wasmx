@@ -93,6 +93,26 @@ func (suite *KeeperTestSuite) TestOauth2() {
 	utils.RegisterRole(suite, appA, types.ROLE_MCP, userAddress, sender)
 	fmt.Println("MCP role assigned to userdata contract - auto-registration triggered via RoleChanged hook")
 
+	// Configure OAuth2 Keys contract with funder private key
+	fmt.Println("Configuring OAuth2 Keys contract with funder private key...")
+	oauth2KeysAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_OAUTH2_KEYS))
+
+	// Export the sender's private key to use as funder
+	// In a real setup, this would be a dedicated funder account
+	funderPrivKeyHex := fmt.Sprintf("%x", sender.PrivKey.Bytes())
+
+	oauth2KeysInitMsg := map[string]interface{}{
+		"init_genesis": map[string]interface{}{
+			"funder_priv_key":   funderPrivKeyHex,
+			"init_account_amt":  "1000000",
+			"route_prefix":      "/auth",
+		},
+	}
+	oauth2KeysInitData, err := json.Marshal(oauth2KeysInitMsg)
+	suite.Require().NoError(err)
+	appA.ExecuteContract(sender, oauth2KeysAddr, types.WasmxExecutionMessage{Data: oauth2KeysInitData}, nil, nil)
+	fmt.Println("OAuth2 Keys contract configured")
+
 	// Register OAuth client
 	oauth2Addr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_OAUTH2_SERVER))
 	registerClientMsg := &RegisterOAuthClientCalldata{

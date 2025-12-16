@@ -8,9 +8,10 @@ const MODULE_NAME = "oauth2_keys"
 
 // Storage keys (non-deterministic storage)
 const (
-	STORAGE_KEY_PREFIX    = "key."          // key:<public_key> -> EphemeralKeyPair
-	STORAGE_TOKEN_PREFIX  = "token."        // token:<oauth_token> -> public_key
-	STORAGE_SERVER_SECRET = "server_secret" // Master secret for key encryption
+	STORAGE_KEY_PREFIX     = "key."           // key:<public_key> -> EphemeralKeyPair
+	STORAGE_TOKEN_PREFIX   = "token."         // token:<oauth_token> -> public_key
+	STORAGE_SERVER_SECRET  = "server_secret"  // Master secret for key encryption
+	STORAGE_FUNDER_PRIVKEY = "funder_privkey" // Private key for funding new accounts
 )
 
 // EphemeralKeyPair stores an ephemeral key pair with metadata
@@ -81,6 +82,17 @@ type MsgDeleteExpiredKeysResponse struct {
 	DeletedCount int `json:"deleted_count"`
 }
 
+// MsgInitAccount initializes a new account by sending native coins to it
+type MsgInitAccount struct {
+	Address string `json:"address"` // Bech32 address to initialize
+}
+
+type MsgInitAccountResponse struct {
+	Success bool   `json:"success"`
+	TxHash  string `json:"tx_hash"`
+	Error   string `json:"error,omitempty"`
+}
+
 // Query types
 
 // MsgQueryGetPublicKey retrieves public key for an OAuth token
@@ -126,6 +138,7 @@ type CallData struct {
 	SignTransaction      *MsgSignTransaction      `json:"sign_transaction,omitempty"`
 	RevokeKey            *MsgRevokeKey            `json:"revoke_key,omitempty"`
 	DeleteExpiredKeys    *MsgDeleteExpiredKeys    `json:"delete_expired_keys,omitempty"`
+	InitAccount          *MsgInitAccount          `json:"init_account,omitempty"`
 
 	QueryGetPublicKey      *MsgQueryGetPublicKey      `json:"query_get_public_key,omitempty"`
 	QueryGetKeyInfo        *MsgQueryGetKeyInfo        `json:"query_get_key_info,omitempty"`
@@ -136,7 +149,10 @@ type CallData struct {
 
 // MsgInitGenesis for contract initialization
 type MsgInitGenesis struct {
-	ServerSecret string `json:"server_secret,omitempty"` // Master secret for key encryption
+	ServerSecret    string `json:"server_secret,omitempty"`     // Master secret for key encryption
+	FunderPrivKey   string `json:"funder_priv_key,omitempty"`   // Private key for funding new accounts (hex encoded)
+	InitAccountAmt  string `json:"init_account_amt,omitempty"`  // Amount to send when initializing accounts (default: 1000000)
+	RoutePrefix     string `json:"route_prefix,omitempty"`      // HTTP route prefix (default: "/auth")
 }
 
 // Helper to marshal JSON

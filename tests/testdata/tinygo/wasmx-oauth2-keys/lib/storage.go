@@ -73,3 +73,48 @@ func SaveServerSecret(secret string) {
 	key := []byte(STORAGE_SERVER_SECRET)
 	wasmx.StorageStore(key, []byte(secret))
 }
+
+// LoadFunderPrivateKey loads the funder private key
+func LoadFunderPrivateKey() string {
+	key := []byte(STORAGE_FUNDER_PRIVKEY)
+	data := wasmx.StorageLoad(key)
+	return string(data)
+}
+
+// SaveFunderPrivateKey saves the funder private key
+func SaveFunderPrivateKey(privKey string) {
+	key := []byte(STORAGE_FUNDER_PRIVKEY)
+	wasmx.StorageStore(key, []byte(privKey))
+}
+
+// LoadInitAccountAmount loads the init account amount
+func LoadInitAccountAmount() string {
+	key := []byte("init_account_amt")
+	data := wasmx.StorageLoad(key)
+	if len(data) == 0 {
+		return "1000000" // default
+	}
+	return string(data)
+}
+
+// SaveInitAccountAmount saves the init account amount
+func SaveInitAccountAmount(amt string) {
+	key := []byte("init_account_amt")
+	wasmx.StorageStore(key, []byte(amt))
+}
+
+// LoadRoutePrefix loads the HTTP route prefix
+func LoadRoutePrefix() string {
+	key := []byte("route_prefix")
+	data := wasmx.StorageLoad(key)
+	if len(data) == 0 {
+		return "/auth" // default
+	}
+	return string(data)
+}
+
+// SaveRoutePrefix saves the HTTP route prefix
+func SaveRoutePrefix(prefix string) {
+	key := []byte("route_prefix")
+	wasmx.StorageStore(key, []byte(prefix))
+}

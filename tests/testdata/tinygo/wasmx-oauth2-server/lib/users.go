@@ -568,6 +568,37 @@ func generateEphemeralKey(oauthToken, userID, identityUserID string, expiresAt i
 	fmt.Println("Private Key (hex, first 16 chars):", response.PrivateKey[:16]+"...")
 	fmt.Println("Expires At:", expiresAt)
 	fmt.Println("===============================")
+
+	// Initialize the blockchain account by sending it some native coins
+	// This ensures the account has an account number for signing transactions
+	user := getUser(userID)
+	if user != nil && user.Address != "" {
+		initAccountMsg := map[string]interface{}{
+			"init_account": map[string]interface{}{
+				"address": user.Address,
+			},
+		}
+
+		initMsgBz, err := json.Marshal(initAccountMsg)
+		if err != nil {
+			LoggerError("Failed to marshal init account message", []string{"error", err.Error()})
+			fmt.Println("WARNING: Failed to marshal init account message:", err.Error())
+			return
+		}
+
+		// Call oauth2-keys contract to initialize the account
+		ok, data := wasmx.CallSimple(keysAddr, initMsgBz, false, MODULE_NAME)
+		if !ok {
+			LoggerError("Failed to initialize account", []string{"error", string(data), "address", user.Address})
+			fmt.Println("WARNING: Failed to initialize account:", string(data))
+			return
+		}
+
+		fmt.Println("=== ACCOUNT INITIALIZED ===")
+		fmt.Println("Address:", user.Address)
+		fmt.Println("Response:", string(data))
+		fmt.Println("===========================")
+	}
 }
 
 // revokeEphemeralKey revokes an ephemeral key associated with an OAuth token

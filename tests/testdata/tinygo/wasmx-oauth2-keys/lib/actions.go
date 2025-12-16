@@ -23,6 +23,22 @@ func InitGenesis(msg *MsgInitGenesis) []byte {
 	// Save server secret
 	SaveServerSecret(serverSecret)
 
+	// Save funder private key if provided
+	if msg.FunderPrivKey != "" {
+		SaveFunderPrivateKey(msg.FunderPrivKey)
+		fmt.Println("Funder private key initialized", nil)
+	}
+
+	// Save init account amount if provided
+	if msg.InitAccountAmt != "" {
+		SaveInitAccountAmount(msg.InitAccountAmt)
+	}
+
+	// Save route prefix if provided (for HTTP route registration later)
+	if msg.RoutePrefix != "" {
+		SaveRoutePrefix(msg.RoutePrefix)
+	}
+
 	fmt.Println("Server secret initialized", nil)
 	return MarshalJSON(map[string]bool{"success": true})
 }

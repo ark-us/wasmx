@@ -4,10 +4,17 @@ import (
 	"encoding/json"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
+	wasmxhttp "github.com/loredanacirstea/wasmx-env-httpserver/lib"
 )
 
 // RouteCallData routes incoming call data to the appropriate handler
 func RouteCallData(data []byte) []byte {
+	// Check if this is an HTTP request
+	var httpReq wasmxhttp.HttpRequestIncoming
+	if err := json.Unmarshal(data, &httpReq); err == nil && httpReq.RequestURI != "" {
+		return HandleHTTPRequest(&httpReq)
+	}
+
 	var callData CallData
 	if err := json.Unmarshal(data, &callData); err != nil {
 		LoggerError("Failed to unmarshal calldata", []string{"error", err.Error()})
@@ -34,6 +41,10 @@ func RouteCallData(data []byte) []byte {
 
 	if callData.DeleteExpiredKeys != nil {
 		return DeleteExpiredKeys(callData.DeleteExpiredKeys)
+	}
+
+	if callData.InitAccount != nil {
+		return InitAccount(callData.InitAccount)
 	}
 
 	// Handle queries
@@ -71,6 +82,10 @@ func OnRoleChanged() []byte {
 	// OAuth2 Keys contract can be notified when assigned ROLE_OAUTH2_KEYS
 	if role == wasmx.ROLE_OAUTH2_KEYS {
 		LoggerInfo("OAuth2 Keys contract role assigned", nil)
+
+		// Register HTTP routes with HTTP registry
+		httpRegistryAddr := wasmx.GetAddressByRole(wasmx.ROLE_HTTP_SERVER)
+		registerHttpRoutes(httpRegistryAddr)
 	}
 
 	return MarshalJSON(map[string]bool{"success": true})

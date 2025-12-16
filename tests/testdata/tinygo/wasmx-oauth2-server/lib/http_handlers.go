@@ -97,7 +97,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
         .success { color: green; margin: 10px 0; }
         .checkbox-label { display: flex; align-items: center; margin: 15px 0; }
         .checkbox-label input { width: auto; margin-right: 10px; }
-        #blockchainOptions { display: none; padding: 15px; background: #f8f9fa; border-radius: 5px; margin: 15px 0; }
+        #blockchainOptions { display: block; padding: 15px; background: #f8f9fa; border-radius: 5px; margin: 15px 0; }
         .info { background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 14px; }
     </style>
 </head>
@@ -107,11 +107,6 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
         <input type="email" id="email" name="email" placeholder="Email" required />
         <input type="password" id="password" name="password" placeholder="Password (min 8 characters)" required minlength="8" />
         <input type="text" id="username" name="username" placeholder="Username (optional)" />
-
-        <label class="checkbox-label">
-            <input type="checkbox" id="enableBlockchain" />
-            Enable WasmX Blockchain Account
-        </label>
 
         <div id="blockchainOptions">
             <div class="info">
@@ -134,11 +129,18 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
         import { ripemd160 } from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/ripemd160/+esm';
         import { bech32 } from 'https://cdn.jsdelivr.net/npm/bech32@2.0.0/+esm';
 
-        document.getElementById('enableBlockchain').addEventListener('change', function(e) {
-            document.getElementById('blockchainOptions').style.display = e.target.checked ? 'block' : 'none';
-            document.getElementById('pin').required = e.target.checked;
-            document.getElementById('pinConfirm').required = e.target.checked;
-        });
+        // Import CosmJS for transaction signing
+        import { makeSignDoc, makeAuthInfoBytes } from 'https://cdn.jsdelivr.net/npm/@cosmjs/proto-signing@0.32.4/+esm';
+        import { Registry } from 'https://cdn.jsdelivr.net/npm/@cosmjs/proto-signing@0.32.4/+esm';
+
+		import "https://cdn.jsdelivr.net/npm/protobufjs@7.2.4/minimal.min.js";
+
+        // import { MsgExecuteContract } from 'https://cdn.jsdelivr.net/npm/@ark-us/wasmxjs@0.0.11/module/codegen/mythos/wasmx/v1/tx.js';
+		import { MsgExecuteContract } from "https://cdn.jsdelivr.net/npm/@ark-us/wasmxjs@0.0.11/module/codegen/mythos/wasmx/v1/tx.js/+esm";
+
+        document.getElementById('blockchainOptions').style.display = 'block';
+		document.getElementById('pin').required = true;
+		document.getElementById('pinConfirm').required = true;
 
         // Derive encryption key from PIN using PBKDF2
         async function deriveKeyFromPIN(pin) {
@@ -217,6 +219,18 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
             return address;
         }
 
+        // TODO: Implement proper Cosmos SDK transaction signing
+        // This requires proper protobuf encoding of TxBody and AuthInfo
+        // For now, we'll continue using the backend's CallSimple approach
+        // which works in test environments but doesn't persist state in production
+        //
+        // To implement properly, we would need:
+        // 1. Import @cosmjs/proto-signing and @cosmjs/stargate
+        // 2. Create TxBody with MsgExecuteContract
+        // 3. Create AuthInfo with signer info and fee
+        // 4. Create SignDoc and sign with user's private key
+        // 5. Encode to protobuf and submit via /broadcast_tx endpoint
+
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -228,7 +242,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const username = document.getElementById('username').value;
-            const enableBlockchain = document.getElementById('enableBlockchain').checked;
+            const enableBlockchain = true;
 
             let requestData = { email, password, username };
 
@@ -270,6 +284,74 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
                     // Add blockchain info to registration
                     requestData.public_key = keyPair.publicKey;
                     requestData.address = address;
+
+                    // Initialize the blockchain account by sending it native coins
+                    successDiv.textContent = 'Initializing blockchain account...';
+                    try {
+                        const initResponse = await fetch('/auth/register_init', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ address: address })
+                        });
+
+                        const initResult = await initResponse.json();
+                        if (!initResponse.ok || !initResult.success) {
+                            console.warn('Account initialization failed:', initResult.error);
+                            // Continue anyway - ephemeral key generation will also try to initialize
+                        } else {
+                            console.log('Account initialized with tx:', initResult.tx_hash);
+
+                            // Wait 5 seconds for the funding transaction to be processed
+                            successDiv.textContent = 'Account funded. Waiting for confirmation...';
+                            await new Promise(resolve => setTimeout(resolve, 5000));
+
+                            // Fetch account info to verify the account is ready
+                            successDiv.textContent = 'Verifying account...';
+                            try {
+                                const accountInfoResponse = await fetch('/auth/account_info?address=' + encodeURIComponent(address));
+                                const accountInfo = await accountInfoResponse.json();
+
+                                if (accountInfoResponse.ok && accountInfo.account_number) {
+                                    console.log('=== ACCOUNT INFO ===');
+                                    console.log('Account Number:', accountInfo.account_number);
+                                    console.log('Sequence:', accountInfo.sequence);
+                                    console.log('Public Key:', accountInfo.pub_key);
+                                    console.log('====================');
+
+                                    // Store account info for later use (e.g., signing transactions)
+                                    requestData.account_number = accountInfo.account_number;
+                                    requestData.sequence = accountInfo.sequence;
+                                } else {
+                                    console.warn('Could not fetch account info:', accountInfo.error || 'Unknown error');
+                                }
+                            } catch (err) {
+                                console.warn('Failed to fetch account info:', err);
+                            }
+
+                            // Fetch contract addresses (identity contract, chain info)
+                            try {
+                                const addressesResponse = await fetch('/auth/contract_addresses');
+                                const addresses = await addressesResponse.json();
+
+                                if (addressesResponse.ok) {
+                                    console.log('=== CHAIN INFO ===');
+                                    console.log('Chain ID:', addresses.chain_id);
+                                    console.log('Base Denom:', addresses.base_denom);
+                                    console.log('Identity Contract:', addresses.identity_address);
+                                    console.log('==================');
+
+                                    // Store for potential transaction signing
+                                    requestData.chain_id = addresses.chain_id;
+                                    requestData.identity_address = addresses.identity_address;
+                                }
+                            } catch (err) {
+                                console.warn('Failed to fetch contract addresses:', err);
+                            }
+                        }
+                    } catch (err) {
+                        console.warn('Account initialization request failed:', err);
+                        // Continue anyway
+                    }
 
                     successDiv.textContent = 'Keys generated and encrypted. Registering...';
                 } catch (err) {
