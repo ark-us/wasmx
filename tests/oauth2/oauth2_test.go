@@ -93,18 +93,6 @@ func (suite *KeeperTestSuite) TestOauth2() {
 	utils.RegisterRole(suite, appA, types.ROLE_MCP, userAddress, sender)
 	fmt.Println("MCP role assigned to userdata contract - auto-registration triggered via RoleChanged hook")
 
-	// Assign roles to identity and oauth2_keys contracts
-	// identityAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_IDENTITY))
-	// oauth2KeysAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_OAUTH2_KEYS))
-
-	// fmt.Println("Assigning IDENTITY role to identity contract...")
-	// utils.RegisterRole(suite, appA, types.ROLE_ACCOUNT_IDENTITY, identityAddr, sender)
-	// fmt.Println("IDENTITY role assigned to contract:", identityAddr.String())
-
-	// fmt.Println("Assigning OAUTH2_KEYS role to oauth2_keys contract...")
-	// utils.RegisterRole(suite, appA, types.ROLE_OAUTH2_KEYS, oauth2KeysAddr, sender)
-	// fmt.Println("OAUTH2_KEYS role assigned to contract:", oauth2KeysAddr.String())
-
 	// Register OAuth client
 	oauth2Addr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_OAUTH2_SERVER))
 	registerClientMsg := &RegisterOAuthClientCalldata{
@@ -134,29 +122,6 @@ func (suite *KeeperTestSuite) TestOauth2() {
 	fmt.Println("Client ID:    ", clientResult.ClientID)
 	fmt.Println("Client Secret:", clientResult.ClientSecret)
 	fmt.Println("================================")
-
-	// Register test user
-	registerUserMsg := &RegisterUserCalldata{
-		RegisterUser: &RegisterUserRequest{
-			Email:    "test2@mail.provable.dev",
-			Password: "123456789",
-			Username: "test2",
-		},
-	}
-	registerUserData, err := json.Marshal(registerUserMsg)
-	suite.Require().NoError(err)
-	userResp := appA.ExecuteContract(sender, oauth2Addr, types.WasmxExecutionMessage{Data: registerUserData}, nil, nil)
-
-	var userResult RegisterUserResponse
-	err = appA.DecodeExecuteResponse(userResp, &userResult)
-	suite.Require().NoError(err)
-
-	fmt.Println("=== Test User Registered ===")
-	fmt.Println("User ID:      ", userResult.UserID)
-	fmt.Println("Email:        ", userResult.Email)
-	fmt.Println("Username:     ", userResult.Username)
-	fmt.Println("Password:      123456789")
-	fmt.Println("============================")
 
 	// Start the HTTP server
 	httpRegistryAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_HTTPSERVER_REGISTRY))

@@ -428,6 +428,7 @@ func registerInIdentityContract(publicKey string, address string) (string, strin
 	fmt.Println("--wasmx.oauth2server.registerInIdentityContract--")
 	// Get identity contract address
 	identityAddr := wasmx.GetAddressByRole(wasmx.ROLE_ACCOUNT_IDENTITY)
+	fmt.Println("--wasmx.oauth2server.registerInIdentityContract.identityAddr--", identityAddr)
 	if identityAddr == "" {
 		LoggerError("Identity contract not found", nil)
 		Revert(wasmx.ROLE_ACCOUNT_IDENTITY + ` contract not found`)
@@ -454,14 +455,17 @@ func registerInIdentityContract(publicKey string, address string) (string, strin
 	}
 
 	msgBz, err := json.Marshal(registerMsg)
+	fmt.Println("--wasmx.oauth2server.registerInIdentityContract.msgBz--", string(msgBz))
 	if err != nil {
 		LoggerError("Failed to marshal identity message", []string{"error", err.Error()})
 		Revert(`Failed to marshal identity message: ` + err.Error())
 		return "", ""
 	}
+	fmt.Println("--wasmx.oauth2server.registerInIdentityContract.register_user--")
 
 	// Call identity contract
 	ok, data := wasmx.CallSimple(identityAddr, msgBz, false, MODULE_NAME)
+	fmt.Println("--wasmx.oauth2server.registerInIdentityContract.register_user.resp--", ok, string(data))
 	if !ok {
 		LoggerError("Failed to register in identity contract", []string{"error", string(data)})
 		fmt.Println("ERROR: Identity contract call failed:", string(data))

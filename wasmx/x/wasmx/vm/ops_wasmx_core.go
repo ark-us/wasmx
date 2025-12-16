@@ -679,7 +679,15 @@ func coreBroadcastTxAsync(_context interface{}, rnh memc.RuntimeHandler, params 
 	if err != nil {
 		return nil, err
 	}
-	res, err := ctx.App.(mcfg.MythosApp).GetRpcClient().BroadcastTxAsync(ctx.GoContextParent, txbz)
+	mapp, ok := ctx.App.(mcfg.MythosApp)
+	if !ok {
+		return nil, fmt.Errorf("app not MythosApp interface in coreBroadcastTxAsync")
+	}
+	rpcClient := mapp.GetRpcClient()
+	if rpcClient == nil {
+		return nil, fmt.Errorf("rpcClient nil in coreBroadcastTxAsync")
+	}
+	res, err := rpcClient.BroadcastTxAsync(ctx.GoContextParent, txbz)
 	if err != nil {
 		resp.Error = err.Error()
 	}

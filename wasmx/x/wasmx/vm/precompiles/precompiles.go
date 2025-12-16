@@ -186,6 +186,9 @@ var (
 	//go:embed 70.wasmx_oauth2_keys_0.0.1.wasm
 	wasmx_oauth2_keys_001 []byte
 
+	//go:embed 71.erc20xjson_go_0.0.1.wasm
+	wasmx_erc20x []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -281,7 +284,7 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 	case types.BANK_v001:
 		wasmbin = bank_contract
 	case types.ERC20_v001:
-		wasmbin = erc20json_contract
+		wasmbin = wasmx_erc20x // erc20json_contract
 	case types.DERC20_v001:
 		wasmbin = derc20json_contract
 	case types.HOOKS_v001:

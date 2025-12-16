@@ -27,10 +27,26 @@ func InstantiateToken() []byte {
 	}
 	SetMinters(minters)
 
+	// Parse and store negative balance threshold
+	// threshold := sdkmath.ZeroInt()
+	threshold := sdkmath.NewInt(100000000000000000)
+	if calld.NegativeBalanceThreshold != "" {
+		var ok bool
+		threshold, ok = sdkmath.NewIntFromString(calld.NegativeBalanceThreshold)
+		if !ok {
+			Revert("invalid negative balance threshold: " + calld.NegativeBalanceThreshold)
+		}
+		if threshold.IsNegative() {
+			Revert("negative balance threshold must be positive")
+		}
+	}
+	SetNegativeBalanceThreshold(threshold)
+
 	SetInfo(TokenInfo{
-		Name:     calld.Name,
-		Symbol:   calld.Symbol,
-		Decimals: calld.Decimals,
+		Name:                     calld.Name,
+		Symbol:                   calld.Symbol,
+		Decimals:                 calld.Decimals,
+		NegativeBalanceThreshold: threshold.String(),
 	})
 
 	return []byte("{}")
@@ -71,12 +87,22 @@ func TotalSupply() []byte {
 	return data
 }
 
-// BalanceOf returns the balance of an address
+// BalanceOf returns the balance of an address (ERC20 compatible - returns 0 for negative)
 func BalanceOf(req *MsgBalanceOf) []byte {
 	value := GetBalance(string(req.Owner))
 	info := GetInfo()
 	resp := MsgBalanceOfResponse{
 		Balance: wasmx.Coin{Denom: info.Symbol, Amount: value},
+	}
+	data, _ := json.Marshal(resp)
+	return data
+}
+
+// SignedBalanceOf returns the actual signed balance of an address (can be negative)
+func SignedBalanceOf(req *MsgSignedBalanceOf) []byte {
+	value := GetSignedBalance(string(req.Owner))
+	resp := MsgSignedBalanceOfResponse{
+		Balance: value,
 	}
 	data, _ := json.Marshal(resp)
 	return data
@@ -185,13 +211,18 @@ func Burn(req *MsgBurn) []byte {
 		"authorized", fmt.Sprintf("%t", authorized),
 	})
 
-	balance := GetBalance(string(req.From))
-	if balance.LT(req.Value) {
-		Revert(fmt.Sprintf("balance not enough for burning: %s; burning %s", balance.String(), req.Value.String()))
+	threshold := GetNegativeBalanceThreshold()
+	balance := GetSignedBalance(string(req.From))
+	newBalance := balance.Sub(req.Value)
+
+	// Validate new balance is not below -threshold
+	negativeThreshold := threshold.Neg()
+	if newBalance.LT(negativeThreshold) {
+		Revert(fmt.Sprintf("balance not enough for burning: %s; burning %s; would exceed negative threshold: %s",
+			balance.String(), req.Value.String(), negativeThreshold.String()))
 	}
 
-	balance = balance.Sub(req.Value)
-	SetBalance(string(req.From), balance)
+	SetBalance(string(req.From), newBalance)
 
 	supply := GetTotalSupply()
 	supply = supply.Sub(req.Value)
@@ -202,21 +233,29 @@ func Burn(req *MsgBurn) []byte {
 	return []byte("{}")
 }
 
-// Move transfers tokens between addresses
+// Move transfers tokens between addresses (supports negative balances up to threshold)
 func Move(from, to wasmx.Bech32String, amount sdkmath.Int) {
-	balanceFrom := GetBalance(string(from))
-	if balanceFrom.LT(amount) {
-		Revert(fmt.Sprintf("cannot move coins from %s to %s; amount: %s; balance: %s",
-			from, to, amount.String(), balanceFrom.String()))
+	threshold := GetNegativeBalanceThreshold()
+
+	// Get actual signed balances
+	balanceFrom := GetSignedBalance(string(from))
+	balanceTo := GetSignedBalance(string(to))
+
+	// Calculate new balances
+	newBalanceFrom := balanceFrom.Sub(amount)
+	newBalanceTo := balanceTo.Add(amount)
+
+	// Validate sender's new balance is not below -threshold
+	negativeThreshold := threshold.Neg()
+	if newBalanceFrom.LT(negativeThreshold) {
+		Revert(fmt.Sprintf("cannot move coins from %s to %s; amount: %s; balance: %s; would exceed negative threshold: %s",
+			from, to, amount.String(), balanceFrom.String(), negativeThreshold.String()))
 	}
 
-	balanceTo := GetBalance(string(to))
-	balanceFrom = balanceFrom.Sub(amount)
-	balanceTo = balanceTo.Add(amount)
-
-	SetBalance(string(from), balanceFrom)
+	// SetBalance will validate and store using offset
+	SetBalance(string(from), newBalanceFrom)
 	LogTransfer(from, to, amount)
-	SetBalance(string(to), balanceTo)
+	SetBalance(string(to), newBalanceTo)
 }
 
 // LogTransfer emits a Transfer event

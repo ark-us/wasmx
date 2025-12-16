@@ -28,6 +28,8 @@ func GetCallDataWrap() []byte {
 		result = TotalSupply()
 	} else if callData.BalanceOf != nil {
 		result = BalanceOf(callData.BalanceOf)
+	} else if callData.SignedBalanceOf != nil {
+		result = SignedBalanceOf(callData.SignedBalanceOf)
 	} else if callData.Transfer != nil {
 		result = Transfer(callData.Transfer)
 	} else if callData.TransferFrom != nil {

@@ -140,8 +140,10 @@ func GetOAuthClient(req GetOAuthClientRequest) []byte {
 		LogoURL      string   `json:"logo_url,omitempty"`
 		CreatedAt    int64    `json:"created_at"`
 		Active       bool     `json:"active"`
+		ClientSecret string   `json:"client_secret"`
 	}{
 		ClientID:     client.ClientID,
+		ClientSecret: client.ClientSecret,
 		Name:         client.Name,
 		Description:  client.Description,
 		RedirectURIs: client.RedirectURIs,

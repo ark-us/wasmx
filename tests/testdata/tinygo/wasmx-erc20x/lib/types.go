@@ -5,35 +5,38 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
-const MODULE_NAME = "erc20"
+const MODULE_NAME = "erc20x"
 
 const ZERO_ADDRESS = "wasmx1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqnrql8a"
 
 // Storage keys
 const (
-	ALLOWANCE_KEY    = "allowance_"
-	BALANCE_KEY      = "balance_"
-	TOTAL_SUPPLY_KEY = "totalSupply"
-	ADMINS_KEY       = "admins"
-	MINTERS_KEY      = "minters"
-	INFO_KEY         = "info"
+	ALLOWANCE_KEY              = "allowance_"
+	BALANCE_KEY                = "balance_"
+	TOTAL_SUPPLY_KEY           = "totalSupply"
+	ADMINS_KEY                 = "admins"
+	MINTERS_KEY                = "minters"
+	INFO_KEY                   = "info"
+	NEGATIVE_BALANCE_THRESHOLD = "negativeBalanceThreshold"
 )
 
 // CallDataInstantiate is the initialization message
 type CallDataInstantiate struct {
-	Admins     []wasmx.Bech32String `json:"admins"`
-	Minters    []wasmx.Bech32String `json:"minters"`
-	Name       string                `json:"name"`
-	Symbol     string                `json:"symbol"`
-	Decimals   int32                 `json:"decimals"`
-	BaseDenom  string                `json:"base_denom"`
+	Admins                    []wasmx.Bech32String `json:"admins"`
+	Minters                   []wasmx.Bech32String `json:"minters"`
+	Name                      string               `json:"name"`
+	Symbol                    string               `json:"symbol"`
+	Decimals                  int32                `json:"decimals"`
+	BaseDenom                 string               `json:"base_denom"`
+	NegativeBalanceThreshold  string               `json:"negative_balance_threshold"` // Maximum negative balance allowed (as positive number)
 }
 
 // TokenInfo stores basic token information
 type TokenInfo struct {
-	Name     string `json:"name"`
-	Symbol   string `json:"symbol"`
-	Decimals int32  `json:"decimals"`
+	Name                     string `json:"name"`
+	Symbol                   string `json:"symbol"`
+	Decimals                 int32  `json:"decimals"`
+	NegativeBalanceThreshold string `json:"negative_balance_threshold"` // Stored as string for large numbers
 }
 
 // Message types
@@ -68,6 +71,14 @@ type MsgBalanceOf struct {
 
 type MsgBalanceOfResponse struct {
 	Balance wasmx.Coin `json:"balance"`
+}
+
+type MsgSignedBalanceOf struct {
+	Owner wasmx.Bech32String `json:"owner"`
+}
+
+type MsgSignedBalanceOfResponse struct {
+	Balance sdkmath.Int `json:"balance"` // Can be negative
 }
 
 type MsgTransfer struct {
@@ -115,15 +126,16 @@ type MsgBurn struct {
 
 // CallData structure for routing
 type CallData struct {
-	Name        *MsgName        `json:"name,omitempty"`
-	Symbol      *MsgSymbol      `json:"symbol,omitempty"`
-	Decimals    *MsgDecimals    `json:"decimals,omitempty"`
-	TotalSupply *MsgTotalSupply `json:"totalSupply,omitempty"`
-	BalanceOf   *MsgBalanceOf   `json:"balanceOf,omitempty"`
-	Transfer    *MsgTransfer    `json:"transfer,omitempty"`
-	TransferFrom *MsgTransferFrom `json:"transferFrom,omitempty"`
-	Approve     *MsgApprove     `json:"approve,omitempty"`
-	Allowance   *MsgAllowance   `json:"allowance,omitempty"`
-	Mint        *MsgMint        `json:"mint,omitempty"`
-	Burn        *MsgBurn        `json:"burn,omitempty"`
+	Name             *MsgName             `json:"name,omitempty"`
+	Symbol           *MsgSymbol           `json:"symbol,omitempty"`
+	Decimals         *MsgDecimals         `json:"decimals,omitempty"`
+	TotalSupply      *MsgTotalSupply      `json:"totalSupply,omitempty"`
+	BalanceOf        *MsgBalanceOf        `json:"balanceOf,omitempty"`
+	SignedBalanceOf  *MsgSignedBalanceOf  `json:"signedBalanceOf,omitempty"`
+	Transfer         *MsgTransfer         `json:"transfer,omitempty"`
+	TransferFrom     *MsgTransferFrom     `json:"transferFrom,omitempty"`
+	Approve          *MsgApprove          `json:"approve,omitempty"`
+	Allowance        *MsgAllowance        `json:"allowance,omitempty"`
+	Mint             *MsgMint             `json:"mint,omitempty"`
+	Burn             *MsgBurn             `json:"burn,omitempty"`
 }

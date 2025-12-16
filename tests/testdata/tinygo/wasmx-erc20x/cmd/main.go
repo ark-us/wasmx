@@ -52,6 +52,8 @@ func main() {
 		result = lib.TotalSupply()
 	case calldata.BalanceOf != nil:
 		result = lib.BalanceOf(calldata.BalanceOf)
+	case calldata.SignedBalanceOf != nil:
+		result = lib.SignedBalanceOf(calldata.SignedBalanceOf)
 	case calldata.Transfer != nil:
 		result = lib.Transfer(calldata.Transfer)
 	case calldata.TransferFrom != nil:

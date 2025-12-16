@@ -81,7 +81,7 @@ func handleWellKnown(req wasmxhttp.HttpRequestIncoming) []byte {
 }
 
 func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
-	fmt.Println("--wasmx.oauth2server.handleRegister--")
+	fmt.Println("--wasmx.oauth2server.handleRegister--", req.Method)
 	if req.Method == "GET" {
 		// Return HTML registration form with blockchain key generation
 		html := `<!DOCTYPE html>
