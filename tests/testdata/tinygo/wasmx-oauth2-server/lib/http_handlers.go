@@ -1,13 +1,16 @@
 package lib
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
+	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	wasmxhttp "github.com/loredanacirstea/wasmx-env-httpserver/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // HandleHttpRequestWrap handles HTTP requests forwarded from HTTP server registry via HttpRequestHandler
@@ -32,10 +35,18 @@ func HandleHttpRequestWrap(req wasmxhttp.HttpRequestIncoming) []byte {
 		return handleToken(req)
 	case "/register":
 		return handleRegister(req)
+	case "/register_tx":
+		return handleRegisterTx(req)
 	case "/login":
 		return handleLogin(req)
 	case "/logout":
 		return handleLogout(req)
+	case "/auth/register_init":
+		return handleRegisterInit(req)
+	case "/auth/account_info":
+		return handleAccountInfo(req)
+	case "/auth/contract_addresses":
+		return handleContractAddresses(req)
 	default:
 		return marshalHTTP(wasmxhttp.HttpResponseWrap{
 			Error: "",
@@ -80,6 +91,489 @@ func handleWellKnown(req wasmxhttp.HttpRequestIncoming) []byte {
 	})
 }
 
+// handleRegisterInit handles the /auth/register_init endpoint
+// This endpoint receives a user's address and initializes it by sending native coins
+func handleRegisterInit(req wasmxhttp.HttpRequestIncoming) []byte {
+	fmt.Println("--wasmx.oauth2server.handleRegisterInit--", req.Method)
+
+	if req.Method != "POST" {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "405 Method Not Allowed",
+				StatusCode: 405,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"method not allowed"}`),
+			},
+		})
+	}
+
+	// Parse request body
+	type RegisterInitRequest struct {
+		Address string `json:"address"`
+	}
+
+	var reqData RegisterInitRequest
+	if err := json.Unmarshal(req.Data, &reqData); err != nil {
+		fmt.Println("ERROR: Failed to parse register_init request:", err.Error())
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "400 Bad Request",
+				StatusCode: 400,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"invalid request body"}`),
+			},
+		})
+	}
+
+	if reqData.Address == "" {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "400 Bad Request",
+				StatusCode: 400,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"address is required"}`),
+			},
+		})
+	}
+
+	// Get oauth2-keys contract address
+	keysAddr := wasmx.GetAddressByRole(wasmx.ROLE_OAUTH2_KEYS)
+	if keysAddr == "" {
+		fmt.Println("ERROR: OAuth2 keys contract not found by role")
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"oauth2 keys contract not found"}`),
+			},
+		})
+	}
+
+	// Create message to initialize account
+	initMsg := map[string]interface{}{
+		"init_account": map[string]interface{}{
+			"address": reqData.Address,
+		},
+	}
+
+	msgBz, err := json.Marshal(initMsg)
+	if err != nil {
+		fmt.Println("ERROR: Failed to marshal init account message:", err.Error())
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to marshal request"}`),
+			},
+		})
+	}
+
+	// Call oauth2-keys contract to initialize account
+	fmt.Println("Calling oauth2-keys contract to initialize account:", reqData.Address)
+	ok, data := wasmx.CallSimple(keysAddr, msgBz, false, MODULE_NAME)
+	if !ok {
+		fmt.Println("ERROR: Failed to initialize account:", string(data))
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to initialize account: ` + string(data) + `"}`),
+			},
+		})
+	}
+
+	// Parse response
+	var response struct {
+		Success bool   `json:"success"`
+		TxHash  string `json:"tx_hash"`
+		Error   string `json:"error"`
+	}
+	if err := json.Unmarshal(data, &response); err != nil {
+		fmt.Println("ERROR: Failed to parse init account response:", err.Error())
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to parse response"}`),
+			},
+		})
+	}
+
+	if !response.Success {
+		fmt.Println("ERROR: Account initialization failed:", response.Error)
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"` + response.Error + `"}`),
+			},
+		})
+	}
+
+	// Return success response
+	fmt.Println("Account initialized successfully:", reqData.Address, "TxHash:", response.TxHash)
+	respBody, _ := json.Marshal(map[string]interface{}{
+		"success": true,
+		"tx_hash": response.TxHash,
+		"address": reqData.Address,
+	})
+	return marshalHTTP(wasmxhttp.HttpResponseWrap{
+		Error: "",
+		Data: wasmxhttp.HttpResponse{
+			Status:     "200 OK",
+			StatusCode: 200,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Data:       respBody,
+		},
+	})
+}
+
+// handleAccountInfo handles the /auth/account_info endpoint
+// This endpoint returns account information (account number and sequence) needed for signing transactions
+func handleAccountInfo(req wasmxhttp.HttpRequestIncoming) []byte {
+	fmt.Println("--wasmx.oauth2server.handleAccountInfo--", req.Method)
+
+	if req.Method != "GET" && req.Method != "POST" {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "405 Method Not Allowed",
+				StatusCode: 405,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"method not allowed"}`),
+			},
+		})
+	}
+
+	// Get address from query params or body
+	address := ""
+	if req.Method == "GET" {
+		// Parse URL for query parameters
+		// The RequestURI might contain query string like "/auth/account_info?address=..."
+		for idx := 0; idx < len(req.RequestURI); idx++ {
+			if req.RequestURI[idx] == '?' {
+				queryString := req.RequestURI[idx+1:]
+				// Simple parsing of address parameter
+				if len(queryString) > 8 && queryString[:8] == "address=" {
+					address = queryString[8:]
+				}
+				break
+			}
+		}
+	} else {
+		type AccountInfoRequest struct {
+			Address string `json:"address"`
+		}
+		var reqData AccountInfoRequest
+		if err := json.Unmarshal(req.Data, &reqData); err == nil {
+			address = reqData.Address
+		}
+	}
+
+	if address == "" {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "400 Bad Request",
+				StatusCode: 400,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"address is required"}`),
+			},
+		})
+	}
+
+	// Query account information from wasmx-auth contract
+	authAddr := wasmx.GetAddressByRole(wasmx.ROLE_AUTH)
+	if authAddr == "" {
+		fmt.Println("ERROR: Auth contract not found")
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"auth contract not found"}`),
+			},
+		})
+	}
+
+	// Build query message
+	queryMsg := map[string]interface{}{
+		"GetAccountInfo": map[string]interface{}{
+			"address": address,
+		},
+	}
+	queryMsgBytes, err := json.Marshal(queryMsg)
+	if err != nil {
+		fmt.Println("ERROR: Failed to marshal query message:", err.Error())
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to marshal query"}`),
+			},
+		})
+	}
+
+	// Query auth contract
+	fmt.Println("Querying auth contract for account info:", address)
+	ok, data := wasmx.CallSimple(authAddr, queryMsgBytes, true, MODULE_NAME)
+	if !ok {
+		fmt.Println("ERROR: Failed to query account info:", string(data))
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to query account info: ` + string(data) + `"}`),
+			},
+		})
+	}
+
+	// Parse response: {"info": BaseAccount}
+	var response struct {
+		Info struct {
+			Address       string      `json:"address"`
+			PubKey        interface{} `json:"pub_key"`
+			AccountNumber uint64      `json:"account_number"`
+			Sequence      uint64      `json:"sequence"`
+		} `json:"info"`
+	}
+	if err := json.Unmarshal(data, &response); err != nil {
+		fmt.Println("ERROR: Failed to parse account info response:", err.Error(), "data:", string(data))
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to parse account info"}`),
+			},
+		})
+	}
+
+	// Return account info
+	fmt.Println("Account info retrieved successfully:", address)
+	respBody, _ := json.Marshal(map[string]interface{}{
+		"address":        address,
+		"account_number": fmt.Sprintf("%d", response.Info.AccountNumber),
+		"sequence":       fmt.Sprintf("%d", response.Info.Sequence),
+		"pub_key":        response.Info.PubKey,
+	})
+	return marshalHTTP(wasmxhttp.HttpResponseWrap{
+		Error: "",
+		Data: wasmxhttp.HttpResponse{
+			Status:     "200 OK",
+			StatusCode: 200,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Data:       respBody,
+		},
+	})
+}
+
+// handleContractAddresses handles the /auth/contract_addresses endpoint
+// This endpoint returns contract addresses and chain info needed for transaction signing
+func handleContractAddresses(req wasmxhttp.HttpRequestIncoming) []byte {
+	fmt.Println("--wasmx.oauth2server.handleContractAddresses--", req.Method)
+
+	if req.Method != "GET" {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "405 Method Not Allowed",
+				StatusCode: 405,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"method not allowed"}`),
+			},
+		})
+	}
+
+	// Get identity contract address
+	identityAddr := wasmx.GetAddressByRole(wasmx.ROLE_ACCOUNT_IDENTITY)
+	if identityAddr == "" {
+		fmt.Println("ERROR: Identity contract not found")
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"identity contract not found"}`),
+			},
+		})
+	}
+
+	// Get chain info
+	chainID := wasmx.GetChainId()
+	baseDenom := "amyt"      // Default Cosmos SDK denom
+	bech32Prefix := "mythos" // Bech32 address prefix for this chain
+
+	// Return contract addresses and chain info
+	respBody, _ := json.Marshal(map[string]interface{}{
+		"identity_address": identityAddr,
+		"chain_id":         chainID,
+		"base_denom":       baseDenom,
+		"bech32_prefix":    bech32Prefix,
+	})
+
+	return marshalHTTP(wasmxhttp.HttpResponseWrap{
+		Error: "",
+		Data: wasmxhttp.HttpResponse{
+			Status:     "200 OK",
+			StatusCode: 200,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Data:       respBody,
+		},
+	})
+}
+
+// handleRegisterTx handles the /register_tx endpoint
+// This endpoint receives a signed transaction and broadcasts it to register with the identity contract
+func handleRegisterTx(req wasmxhttp.HttpRequestIncoming) []byte {
+	fmt.Println("--wasmx.oauth2server.handleRegisterTx--", req.Method)
+
+	if req.Method != "POST" {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "405 Method Not Allowed",
+				StatusCode: 405,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"method not allowed"}`),
+			},
+		})
+	}
+
+	// Parse request body
+	type RegisterTxRequest struct {
+		SignedTx string `json:"signed_tx"`
+		Address  string `json:"address"`
+	}
+
+	var reqData RegisterTxRequest
+	if err := json.Unmarshal(req.Data, &reqData); err != nil {
+		fmt.Println("ERROR: Failed to parse register_tx request:", err.Error())
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "400 Bad Request",
+				StatusCode: 400,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"invalid request body"}`),
+			},
+		})
+	}
+
+	if reqData.SignedTx == "" || reqData.Address == "" {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "400 Bad Request",
+				StatusCode: 400,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"signed_tx and address are required"}`),
+			},
+		})
+	}
+
+	// Decode base64 transaction
+	txBytes, err := base64.StdEncoding.DecodeString(reqData.SignedTx)
+	if err != nil {
+		fmt.Println("ERROR: Failed to decode signed transaction:", err.Error())
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "400 Bad Request",
+				StatusCode: 400,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"invalid signed transaction encoding"}`),
+			},
+		})
+	}
+
+	// Broadcast transaction to blockchain
+	fmt.Println("Broadcasting signed transaction for address:", reqData.Address)
+	broadcastResp, err := wasmxcore.BroadcastTxAsync(txBytes)
+	if err != nil {
+		fmt.Println("ERROR: Failed to broadcast transaction:", err.Error())
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to broadcast transaction: ` + err.Error() + `"}`),
+			},
+		})
+	}
+
+	// Check if broadcast was successful
+	if broadcastResp.Error != "" {
+		fmt.Println("ERROR: Broadcast transaction error:", broadcastResp.Error)
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"transaction broadcast failed: ` + broadcastResp.Error + `"}`),
+			},
+		})
+	}
+
+	if broadcastResp.Response != nil && broadcastResp.Response.Code != 0 {
+		fmt.Println("ERROR: Transaction execution failed:", broadcastResp.Response.Log)
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"transaction execution failed: ` + broadcastResp.Response.Log + `"}`),
+			},
+		})
+	}
+
+	var txHash string
+	if broadcastResp.Response != nil {
+		txHash = broadcastResp.Response.Hash.String()
+		fmt.Println("SUCCESS: Transaction broadcasted successfully, TxHash:", txHash)
+	}
+
+	// Return success response
+	respBody, _ := json.Marshal(map[string]interface{}{
+		"success": true,
+		"tx_hash": txHash,
+		"address": reqData.Address,
+	})
+
+	return marshalHTTP(wasmxhttp.HttpResponseWrap{
+		Error: "",
+		Data: wasmxhttp.HttpResponse{
+			Status:     "200 OK",
+			StatusCode: 200,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Data:       respBody,
+		},
+	})
+}
+
 func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 	fmt.Println("--wasmx.oauth2server.handleRegister--", req.Method)
 	if req.Method == "GET" {
@@ -103,25 +597,27 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 </head>
 <body>
     <h2>Register</h2>
-    <form id="registerForm">
-        <input type="email" id="email" name="email" placeholder="Email" required />
-        <input type="password" id="password" name="password" placeholder="Password (min 8 characters)" required minlength="8" />
-        <input type="text" id="username" name="username" placeholder="Username (optional)" />
+    <div id="registerFormContainer">
+        <input type="email" id="email" placeholder="Email" required />
+        <input type="password" id="password" placeholder="Password (min 8 characters)" required minlength="8" />
+        <input type="text" id="username" placeholder="Username (optional)" />
 
         <div id="blockchainOptions">
             <div class="info">
                 A cryptographic key pair will be generated in your browser and encrypted with a 4-digit PIN.
                 Your private key never leaves your browser and is never sent to the server.
             </div>
-            <input type="text" id="pin" placeholder="4-digit PIN" pattern="[0-9]{4}" maxlength="4" />
-            <input type="text" id="pinConfirm" placeholder="Confirm PIN" pattern="[0-9]{4}" maxlength="4" />
+            <input type="text" id="pin" placeholder="4-digit PIN" pattern="[0-9]{4}" maxlength="4" required />
+            <input type="text" id="pinConfirm" placeholder="Confirm PIN" pattern="[0-9]{4}" maxlength="4" required />
         </div>
 
-        <button type="submit">Register</button>
+        <button type="button" id="registerButton">Register</button>
         <div id="error" class="error"></div>
         <div id="success" class="success"></div>
-    </form>
+    </div>
     <p>Already have an account? <a href="/login">Login here</a></p>
+
+	<script src="https://cdn.jsdelivr.net/gh/ark-us/mythosjs@main/packages/wasmxjs-browser-bundle/dist/wasmxjs-bundle.umd.js"></script>
 
     <script type="module">
         import * as secp from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@2.1.0/+esm';
@@ -130,13 +626,11 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
         import { bech32 } from 'https://cdn.jsdelivr.net/npm/bech32@2.0.0/+esm';
 
         // Import CosmJS for transaction signing
-        import { makeSignDoc, makeAuthInfoBytes } from 'https://cdn.jsdelivr.net/npm/@cosmjs/proto-signing@0.32.4/+esm';
-        import { Registry } from 'https://cdn.jsdelivr.net/npm/@cosmjs/proto-signing@0.32.4/+esm';
+        import { toBase64 } from 'https://cdn.jsdelivr.net/npm/@cosmjs/encoding@0.32.4/+esm';
 
-		import "https://cdn.jsdelivr.net/npm/protobufjs@7.2.4/minimal.min.js";
+		let execMsg = WasmxJS.MsgExecuteContract;
 
-        // import { MsgExecuteContract } from 'https://cdn.jsdelivr.net/npm/@ark-us/wasmxjs@0.0.11/module/codegen/mythos/wasmx/v1/tx.js';
-		import { MsgExecuteContract } from "https://cdn.jsdelivr.net/npm/@ark-us/wasmxjs@0.0.11/module/codegen/mythos/wasmx/v1/tx.js/+esm";
+		console.log("module script");
 
         document.getElementById('blockchainOptions').style.display = 'block';
 		document.getElementById('pin').required = true;
@@ -204,7 +698,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 
         // Derive Cosmos SDK-compatible bech32 address from public key
         // This follows the standard Cosmos SDK address derivation (coin type 118)
-        function deriveAddress(publicKeyHex) {
+        function deriveAddress(publicKeyHex, bech32Prefix) {
             // Convert hex public key to bytes
             const pubKeyBytes = new Uint8Array(publicKeyHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
 
@@ -212,26 +706,120 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
             const sha256Hash = sha256(pubKeyBytes);
             const ripemd160Hash = ripemd160(sha256Hash);
 
-            // Convert to bech32 with 'wasmx' prefix
+            // Convert to bech32 with the specified prefix
             const words = bech32.toWords(ripemd160Hash);
-            const address = bech32.encode('wasmx', words);
+            const address = bech32.encode(bech32Prefix, words);
 
             return address;
         }
 
-        // TODO: Implement proper Cosmos SDK transaction signing
-        // This requires proper protobuf encoding of TxBody and AuthInfo
-        // For now, we'll continue using the backend's CallSimple approach
-        // which works in test environments but doesn't persist state in production
-        //
-        // To implement properly, we would need:
-        // 1. Import @cosmjs/proto-signing and @cosmjs/stargate
-        // 2. Create TxBody with MsgExecuteContract
-        // 3. Create AuthInfo with signer info and fee
-        // 4. Create SignDoc and sign with user's private key
-        // 5. Encode to protobuf and submit via /broadcast_tx endpoint
+        // Helper function to sign transaction
+        async function signTransaction(privateKeyHex, address, accountNumber, sequence, chainId, txBodyBytes, authInfoBytes) {
+            // Convert hex private key to bytes
+            const privateKeyBytes = new Uint8Array(privateKeyHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
 
-        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            // Create SignDoc
+            const signDoc = {
+                bodyBytes: txBodyBytes,
+                authInfoBytes: authInfoBytes,
+                chainId: chainId,
+                accountNumber: accountNumber
+            };
+
+            // Serialize SignDoc for signing
+            const signDocBytes = new Uint8Array([
+                ...new TextEncoder().encode(chainId),
+                ...new Uint8Array(new BigUint64Array([BigInt(accountNumber)]).buffer),
+                ...txBodyBytes,
+                ...authInfoBytes
+            ]);
+
+            // Sign with secp256k1
+            const signDocHash = sha256(signDocBytes);
+            const signature = await secp.sign(signDocHash, privateKeyBytes, { der: false });
+
+            return new Uint8Array(signature);
+        }
+
+        // Helper function to create MsgExecuteContract transaction
+        async function createRegisterUserTransaction(privateKeyHex, publicKeyHex, address, accountNumber, sequence, chainId, identityAddress) {
+            // Convert public key to bytes
+            const publicKeyBytes = new Uint8Array(publicKeyHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+
+            // Create the register_user message payload
+            const registerUserMsg = {
+                register_user: {
+                    address: address,
+                    public_key: Array.from(publicKeyBytes),
+                    service_domain: "",
+                    permissions: [],
+                    expires_at: 0
+                }
+            };
+
+            // Create the contract execution message with base64-encoded data
+            const msgData = JSON.stringify({ data: toBase64(new TextEncoder().encode(JSON.stringify(registerUserMsg))) });
+
+            // Create MsgExecuteContract
+            const msgExecuteContract = {
+                sender: address,
+                contract: identityAddress,
+                msg: new TextEncoder().encode(msgData),
+                funds: [],
+                dependencies: []
+            };
+
+            // Encode TxBody
+            const txBody = {
+                messages: [msgExecuteContract],
+                memo: "",
+                timeoutHeight: 0,
+                extensionOptions: [],
+                nonCriticalExtensionOptions: []
+            };
+
+            // Simple protobuf-like encoding for TxBody (simplified)
+            const txBodyBytes = new TextEncoder().encode(JSON.stringify(txBody));
+
+            // Create AuthInfo with fee and signer info
+            const authInfo = {
+                signerInfos: [{
+                    publicKey: {
+                        typeUrl: "/cosmos.crypto.secp256k1.PubKey",
+                        value: publicKeyBytes
+                    },
+                    modeInfo: {
+                        single: { mode: 1 } // SIGN_MODE_DIRECT
+                    },
+                    sequence: sequence
+                }],
+                fee: {
+                    amount: [{ denom: "amyt", amount: "20000000" }],
+                    gasLimit: 20000000,
+                    payer: "",
+                    granter: ""
+                }
+            };
+
+            // Simple encoding for AuthInfo
+            const authInfoBytes = new TextEncoder().encode(JSON.stringify(authInfo));
+
+            // Sign the transaction
+            const signature = await signTransaction(privateKeyHex, address, accountNumber, sequence, chainId, txBodyBytes, authInfoBytes);
+
+            // Create complete transaction
+            const txRaw = {
+                bodyBytes: Array.from(txBodyBytes),
+                authInfoBytes: Array.from(authInfoBytes),
+                signatures: [Array.from(signature)]
+            };
+
+            return toBase64(new TextEncoder().encode(JSON.stringify(txRaw)));
+        }
+
+		console.log("set registerButton event");
+        document.getElementById('registerButton').addEventListener('click', async function(e) {
+			console.log("registerButton");
             e.preventDefault();
 
             const errorDiv = document.getElementById('error');
@@ -242,124 +830,190 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const username = document.getElementById('username').value;
-            const enableBlockchain = true;
 
             let requestData = { email, password, username };
 
-            if (enableBlockchain) {
-                const pin = document.getElementById('pin').value;
-                const pinConfirm = document.getElementById('pinConfirm').value;
+			const pin = document.getElementById('pin').value;
+			const pinConfirm = document.getElementById('pinConfirm').value;
 
-                if (pin !== pinConfirm) {
-                    errorDiv.textContent = 'PINs do not match';
-                    return;
-                }
+			if (pin !== pinConfirm) {
+				errorDiv.textContent = 'PINs do not match';
+				return;
+			}
 
-                if (!/^[0-9]{4}$/.test(pin)) {
-                    errorDiv.textContent = 'PIN must be exactly 4 digits';
-                    return;
-                }
+			if (!/^[0-9]{4}$/.test(pin)) {
+				errorDiv.textContent = 'PIN must be exactly 4 digits';
+				return;
+			}
 
-                try {
-                    successDiv.textContent = 'Generating cryptographic keys...';
+			try {
+				successDiv.textContent = 'Fetching chain configuration...';
 
-                    // Generate key pair
-                    const keyPair = generateKeyPair();
-                    const address = deriveAddress(keyPair.publicKey);
+				// Fetch chain config to get bech32 prefix
+				let bech32Prefix = 'mythos'; // Default
+				try {
+					const configResponse = await fetch('/auth/contract_addresses');
+					if (configResponse.ok) {
+						const config = await configResponse.json();
+						bech32Prefix = config.bech32_prefix || 'mythos';
+						console.log('=== CHAIN CONFIG ===');
+						console.log('Bech32 Prefix:', bech32Prefix);
+						console.log('====================');
+					}
+				} catch (err) {
+					console.warn('Failed to fetch chain config, using default prefix:', bech32Prefix);
+				}
 
-                    // LOG: Show generated keys in console
-                    console.log('=== BROWSER-SIDE KEY GENERATION ===');
-                    console.log('Private Key (hex):', keyPair.privateKey);
-                    console.log('Public Key (compressed, hex):', keyPair.publicKey);
-                    console.log('Derived Address (Cosmos SDK bech32):', address);
-                    console.log('✓ Address format IS Cosmos SDK coin 118 compatible!');
-                    console.log('===================================');
+				successDiv.textContent = 'Generating cryptographic keys...';
 
-                    // Encrypt private key with PIN
-                    const encryptedPrivateKey = await encryptPrivateKey(keyPair.privateKey, pin);
+				// Generate key pair
+				const keyPair = generateKeyPair();
+				const address = deriveAddress(keyPair.publicKey, bech32Prefix);
 
-                    // Store encrypted private key in localStorage
-                    localStorage.setItem('wasmx_encrypted_key_' + email, encryptedPrivateKey);
+				// LOG: Show generated keys in console
+				console.log('=== BROWSER-SIDE KEY GENERATION ===');
+				console.log('Private Key (hex):', keyPair.privateKey);
+				console.log('Public Key (compressed, hex):', keyPair.publicKey);
+				console.log('Derived Address (Cosmos SDK bech32):', address);
+				console.log('Bech32 Prefix:', bech32Prefix);
+				console.log('✓ Address format IS Cosmos SDK coin 118 compatible!');
+				console.log('===================================');
 
-                    // Add blockchain info to registration
-                    requestData.public_key = keyPair.publicKey;
-                    requestData.address = address;
+				// Encrypt private key with PIN
+				const encryptedPrivateKey = await encryptPrivateKey(keyPair.privateKey, pin);
 
-                    // Initialize the blockchain account by sending it native coins
-                    successDiv.textContent = 'Initializing blockchain account...';
-                    try {
-                        const initResponse = await fetch('/auth/register_init', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ address: address })
-                        });
+				// Store encrypted private key in localStorage
+				localStorage.setItem('wasmx_encrypted_key_' + email, encryptedPrivateKey);
 
-                        const initResult = await initResponse.json();
-                        if (!initResponse.ok || !initResult.success) {
-                            console.warn('Account initialization failed:', initResult.error);
-                            // Continue anyway - ephemeral key generation will also try to initialize
-                        } else {
-                            console.log('Account initialized with tx:', initResult.tx_hash);
+				// Add blockchain info to registration
+				requestData.public_key = keyPair.publicKey;
+				requestData.address = address;
 
-                            // Wait 5 seconds for the funding transaction to be processed
-                            successDiv.textContent = 'Account funded. Waiting for confirmation...';
-                            await new Promise(resolve => setTimeout(resolve, 5000));
+				// Initialize the blockchain account by sending it native coins
+				successDiv.textContent = 'Initializing blockchain account...';
+				try {
+					const initResponse = await fetch('/auth/register_init', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ address: address })
+					});
 
-                            // Fetch account info to verify the account is ready
-                            successDiv.textContent = 'Verifying account...';
-                            try {
-                                const accountInfoResponse = await fetch('/auth/account_info?address=' + encodeURIComponent(address));
-                                const accountInfo = await accountInfoResponse.json();
+					const initResult = await initResponse.json();
+					if (!initResponse.ok || !initResult.success) {
+						console.warn('Account initialization failed:', initResult.error);
+						// Continue anyway - ephemeral key generation will also try to initialize
+					} else {
+						console.log('Account initialized with tx:', initResult.tx_hash);
 
-                                if (accountInfoResponse.ok && accountInfo.account_number) {
-                                    console.log('=== ACCOUNT INFO ===');
-                                    console.log('Account Number:', accountInfo.account_number);
-                                    console.log('Sequence:', accountInfo.sequence);
-                                    console.log('Public Key:', accountInfo.pub_key);
-                                    console.log('====================');
+						// Wait 5 seconds for the funding transaction to be processed
+						successDiv.textContent = 'Account funded. Waiting for confirmation...';
+						await new Promise(resolve => setTimeout(resolve, 5000));
 
-                                    // Store account info for later use (e.g., signing transactions)
-                                    requestData.account_number = accountInfo.account_number;
-                                    requestData.sequence = accountInfo.sequence;
-                                } else {
-                                    console.warn('Could not fetch account info:', accountInfo.error || 'Unknown error');
-                                }
-                            } catch (err) {
-                                console.warn('Failed to fetch account info:', err);
-                            }
+						// Declare accountInfo outside try-catch so it's accessible in both blocks
+						let accountInfo = null;
 
-                            // Fetch contract addresses (identity contract, chain info)
-                            try {
-                                const addressesResponse = await fetch('/auth/contract_addresses');
-                                const addresses = await addressesResponse.json();
+						// Fetch account info to verify the account is ready
+						successDiv.textContent = 'Verifying account...';
+						try {
+							const accountInfoResponse = await fetch('/auth/account_info?address=' + encodeURIComponent(address));
+							accountInfo = await accountInfoResponse.json();
 
-                                if (addressesResponse.ok) {
-                                    console.log('=== CHAIN INFO ===');
-                                    console.log('Chain ID:', addresses.chain_id);
-                                    console.log('Base Denom:', addresses.base_denom);
-                                    console.log('Identity Contract:', addresses.identity_address);
-                                    console.log('==================');
+							if (accountInfoResponse.ok && accountInfo.account_number) {
+								console.log('=== ACCOUNT INFO ===');
+								console.log('Account Number:', accountInfo.account_number);
+								console.log('Sequence:', accountInfo.sequence);
+								console.log('Public Key:', accountInfo.pub_key);
+								console.log('====================');
 
-                                    // Store for potential transaction signing
-                                    requestData.chain_id = addresses.chain_id;
-                                    requestData.identity_address = addresses.identity_address;
-                                }
-                            } catch (err) {
-                                console.warn('Failed to fetch contract addresses:', err);
-                            }
-                        }
-                    } catch (err) {
-                        console.warn('Account initialization request failed:', err);
-                        // Continue anyway
-                    }
+								// Store account info for later use (e.g., signing transactions)
+								requestData.account_number = accountInfo.account_number;
+								requestData.sequence = accountInfo.sequence;
+							} else {
+								console.warn('Could not fetch account info:', accountInfo.error || 'Unknown error');
+							}
+						} catch (err) {
+							console.warn('Failed to fetch account info:', err);
+						}
 
-                    successDiv.textContent = 'Keys generated and encrypted. Registering...';
-                } catch (err) {
-                    errorDiv.textContent = 'Failed to generate keys: ' + err.message;
-                    return;
-                }
-            }
+						// Fetch contract addresses (identity contract, chain info)
+						successDiv.textContent = 'Preparing transaction...';
+						try {
+							const addressesResponse = await fetch('/auth/contract_addresses');
+							const addresses = await addressesResponse.json();
 
+							if (addressesResponse.ok && accountInfo.account_number && accountInfo.sequence !== undefined) {
+								console.log('=== CHAIN INFO ===');
+								console.log('Chain ID:', addresses.chain_id);
+								console.log('Base Denom:', addresses.base_denom);
+								console.log('Identity Contract:', addresses.identity_address);
+								console.log('==================');
+
+								// Create and sign the register_user transaction
+								successDiv.textContent = 'Signing transaction with identity contract...';
+								const signedTx = await createRegisterUserTransaction(
+									keyPair.privateKey,
+									keyPair.publicKey,
+									address,
+									parseInt(accountInfo.account_number),
+									parseInt(accountInfo.sequence),
+									addresses.chain_id,
+									addresses.identity_address
+								);
+
+								console.log('=== SIGNED TRANSACTION ===');
+								console.log('Transaction signed successfully');
+								console.log('==========================');
+
+								// Step 1: Send signed transaction to /register_tx
+								successDiv.textContent = 'Broadcasting identity registration transaction...';
+								try {
+									const registerTxResponse = await fetch('/register_tx', {
+										method: 'POST',
+										headers: { 'Content-Type': 'application/json' },
+										body: JSON.stringify({
+											signed_tx: signedTx,
+											address: address
+										})
+									});
+
+									const registerTxResult = await registerTxResponse.json();
+
+									if (!registerTxResponse.ok || !registerTxResult.success) {
+										errorDiv.textContent = 'Failed to register with identity contract: ' + (registerTxResult.error || 'Unknown error');
+										return;
+									}
+
+									console.log('=== IDENTITY REGISTRATION SUCCESS ===');
+									console.log('TxHash:', registerTxResult.tx_hash);
+									console.log('====================================');
+
+									// Wait a bit for transaction to be processed
+									await new Promise(resolve => setTimeout(resolve, 2000));
+								} catch (err) {
+									errorDiv.textContent = 'Failed to register identity: ' + err.message;
+									return;
+								}
+							} else {
+								console.warn('Missing account info or contract addresses, skipping transaction signing');
+							}
+						} catch (err) {
+							console.warn('Failed to create signed transaction:', err);
+							errorDiv.textContent = 'Failed to sign transaction: ' + err.message;
+							return;
+						}
+					}
+				} catch (err) {
+					console.warn('Account initialization request failed:', err);
+					// Continue anyway
+				}
+
+				successDiv.textContent = 'Registering OAuth2 account...';
+			} catch (err) {
+				errorDiv.textContent = 'Failed to generate keys: ' + err.message;
+				return;
+			}
+
+            // Step 2: Register with OAuth2 server
             try {
                 const response = await fetch('/register', {
                     method: 'POST',

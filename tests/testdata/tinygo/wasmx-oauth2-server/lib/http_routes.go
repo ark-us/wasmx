@@ -27,12 +27,16 @@ func registerHttpRoutes(registryAddr wasmx.Bech32String) {
 		"/oauth/authorize",
 		"/oauth/token",
 		"/register",
+		"/register_tx",
 		"/login",
 		"/logout",
 		"/auth/register",
+		"/auth/register_init",
+		"/auth/account_info",
 		"/auth/login",
 		"/auth/logout",
 		"/auth/me",
+		"/auth/contract_addresses",
 	}
 
 	for _, rt := range routes {

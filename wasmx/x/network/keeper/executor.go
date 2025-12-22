@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -216,6 +217,8 @@ func (r *ActionExecutor) ExecuteWithHeader(goCtx context.Context, header cmtprot
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
+	fmt.Println("--ActionExecutor.ExecuteWithHeader--")
+
 	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContextWithHeader(r.app.GetBaseApp(), r.logger, header, false)
 	if err != nil {
 		return nil, err
@@ -235,6 +238,7 @@ func (r *ActionExecutor) ExecuteInternal(
 	mode sdk.ExecMode,
 	cb func(goctx context.Context) (any, error),
 ) (any, error) {
+	fmt.Println("--ActionExecutor.ExecuteInternal--")
 	// execution is serialized, so each execution has its own unique id
 	r.counter++
 
@@ -257,7 +261,11 @@ func (r *ActionExecutor) ExecuteInternal(
 		}
 	}
 
+	fmt.Println("--ActionExecutor.ExecuteInternal.cb--")
+
 	res, err := cb(goCtx)
+
+	fmt.Println("--ActionExecutor.ExecuteInternal.cb.res--", err, res)
 
 	// call app EndTransaction hook with any returned error
 	endtx := r.app.GetBaseApp().EndTransaction

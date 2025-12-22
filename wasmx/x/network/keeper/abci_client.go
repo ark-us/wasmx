@@ -116,6 +116,7 @@ func (c *ABCIClient) BroadcastTxCommit(_ context.Context, tx cmttypes.Tx) (*rpct
 }
 
 func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*rpctypes.ResultBroadcastTx, error) {
+	fmt.Println("--ABCIClient.BroadcastTxAsync--")
 	c.logger.Debug("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()))
 
 	bapp := c.bapp
@@ -144,6 +145,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 	if len(multiChainIds) == 0 {
 		multiChainIds = []string{bapp.ChainID()}
 	}
+	fmt.Println("--ABCIClient.BroadcastTxAsync.multiChainIds--", multiChainIds)
 
 	// if atomic transaction, we send it to all respective chains
 	for _, multiChainId := range multiChainIds {
@@ -166,8 +168,12 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 
 		// TODO use ctx from params?
 		cb := func(goctx context.Context) (any, error) {
+			fmt.Println("--ActionExecutor.cb--")
 			ctx := sdk.UnwrapSDKContext(goctx)
 			sdktx, err := bapp.TxDecode(tx)
+			if err != nil {
+				return nil, err
+			}
 
 			if len(sdktx.GetMsgs()) > 0 {
 				// we just take the first one // TODO fixme
@@ -218,6 +224,7 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 			}
 
 			msg := []byte(fmt.Sprintf(`{"run":{"event": {"type": "newTransaction", "params": [{"key": "transaction", "value":"%s"}]}}}`, base64.StdEncoding.EncodeToString(tx)))
+			fmt.Println("--ABCIClient.BroadcastTxAsync.msg--", string(msg))
 			rresp, err := mapp.GetNetworkKeeper().ExecuteContractInternal(ctx, &types.MsgExecuteContract{
 				Sender:   wasmxtypes.ROLE_CONSENSUS,
 				Contract: wasmxtypes.ROLE_CONSENSUS,
@@ -228,7 +235,9 @@ func (c *ABCIClient) BroadcastTxAsync(goctx context.Context, tx cmttypes.Tx) (*r
 			}
 			return rresp, nil
 		}
+		fmt.Println("--ABCIClient.BroadcastTxAsync.ExecuteWithMockHeader--")
 		_, err = mapp.GetActionExecutor().ExecuteWithMockHeader(context.Background(), sdk.ExecModeFinalize, cb)
+		fmt.Println("--ABCIClient.BroadcastTxAsync.ExecuteWithMockHeader.resp--", err)
 		// TODO handle resp, err ?
 		if err != nil {
 			c.logger.Error("ABCIClient.BroadcastTxAsync", "txhash", hex.EncodeToString(tx.Hash()), "error", err.Error())

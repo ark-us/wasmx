@@ -155,11 +155,10 @@ type BroadcastTxAsyncResponse struct {
 }
 
 type PrepareTxRequest struct {
-	FromAddress string `json:"from_address"`
-	ToAddress   string `json:"to_address"`
-	Data        []byte `json:"data"`
-	GasLimit    uint64 `json:"gas_limit"`
-	PrivateKey  []byte `json:"private_key"`
+	ToAddress  string `json:"to_address"`
+	Data       []byte `json:"data"`
+	GasLimit   uint64 `json:"gas_limit"`
+	PrivateKey []byte `json:"private_key"`
 }
 
 type PrepareTxResponse struct {

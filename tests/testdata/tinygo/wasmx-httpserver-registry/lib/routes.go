@@ -248,7 +248,6 @@ func loadRoutes() []RouteRecord {
 	if len(data) == 0 {
 		return []RouteRecord{}
 	}
-	fmt.Println("--wasmx.httpserver.loadRoutes--", string(data))
 	var routes []RouteRecord
 	if err := json.Unmarshal(data, &routes); err != nil {
 		return []RouteRecord{}
@@ -352,7 +351,6 @@ func handleMutatingRequest(req HttpRequestIncoming, targetContract string) {
 	// Prepare and sign transaction using PrepareTx
 	gasLimit := uint64(30000000) // Default gas limit
 	txBytes, err := wasmxcore.PrepareTx(
-		keyResponse.Address,
 		targetContract,
 		calld,
 		gasLimit,

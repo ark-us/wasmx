@@ -44,11 +44,19 @@ func RegisterUser(req RegisterUserRequest) []byte {
 	fmt.Println("--wasmx.oauth2server.RegisterUser3--")
 
 	if req.PublicKey != "" && req.Address != "" {
-		identityUserID, blockchainAddress = registerInIdentityContract(req.PublicKey, req.Address)
-		LoggerInfo("User registered in identity contract", []string{
-			"identity_user_id", identityUserID,
-			"address", blockchainAddress,
-		})
+		// Query identity contract to get user_id by address
+		// (user should have already registered via /register_tx)
+		fmt.Println("--wasmx.oauth2server.RegisterUser: Querying identity contract by address--")
+		identityUserID, blockchainAddress = queryIdentityUserByAddress(req.Address)
+		if identityUserID == "" {
+			fmt.Println("WARNING: No identity user found for address:", req.Address)
+			LoggerError("Identity user not found for address", []string{"address", req.Address})
+		} else {
+			LoggerInfo("Found identity user for address", []string{
+				"identity_user_id", identityUserID,
+				"address", blockchainAddress,
+			})
+		}
 	}
 	fmt.Println("--wasmx.oauth2server.RegisterUser4--")
 
@@ -423,74 +431,53 @@ func validateSessionInternal(sessionID string) (string, error) {
 	return session.UserID, nil
 }
 
-// registerInIdentityContract registers a user in the identity contract
-func registerInIdentityContract(publicKey string, address string) (string, string) {
-	fmt.Println("--wasmx.oauth2server.registerInIdentityContract--")
+// queryIdentityUserByAddress queries the identity contract to get user_id by address
+func queryIdentityUserByAddress(address string) (string, string) {
+	fmt.Println("--wasmx.oauth2server.queryIdentityUserByAddresssssssss--", address)
+	fmt.Println("--wasmx.oauth2server.queryIdentityUserByAddress.ROLE_ACCOUNT_IDENTITY--", wasmx.ROLE_ACCOUNT_IDENTITY)
+
 	// Get identity contract address
 	identityAddr := wasmx.GetAddressByRole(wasmx.ROLE_ACCOUNT_IDENTITY)
-	fmt.Println("--wasmx.oauth2server.registerInIdentityContract.identityAddr--", identityAddr)
+	fmt.Println("--wasmx.oauth2server.queryIdentityUserByAddress.identityAddr--", identityAddr)
 	if identityAddr == "" {
 		LoggerError("Identity contract not found", nil)
-		Revert(wasmx.ROLE_ACCOUNT_IDENTITY + ` contract not found`)
 		return "", ""
 	}
 
-	// Convert hex public key to bytes
-	pubKeyBytes := hexToBytes(publicKey)
-	if len(pubKeyBytes) == 0 {
-		LoggerError("Invalid public key hex", []string{"public_key", publicKey})
-		Revert(`Invalid public key hex: ` + publicKey)
-		return "", ""
-	}
-
-	// Create register_user message for identity contract
-	registerMsg := map[string]interface{}{
-		"register_user": map[string]interface{}{
-			"address":        address,
-			"public_key":     pubKeyBytes, // Send as bytes (will be base64 in JSON)
-			"service_domain": "",          // Empty for regular user address
-			"permissions":    []string{},  // Empty permissions array
-			"expires_at":     int64(0),    // Non-expiring
+	// Create query message
+	queryMsg := map[string]interface{}{
+		"query_user_by_address": map[string]interface{}{
+			"address": address,
 		},
 	}
 
-	msgBz, err := json.Marshal(registerMsg)
-	fmt.Println("--wasmx.oauth2server.registerInIdentityContract.msgBz--", string(msgBz))
+	queryMsgBytes, err := json.Marshal(queryMsg)
 	if err != nil {
-		LoggerError("Failed to marshal identity message", []string{"error", err.Error()})
-		Revert(`Failed to marshal identity message: ` + err.Error())
+		LoggerError("Failed to marshal identity query", []string{"error", err.Error()})
 		return "", ""
 	}
-	fmt.Println("--wasmx.oauth2server.registerInIdentityContract.register_user--")
 
-	// Call identity contract
-	ok, data := wasmx.CallSimple(identityAddr, msgBz, false, MODULE_NAME)
-	fmt.Println("--wasmx.oauth2server.registerInIdentityContract.register_user.resp--", ok, string(data))
+	fmt.Println("--wasmx.oauth2server.queryIdentityUserByAddress.CallSimple--", identityAddr, string(queryMsgBytes))
+
+	// Query identity contract
+	ok, data := wasmx.CallSimple(identityAddr, queryMsgBytes, true, MODULE_NAME)
+	fmt.Println("--wasmx.oauth2server.queryIdentityUserByAddress.CallSimple--", ok, string(data))
 	if !ok {
-		LoggerError("Failed to register in identity contract", []string{"error", string(data)})
-		fmt.Println("ERROR: Identity contract call failed:", string(data))
-		Revert("ERROR: Identity contract call failed:" + string(data))
+		LoggerError("Failed to query identity contract", []string{"error", string(data)})
+		fmt.Println("ERROR: Identity contract query failed:", string(data))
 		return "", ""
 	}
-
-	// Log raw response
-	fmt.Println("=== IDENTITY CONTRACT RESPONSE ===")
-	fmt.Println("Raw data:", string(data))
-	fmt.Println("Data length:", len(data))
-	fmt.Println("==================================")
 
 	// Parse response
 	var response struct {
 		UserID string `json:"user_id"`
 	}
 	if err := json.Unmarshal(data, &response); err != nil {
-		LoggerError("Failed to parse identity response", []string{"error", err.Error(), "data", string(data)})
-		fmt.Println("ERROR: Failed to parse identity response:", err.Error())
-		fmt.Println("Raw data was:", string(data))
-		Revert("ERROR: Failed to parse identity response:" + err.Error())
+		LoggerError("Failed to parse identity query response", []string{"error", err.Error()})
 		return "", ""
 	}
 
+	fmt.Println("Identity user_id for address:", response.UserID)
 	return response.UserID, address
 }
 

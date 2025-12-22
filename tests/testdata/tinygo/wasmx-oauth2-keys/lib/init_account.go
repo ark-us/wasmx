@@ -53,7 +53,6 @@ func InitAccount(msg *MsgInitAccount) []byte {
 	// PrepareTx(fromAddress, toAddress, data, gasLimit, privateKey)
 	// The fromAddress will be derived from the privateKey by the host
 	txBytes, err := wasmxcore.PrepareTx(
-		"", // fromAddress (will be derived from privateKey)
 		msg.Address,
 		[]byte{}, // empty data for native coin transfer
 		100000,   // gas
@@ -71,6 +70,7 @@ func InitAccount(msg *MsgInitAccount) []byte {
 
 	// Broadcast transaction
 	broadcastResp, err := wasmxcore.BroadcastTxAsync(txBytes)
+	fmt.Println("InitAccount: tx broadcasted", err, broadcastResp)
 	if err != nil {
 		LoggerError("InitAccount: failed to broadcast transaction", []string{"error", err.Error()})
 		return MarshalJSON(MsgInitAccountResponse{

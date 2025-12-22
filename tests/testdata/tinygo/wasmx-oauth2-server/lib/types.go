@@ -116,11 +116,11 @@ type OAuthClient struct {
 // User Account Types
 
 type RegisterUserRequest struct {
-	Email      string `json:"email"`
-	Password   string `json:"password"`
-	Username   string `json:"username,omitempty"`
-	PublicKey  string `json:"public_key,omitempty"`  // For WasmX blockchain registration
-	Address    string `json:"address,omitempty"`     // Blockchain address derived from public key
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	Username  string `json:"username,omitempty"`
+	PublicKey string `json:"public_key,omitempty"` // For WasmX blockchain registration
+	Address   string `json:"address,omitempty"`    // Blockchain address derived from public key
 }
 
 type RegisterUserResponse struct {

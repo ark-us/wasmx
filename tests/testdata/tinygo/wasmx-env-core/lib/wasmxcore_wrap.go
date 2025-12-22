@@ -368,22 +368,17 @@ func prepareTxWrap(bz []byte) []byte {
 	return utils.PackedPtrToBytes(prepareTx_(utils.BytesToPackedPtr(bz)))
 }
 
-func PrepareTx(fromAddress string, toAddress string, data []byte, gasLimit uint64, privateKey []byte) ([]byte, error) {
+func PrepareTx(toAddress string, data []byte, gasLimit uint64, privateKey []byte) ([]byte, error) {
 	req := PrepareTxRequest{
-		FromAddress: fromAddress,
-		ToAddress:   toAddress,
-		Data:        data,
-		GasLimit:    gasLimit,
-		PrivateKey:  privateKey,
+		ToAddress:  toAddress,
+		Data:       data,
+		GasLimit:   gasLimit,
+		PrivateKey: privateKey,
 	}
-
 	reqJSON, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-
-	LoggerInfo("prepare tx: ", []string{"from", fromAddress, "to", toAddress, "gas_limit", fmt.Sprintf("%d", gasLimit)})
-
 	result := prepareTxWrap(reqJSON)
 
 	var response PrepareTxResponse
@@ -395,9 +390,6 @@ func PrepareTx(fromAddress string, toAddress string, data []byte, gasLimit uint6
 		LoggerError("prepare tx failed: ", []string{"error", response.Error})
 		return nil, fmt.Errorf("prepare tx failed: %s", response.Error)
 	}
-
-	LoggerInfo("prepare tx success: ", []string{"tx_bytes_len", fmt.Sprintf("%d", len(response.TxBytes))})
-
 	return response.TxBytes, nil
 }
 

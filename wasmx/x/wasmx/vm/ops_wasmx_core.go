@@ -2,6 +2,7 @@ package vm
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -679,21 +680,27 @@ func coreBroadcastTxAsync(_context interface{}, rnh memc.RuntimeHandler, params 
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("--coreBroadcastTxAsync--", hex.EncodeToString((txbz)))
 	mapp, ok := ctx.App.(mcfg.MythosApp)
 	if !ok {
 		return nil, fmt.Errorf("app not MythosApp interface in coreBroadcastTxAsync")
 	}
 	rpcClient := mapp.GetRpcClient()
+	fmt.Println("--coreBroadcastTxAsync.rpcClient--", rpcClient)
 	if rpcClient == nil {
 		return nil, fmt.Errorf("rpcClient nil in coreBroadcastTxAsync")
 	}
-	res, err := rpcClient.BroadcastTxAsync(ctx.GoContextParent, txbz)
-	if err != nil {
-		resp.Error = err.Error()
-	}
-	if res != nil {
-		resp.Response = res
-	}
+	ctx.GoRoutineGroup.Go(func() error {
+		res, err := rpcClient.BroadcastTxAsync(ctx.GoContextParent, txbz)
+		fmt.Println("--coreBroadcastTxAsync.BroadcastTxAsync--", err, res)
+		return err
+	})
+	// if err != nil {
+	// 	resp.Error = err.Error()
+	// }
+	// if res != nil {
+	// 	resp.Response = res
+	// }
 	responsebz, err := json.Marshal(&resp)
 	if err != nil {
 		return nil, err
@@ -716,11 +723,10 @@ type ExecuteCliCommandResponse struct {
 }
 
 type PrepareTxRequest struct {
-	FromAddress string `json:"from_address"`
-	ToAddress   string `json:"to_address"`
-	Data        []byte `json:"data"`
-	GasLimit    uint64 `json:"gas_limit"`
-	PrivateKey  []byte `json:"private_key"`
+	ToAddress  string `json:"to_address"`
+	Data       []byte `json:"data"`
+	GasLimit   uint64 `json:"gas_limit"`
+	PrivateKey []byte `json:"private_key"`
 }
 
 type PrepareTxResponse struct {
@@ -812,14 +818,8 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 
 	privKey := &secp256k1.PrivKey{Key: req.PrivateKey}
 	pubKey := privKey.PubKey()
-
-	// Parse from address
-	fromAddr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.FromAddress)
-	if err != nil {
-		resp.Error = fmt.Sprintf("failed to parse from address: %s", err.Error())
-		responsebz, _ := json.Marshal(&resp)
-		return rnh.AllocateWriteMem(responsebz)
-	}
+	fromAddr := sdk.AccAddress(pubKey.Address())
+	fromAddrPrefixed := ctx.CosmosHandler.AccBech32Codec().BytesToAccAddressPrefixed(fromAddr)
 
 	// Parse to address
 	toAddr, err := ctx.CosmosHandler.AccBech32Codec().StringToAccAddressPrefixed(req.ToAddress)
@@ -832,7 +832,7 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	// Create MsgExecute message
 	msgExecute := &types.MsgExecuteContract{
 		Contract: toAddr.String(),
-		Sender:   fromAddr.String(),
+		Sender:   fromAddrPrefixed.String(),
 		Msg:      req.Data,
 	}
 
@@ -864,14 +864,14 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	}
 
 	// Get account and sequence (nonce)
-	accP, err := ctx.CosmosHandler.GetAccount(fromAddr)
+	accP, err := ctx.CosmosHandler.GetAccount(fromAddrPrefixed)
 	if err != nil {
 		resp.Error = fmt.Sprintf("failed to get account: %s", err.Error())
 		responsebz, _ := json.Marshal(&resp)
 		return rnh.AllocateWriteMem(responsebz)
 	}
 	if accP == nil {
-		accP, err = ctx.CosmosHandler.NewAccountWithAddressPrefixed(fromAddr)
+		accP, err = ctx.CosmosHandler.NewAccountWithAddressPrefixed(fromAddrPrefixed)
 		if err != nil {
 			resp.Error = fmt.Sprintf("failed to create account: %s", err.Error())
 			responsebz, _ := json.Marshal(&resp)
