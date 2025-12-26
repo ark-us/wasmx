@@ -2,6 +2,7 @@ package verifysig
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"google.golang.org/protobuf/types/known/anypb"
@@ -55,9 +56,11 @@ func VerifySignature(ctx sdk.Context, ak AccountKeeper, tx sdk.Tx, simulate bool
 
 		// retrieve pubkey
 		pubKey := acc.GetPubKey()
+		fmt.Println("--VerifySignature.pubKey--", acc.GetAddressPrefixed().String(), pubKey)
 		if !simulate && pubKey == nil {
 			return false, errorsmod.Wrap(sdkerrors.ErrInvalidPubKey, "pubkey on account is not set")
 		}
+		fmt.Println("--VerifySignature.pubKey--", acc.GetAddressPrefixed().String(), pubKey, hex.EncodeToString(pubKey.Bytes()))
 
 		// Check account sequence number.
 		if sig.Sequence != acc.GetSequence() {
@@ -92,6 +95,7 @@ func VerifySignature(ctx sdk.Context, ak AccountKeeper, tx sdk.Tx, simulate bool
 			if !ok {
 				return false, fmt.Errorf("expected tx to implement V2AdaptableTx, got %T", tx)
 			}
+			fmt.Println("--VerifySignature.signerData--", acc.GetAddressPrefixed().String(), signerData)
 			txData := adaptableTx.GetSigningTxData()
 			err = authsigning.VerifySignature(ctx, pubKey, signerData, sig.Data, signModeHandler, txData)
 			if err != nil {

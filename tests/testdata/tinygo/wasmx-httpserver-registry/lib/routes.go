@@ -257,7 +257,6 @@ func loadRoutes() []RouteRecord {
 
 func storeRoutes(routes []RouteRecord) {
 	bz, _ := json.Marshal(routes)
-	fmt.Println("--wasmx.httpserver.storeRoutes--", string(bz))
 	wasmx.StorageStore([]byte(storageKeyRoutes), bz)
 }
 
@@ -348,12 +347,21 @@ func handleMutatingRequest(req HttpRequestIncoming, targetContract string) {
 	}
 	calld, _ := json.Marshal(call)
 
+	// Load gas price from storage
+	gasPrice := LoadGasPrice()
+	if gasPrice == nil {
+		gasPrice = &wasmx.Coin{}
+	}
+
 	// Prepare and sign transaction using PrepareTx
 	gasLimit := uint64(30000000) // Default gas limit
 	txBytes, err := wasmxcore.PrepareTx(
 		targetContract,
 		calld,
+		nil,
+		nil,
 		gasLimit,
+		*gasPrice,
 		keyResponse.PrivateKey,
 	)
 	if err != nil {

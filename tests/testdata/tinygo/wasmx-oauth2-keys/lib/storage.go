@@ -87,20 +87,56 @@ func SaveFunderPrivateKey(privKey string) {
 	wasmx.StorageStore(key, []byte(privKey))
 }
 
-// LoadInitAccountAmount loads the init account amount
-func LoadInitAccountAmount() string {
+// LoadInitAccountAmount loads the init account amount as a CoinJSON
+func LoadInitAccountAmount() *wasmx.Coin {
 	key := []byte("init_account_amt")
 	data := wasmx.StorageLoad(key)
 	if len(data) == 0 {
-		return "1000000" // default
+		return &wasmx.Coin{}
 	}
-	return string(data)
+
+	var coin wasmx.Coin
+	if err := json.Unmarshal(data, &coin); err != nil {
+		return &wasmx.Coin{}
+	}
+	return &coin
 }
 
-// SaveInitAccountAmount saves the init account amount
-func SaveInitAccountAmount(amt string) {
+// SaveInitAccountAmount saves the init account amount as a CoinJSON
+func SaveInitAccountAmount(coin wasmx.Coin) error {
 	key := []byte("init_account_amt")
-	wasmx.StorageStore(key, []byte(amt))
+	data, err := json.Marshal(coin)
+	if err != nil {
+		return err
+	}
+	wasmx.StorageStore(key, data)
+	return nil
+}
+
+// LoadGasPrice loads the gas price
+func LoadGasPrice() *wasmx.Coin {
+	key := []byte("gas_price")
+	data := wasmx.StorageLoad(key)
+	if len(data) == 0 {
+		return &wasmx.Coin{}
+	}
+
+	var coin wasmx.Coin
+	if err := json.Unmarshal(data, &coin); err != nil {
+		return &wasmx.Coin{}
+	}
+	return &coin
+}
+
+// SaveGasPrice saves the gas price
+func SaveGasPrice(coin wasmx.Coin) error {
+	key := []byte("gas_price")
+	data, err := json.Marshal(coin)
+	if err != nil {
+		return err
+	}
+	wasmx.StorageStore(key, data)
+	return nil
 }
 
 // LoadRoutePrefix loads the HTTP route prefix

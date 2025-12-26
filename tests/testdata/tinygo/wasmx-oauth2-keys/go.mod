@@ -12,8 +12,13 @@ replace github.com/loredanacirstea/wasmx-env-core => ../wasmx-env-core
 
 replace github.com/loredanacirstea/wasmx-env-httpserver => ../wasmx-env-httpserver
 
+replace github.com/loredanacirstea/wasmx-auth v0.0.0 => ../wasmx-auth
+
+replace github.com/loredanacirstea/wasmx-utils => ../wasmx-utils
+
 require (
-	cosmossdk.io/math v1.3.0
+	cosmossdk.io/math v1.5.3
+	github.com/loredanacirstea/wasmx-auth v0.0.0
 	github.com/loredanacirstea/wasmx-env v0.0.0
 	github.com/loredanacirstea/wasmx-env-core v0.0.0
 	github.com/loredanacirstea/wasmx-env-httpserver v0.0.0
@@ -21,9 +26,6 @@ require (
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/loredanacirstea/wasmx-env-utils v0.0.0 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
-	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0 // indirect
+	github.com/loredanacirstea/wasmx-utils v0.0.0 // indirect
 )

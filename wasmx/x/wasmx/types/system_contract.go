@@ -118,6 +118,25 @@ func mcpRegistryInitMsg() []byte {
 	return initMsg
 }
 
+func httpserverRegistryInitMsg() []byte {
+	initGenesis := map[string]interface{}{
+		"init_genesis": map[string]interface{}{
+			"gas_price": map[string]string{
+				"amount": "10",
+				"denom":  "amyt",
+			},
+		},
+	}
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	data, _ := json.Marshal(initGenesis)
+	msg.Data = data
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("httpserverRegistryInitMsg: cannot marshal init message")
+	}
+	return initMsg
+}
+
 func StarterPrecompiles() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
@@ -988,7 +1007,7 @@ func SpecialPrecompiles() SystemContracts {
 		{
 			Address:     ADDR_HTTPSERVER_REGISTRY,
 			Label:       HTTPSERVER_REGISTRY_v002,
-			InitMessage: initMsg,
+			InitMessage: httpserverRegistryInitMsg(),
 			Pinned:      true,
 			MeteringOff: true,
 			Role:        &SystemContractRole{Role: ROLE_HTTP_SERVER, Label: ROLE_HTTP_SERVER, Primary: true},

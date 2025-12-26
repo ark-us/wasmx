@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	auth "github.com/loredanacirstea/wasmx-auth/lib"
 	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	wasmxhttp "github.com/loredanacirstea/wasmx-env-httpserver/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
@@ -312,7 +313,7 @@ func handleAccountInfo(req wasmxhttp.HttpRequestIncoming) []byte {
 
 	// Build query message
 	queryMsg := map[string]interface{}{
-		"GetAccountInfo": map[string]interface{}{
+		"GetAccount": map[string]interface{}{
 			"address": address,
 		},
 	}
@@ -346,15 +347,7 @@ func handleAccountInfo(req wasmxhttp.HttpRequestIncoming) []byte {
 		})
 	}
 
-	// Parse response: {"info": BaseAccount}
-	var response struct {
-		Info struct {
-			Address       string      `json:"address"`
-			PubKey        interface{} `json:"pub_key"`
-			AccountNumber uint64      `json:"account_number"`
-			Sequence      uint64      `json:"sequence"`
-		} `json:"info"`
-	}
+	var response auth.QueryAccountResponse
 	if err := json.Unmarshal(data, &response); err != nil {
 		fmt.Println("ERROR: Failed to parse account info response:", err.Error(), "data:", string(data))
 		return marshalHTTP(wasmxhttp.HttpResponseWrap{
@@ -368,21 +361,40 @@ func handleAccountInfo(req wasmxhttp.HttpRequestIncoming) []byte {
 		})
 	}
 
+	if response.Account == nil {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"acount does not exist"}`),
+			},
+		})
+	}
+
+	accbz, err := base64.StdEncoding.DecodeString(response.Account.Value)
+	if err != nil {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to decode Any value"}`),
+			},
+		})
+	}
+
 	// Return account info
 	fmt.Println("Account info retrieved successfully:", address)
-	respBody, _ := json.Marshal(map[string]interface{}{
-		"address":        address,
-		"account_number": fmt.Sprintf("%d", response.Info.AccountNumber),
-		"sequence":       fmt.Sprintf("%d", response.Info.Sequence),
-		"pub_key":        response.Info.PubKey,
-	})
 	return marshalHTTP(wasmxhttp.HttpResponseWrap{
 		Error: "",
 		Data: wasmxhttp.HttpResponse{
 			Status:     "200 OK",
 			StatusCode: 200,
 			Header:     http.Header{"Content-Type": []string{"application/json"}},
-			Data:       respBody,
+			Data:       accbz,
 		},
 	})
 }
@@ -617,7 +629,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
     </div>
     <p>Already have an account? <a href="/login">Login here</a></p>
 
-	<script src="https://cdn.jsdelivr.net/gh/ark-us/mythosjs@main/packages/wasmxjs-browser-bundle/dist/wasmxjs-bundle.umd.js"></script>
+	<script src="https://cdn.jsdelivr.net/gh/ark-us/mythosjs@1e26ca270ac577a2f39966e4df44459df5881f90/packages/wasmxjs-browser-bundle/dist/wasmxjs-bundle.umd.js"></script>
 
     <script type="module">
         import * as secp from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@2.1.0/+esm';
@@ -627,8 +639,6 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 
         // Import CosmJS for transaction signing
         import { toBase64 } from 'https://cdn.jsdelivr.net/npm/@cosmjs/encoding@0.32.4/+esm';
-
-		let execMsg = WasmxJS.MsgExecuteContract;
 
 		console.log("module script");
 
@@ -713,108 +723,147 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
             return address;
         }
 
-        // Helper function to sign transaction
-        async function signTransaction(privateKeyHex, address, accountNumber, sequence, chainId, txBodyBytes, authInfoBytes) {
-            // Convert hex private key to bytes
+        // Helper function to create and sign transaction using WasmxJS
+        // Uses manual transaction construction (same as the working test)
+        async function createRegisterUserTransaction(privateKeyHex, publicKeyHex, address, rpcEndpoint, chainId, identityAddress) {
+            // Convert private key hex to bytes
             const privateKeyBytes = new Uint8Array(privateKeyHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-
-            // Create SignDoc
-            const signDoc = {
-                bodyBytes: txBodyBytes,
-                authInfoBytes: authInfoBytes,
-                chainId: chainId,
-                accountNumber: accountNumber
-            };
-
-            // Serialize SignDoc for signing
-            const signDocBytes = new Uint8Array([
-                ...new TextEncoder().encode(chainId),
-                ...new Uint8Array(new BigUint64Array([BigInt(accountNumber)]).buffer),
-                ...txBodyBytes,
-                ...authInfoBytes
-            ]);
-
-            // Sign with secp256k1
-            const signDocHash = sha256(signDocBytes);
-            const signature = await secp.sign(signDocHash, privateKeyBytes, { der: false });
-
-            return new Uint8Array(signature);
-        }
-
-        // Helper function to create MsgExecuteContract transaction
-        async function createRegisterUserTransaction(privateKeyHex, publicKeyHex, address, accountNumber, sequence, chainId, identityAddress) {
-            // Convert public key to bytes
             const publicKeyBytes = new Uint8Array(publicKeyHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+
+            // Create DirectSecp256k1Wallet from private key
+            const wallet = await WasmxJS.DirectSecp256k1Wallet.fromKey(
+                privateKeyBytes,
+                "mythos"
+            );
+            const [walletAccount] = await wallet.getAccounts();
+            console.log('Wallet address:', walletAccount.address);
+
+            // Connect to Tendermint RPC to get account info and broadcast
+            const tmClient = await WasmxJS.stargate.Comet38Client.connect(rpcEndpoint);
+            const client = await WasmxJS.stargate.SigningWasmXClient.createWithSigner(tmClient, wallet, {
+                gasPrice: {"amount":100,"denom":"amyt"},
+            });
+
+            // Get account info for signing
+            const account = await client.getAccount(address);
+            const accountNumber = account.accountNumber;
+            const sequence = account.sequence;
+            const actualChainId = await client.getChainId();
+
+            console.log('=== SIGNING INFO ===');
+            console.log('Account Number:', accountNumber);
+            console.log('Sequence:', sequence);
+            console.log('Chain ID:', actualChainId);
+            console.log('====================');
 
             // Create the register_user message payload
             const registerUserMsg = {
                 register_user: {
                     address: address,
-                    public_key: Array.from(publicKeyBytes),
+                    public_key: toBase64(publicKeyBytes),
                     service_domain: "",
                     permissions: [],
                     expires_at: 0
                 }
             };
 
-            // Create the contract execution message with base64-encoded data
-            const msgData = JSON.stringify({ data: toBase64(new TextEncoder().encode(JSON.stringify(registerUserMsg))) });
+            // Wrap in WasmxExecutionMessage format: {"data": "<base64>"}
+            const innerMsgJson = JSON.stringify(registerUserMsg);
+            const innerMsgBytes = new TextEncoder().encode(innerMsgJson);
+            const wrappedMsgBytes = new TextEncoder().encode(JSON.stringify({
+                data: toBase64(innerMsgBytes)
+            }));
+
+            console.log('=== MESSAGE ===');
+            console.log('Inner message:', innerMsgJson);
+            console.log('===============');
+
+            // Import required types from WasmxJS bundle
+            const { Registry, makeSignDoc, makeAuthInfoBytes, encodePubkey } = WasmxJS.protoSigning;
+            const { encodeSecp256k1Pubkey } = WasmxJS.amino;
+            const { TxRaw, TxBody } = WasmxJS.cosmjsTypes.cosmos.tx.v1beta1.tx;
+            const { MsgExecuteContract } = WasmxJS.wasmx;
+
+            // Create Registry and register MsgExecuteContract
+            const registry = new Registry([
+                ["/mythos.wasmx.v1.MsgExecuteContract", MsgExecuteContract]
+            ]);
 
             // Create MsgExecuteContract
-            const msgExecuteContract = {
-                sender: address,
-                contract: identityAddress,
-                msg: new TextEncoder().encode(msgData),
-                funds: [],
-                dependencies: []
+            const executeMsg = {
+                typeUrl: "/mythos.wasmx.v1.MsgExecuteContract",
+                value: MsgExecuteContract.fromPartial({
+                    sender: address,
+                    contract: identityAddress,
+                    msg: wrappedMsgBytes,
+                    funds: [],
+                    dependencies: []
+                })
             };
 
-            // Encode TxBody
+            // Encode message as Any type
+            const anyMsg = registry.encodeAsAny(executeMsg);
+
+            // Create TxBody
             const txBody = {
-                messages: [msgExecuteContract],
-                memo: "",
-                timeoutHeight: 0,
-                extensionOptions: [],
-                nonCriticalExtensionOptions: []
+                messages: [anyMsg],
+                memo: ""
             };
+            const txBodyBytes = TxBody.encode(TxBody.fromPartial(txBody)).finish();
 
-            // Simple protobuf-like encoding for TxBody (simplified)
-            const txBodyBytes = new TextEncoder().encode(JSON.stringify(txBody));
+            // Set fee amount and gas limit
+            const gasLimit = 30000000;
+            const feeAmount = [{
+                denom: "amyt",
+                amount: "10000000000000000"
+            }];
 
-            // Create AuthInfo with fee and signer info
-            const authInfo = {
-                signerInfos: [{
-                    publicKey: {
-                        typeUrl: "/cosmos.crypto.secp256k1.PubKey",
-                        value: publicKeyBytes
-                    },
-                    modeInfo: {
-                        single: { mode: 1 } // SIGN_MODE_DIRECT
-                    },
-                    sequence: sequence
-                }],
-                fee: {
-                    amount: [{ denom: "amyt", amount: "20000000" }],
-                    gasLimit: 20000000,
-                    payer: "",
-                    granter: ""
-                }
-            };
+            // Encode public key for AuthInfo
+            const pubkey = encodePubkey(encodeSecp256k1Pubkey(publicKeyBytes));
 
-            // Simple encoding for AuthInfo
-            const authInfoBytes = new TextEncoder().encode(JSON.stringify(authInfo));
+            // Create AuthInfo
+            const authInfoBytes = makeAuthInfoBytes(
+                [{ pubkey, sequence }],
+                feeAmount,
+                gasLimit,
+                undefined,
+                undefined
+            );
+
+            // Create SignDoc
+            const signDoc = makeSignDoc(txBodyBytes, authInfoBytes, actualChainId, accountNumber);
+
+            console.log('=== SIGN DOC ===');
+            console.log('Chain ID:', actualChainId);
+            console.log('Account Number:', accountNumber);
+            console.log('Sequence:', sequence);
+            console.log('================');
 
             // Sign the transaction
-            const signature = await signTransaction(privateKeyHex, address, accountNumber, sequence, chainId, txBodyBytes, authInfoBytes);
+            const { signature, signed } = await wallet.signDirect(address, signDoc);
+            const signatureBytes = WasmxJS.encoding.fromBase64(signature.signature);
 
-            // Create complete transaction
-            const txRaw = {
-                bodyBytes: Array.from(txBodyBytes),
-                authInfoBytes: Array.from(authInfoBytes),
-                signatures: [Array.from(signature)]
-            };
+            // Create final TxRaw
+            const txRaw = TxRaw.fromPartial({
+                bodyBytes: signed.bodyBytes,
+                authInfoBytes: signed.authInfoBytes,
+                signatures: [signatureBytes]
+            });
 
-            return toBase64(new TextEncoder().encode(JSON.stringify(txRaw)));
+            const txBytes = TxRaw.encode(txRaw).finish();
+
+            console.log('=== TRANSACTION ===');
+            console.log('Transaction length:', txBytes.length, 'bytes');
+            console.log('===================');
+
+            // Broadcast the transaction
+            const txHash = await client.broadcastTx(txBytes);
+
+            console.log('=== TRANSACTION RESULT ===');
+            console.log('Transaction Hash:', txHash);
+            console.log('==========================');
+
+            return txHash;
         }
 
 		console.log("set registerButton event");
@@ -861,7 +910,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 						console.log('====================');
 					}
 				} catch (err) {
-					console.warn('Failed to fetch chain config, using default prefix:', bech32Prefix);
+					console.log('Failed to fetch chain config, using default prefix:', bech32Prefix);
 				}
 
 				successDiv.textContent = 'Generating cryptographic keys...';
@@ -900,7 +949,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 
 					const initResult = await initResponse.json();
 					if (!initResponse.ok || !initResult.success) {
-						console.warn('Account initialization failed:', initResult.error);
+						console.log('Account initialization failed:', initResult.error);
 						// Continue anyway - ephemeral key generation will also try to initialize
 					} else {
 						console.log('Account initialized with tx:', initResult.tx_hash);
@@ -929,10 +978,10 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 								requestData.account_number = accountInfo.account_number;
 								requestData.sequence = accountInfo.sequence;
 							} else {
-								console.warn('Could not fetch account info:', accountInfo.error || 'Unknown error');
+								console.log('Could not fetch account info:', accountInfo.error || 'Unknown error');
 							}
 						} catch (err) {
-							console.warn('Failed to fetch account info:', err);
+							console.log('Failed to fetch account info:', err);
 						}
 
 						// Fetch contract addresses (identity contract, chain info)
@@ -948,62 +997,36 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 								console.log('Identity Contract:', addresses.identity_address);
 								console.log('==================');
 
-								// Create and sign the register_user transaction
-								successDiv.textContent = 'Signing transaction with identity contract...';
-								const signedTx = await createRegisterUserTransaction(
+								// Create, sign, and broadcast the register_user transaction
+								successDiv.textContent = 'Registering with identity contract...';
+								const rpcEndpoint = 'http://localhost:26657'; // TODO: get from config
+								const txHash = await createRegisterUserTransaction(
 									keyPair.privateKey,
 									keyPair.publicKey,
 									address,
-									parseInt(accountInfo.account_number),
-									parseInt(accountInfo.sequence),
+									rpcEndpoint,
 									addresses.chain_id,
 									addresses.identity_address
 								);
 
-								console.log('=== SIGNED TRANSACTION ===');
-								console.log('Transaction signed successfully');
-								console.log('==========================');
+								console.log('=== IDENTITY REGISTRATION SUCCESS ===');
+								console.log('TxHash:', txHash);
+								console.log('====================================');
 
-								// Step 1: Send signed transaction to /register_tx
-								successDiv.textContent = 'Broadcasting identity registration transaction...';
-								try {
-									const registerTxResponse = await fetch('/register_tx', {
-										method: 'POST',
-										headers: { 'Content-Type': 'application/json' },
-										body: JSON.stringify({
-											signed_tx: signedTx,
-											address: address
-										})
-									});
-
-									const registerTxResult = await registerTxResponse.json();
-
-									if (!registerTxResponse.ok || !registerTxResult.success) {
-										errorDiv.textContent = 'Failed to register with identity contract: ' + (registerTxResult.error || 'Unknown error');
-										return;
-									}
-
-									console.log('=== IDENTITY REGISTRATION SUCCESS ===');
-									console.log('TxHash:', registerTxResult.tx_hash);
-									console.log('====================================');
-
-									// Wait a bit for transaction to be processed
-									await new Promise(resolve => setTimeout(resolve, 2000));
-								} catch (err) {
-									errorDiv.textContent = 'Failed to register identity: ' + err.message;
-									return;
-								}
+								successDiv.textContent = 'Identity registered. Waiting for confirmation...';
+								// Wait a bit for transaction to be processed
+								await new Promise(resolve => setTimeout(resolve, 2000));
 							} else {
-								console.warn('Missing account info or contract addresses, skipping transaction signing');
+								console.log('Missing account info or contract addresses, skipping transaction signing');
 							}
 						} catch (err) {
-							console.warn('Failed to create signed transaction:', err);
+							console.log('Failed to create signed transaction:', err);
 							errorDiv.textContent = 'Failed to sign transaction: ' + err.message;
 							return;
 						}
 					}
 				} catch (err) {
-					console.warn('Account initialization request failed:', err);
+					console.log('Account initialization request failed:', err);
 					// Continue anyway
 				}
 

@@ -368,12 +368,22 @@ func prepareTxWrap(bz []byte) []byte {
 	return utils.PackedPtrToBytes(prepareTx_(utils.BytesToPackedPtr(bz)))
 }
 
-func PrepareTx(toAddress string, data []byte, gasLimit uint64, privateKey []byte) ([]byte, error) {
+func PrepareTx(toAddress string, data []byte, funds []wasmx.Coin, dependencies []string, gasLimit uint64, gasPrice wasmx.Coin, privateKey []byte) ([]byte, error) {
+	executeMsg := &wasmx.WasmxExecutionMessage{
+		Data: data,
+	}
+	msgbz, err := json.Marshal(executeMsg)
+	if err != nil {
+		return nil, err
+	}
 	req := PrepareTxRequest{
-		ToAddress:  toAddress,
-		Data:       data,
-		GasLimit:   gasLimit,
-		PrivateKey: privateKey,
+		ToAddress:    toAddress,
+		Data:         msgbz,
+		Funds:        funds,
+		Dependencies: dependencies,
+		GasLimit:     gasLimit,
+		GasPrice:     gasPrice,
+		PrivateKey:   privateKey,
 	}
 	reqJSON, err := json.Marshal(req)
 	if err != nil {

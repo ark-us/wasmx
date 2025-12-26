@@ -3,6 +3,8 @@ package lib
 import (
 	"encoding/hex"
 	"fmt"
+
+	"cosmossdk.io/math"
 )
 
 // InitGenesis initializes the contract with genesis state
@@ -30,8 +32,23 @@ func InitGenesis(msg *MsgInitGenesis) []byte {
 	}
 
 	// Save init account amount if provided
-	if msg.InitAccountAmt != "" {
-		SaveInitAccountAmount(msg.InitAccountAmt)
+	if msg.InitAccountAmt.Amount == math.ZeroInt() {
+		return MarshalJSON(map[string]string{"error": "init account amount must be greater than zero"})
+	}
+
+	if err := SaveInitAccountAmount(msg.InitAccountAmt); err != nil {
+		return MarshalJSON(map[string]string{"error": "Failed to save init account amount"})
+	}
+
+	// Gas price is required
+	if msg.GasPrice.Amount.IsNil() {
+		return MarshalJSON(map[string]string{"error": "gas price is required"})
+	}
+	if msg.GasPrice.Amount.IsZero() {
+		return MarshalJSON(map[string]string{"error": "gas price must be greater than zero"})
+	}
+	if err := SaveGasPrice(msg.GasPrice); err != nil {
+		return MarshalJSON(map[string]string{"error": "Failed to save gas price"})
 	}
 
 	// Save route prefix if provided (for HTTP route registration later)

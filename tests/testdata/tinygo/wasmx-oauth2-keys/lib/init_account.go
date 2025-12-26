@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	sdkmath "cosmossdk.io/math"
 	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
@@ -38,24 +37,31 @@ func InitAccount(msg *MsgInitAccount) []byte {
 		})
 	}
 
-	// Get amount to send
-	amountStr := LoadInitAccountAmount()
-	_, ok := sdkmath.NewIntFromString(amountStr)
-	if !ok {
-		LoggerError("InitAccount: invalid init account amount", []string{"amount", amountStr})
+	// Get coin to send
+	coin := LoadInitAccountAmount()
+	if coin == nil {
+		LoggerError("InitAccount: empty init account amount", []string{})
 		return MarshalJSON(MsgInitAccountResponse{
 			Success: false,
-			Error:   "invalid init account amount",
+			Error:   "empty init account amount",
 		})
 	}
 
+	// Load gas price
+	gasPrice := LoadGasPrice()
+	if gasPrice == nil {
+		gasPrice = &wasmx.Coin{}
+	}
+
 	// Prepare transaction: bank send (empty data, just native coin transfer)
-	// PrepareTx(fromAddress, toAddress, data, gasLimit, privateKey)
 	// The fromAddress will be derived from the privateKey by the host
 	txBytes, err := wasmxcore.PrepareTx(
 		msg.Address,
 		[]byte{}, // empty data for native coin transfer
-		100000,   // gas
+		[]wasmx.Coin{*coin},
+		nil,
+		30000000,  // gas
+		*gasPrice, // gas price from storage
 		privKeyBytes,
 	)
 	if err != nil {

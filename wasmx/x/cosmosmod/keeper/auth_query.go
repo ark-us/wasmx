@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,11 +34,12 @@ func (k QuerierAuth) Account(goCtx context.Context, req *authtypes.QueryAccountR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
-	// account := k.Keeper.GetAccount(goCtx, addr.Bytes())
+	fmt.Println("--QuerierAuth.Account--", addr.String())
 	account, err := k.Keeper.GetAccountPrefixed(goCtx, addr)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	fmt.Println("--QuerierAuth.Account.resp--", addr.String(), account)
 	any, err := codectypes.NewAnyWithValue(account)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
@@ -88,6 +90,7 @@ func (k QuerierAuth) AddressStringToBytes(goCtx context.Context, req *authtypes.
 
 func (k QuerierAuth) AccountInfo(goCtx context.Context, req *authtypes.QueryAccountInfoRequest) (*authtypes.QueryAccountInfoResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
+	fmt.Println("--QuerierAuth.AccountInfo not implemented--")
 	k.Keeper.Logger(ctx).Error("Auth.AccountInfo not implemented")
 	return &authtypes.QueryAccountInfoResponse{}, nil
 }

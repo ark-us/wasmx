@@ -12,7 +12,15 @@ replace github.com/loredanacirstea/wasmx-env-utils => ../wasmx-env-utils
 
 replace github.com/loredanacirstea/wasmx-env-httpserver => ../wasmx-env-httpserver
 
+replace github.com/loredanacirstea/wasmx-auth => ../wasmx-auth
+
+replace github.com/loredanacirstea/wasmx-utils => ../wasmx-utils
+
 require github.com/loredanacirstea/wasmx-env v0.0.0
+
+require github.com/loredanacirstea/wasmx-auth v0.0.0
+
+require github.com/loredanacirstea/wasmx-utils v0.0.0 // indirect
 
 require (
 	github.com/loredanacirstea/wasmx-env-core v0.0.0-00010101000000-000000000000
@@ -20,7 +28,6 @@ require (
 )
 
 require (
-	cosmossdk.io/math v1.3.0 // indirect
+	cosmossdk.io/math v1.5.3 // indirect
 	github.com/loredanacirstea/wasmx-env-utils v0.0.0 // indirect
-	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
 )

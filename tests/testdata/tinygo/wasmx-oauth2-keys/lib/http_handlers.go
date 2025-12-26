@@ -1,9 +1,11 @@
 package lib
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
+	auth "github.com/loredanacirstea/wasmx-auth/lib"
 	wasmxhttp "github.com/loredanacirstea/wasmx-env-httpserver/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
@@ -117,7 +119,7 @@ func handleAccountInfo(req *wasmxhttp.HttpRequestIncoming) []byte {
 
 	// Build query message
 	queryMsg := map[string]interface{}{
-		"GetAccountInfo": map[string]interface{}{
+		"GetAccount": map[string]interface{}{
 			"address": address,
 		},
 	}
@@ -134,27 +136,20 @@ func handleAccountInfo(req *wasmxhttp.HttpRequestIncoming) []byte {
 		return respondWithError("failed to query account info: "+string(data), 500)
 	}
 
-	// Parse response: {"info": BaseAccount}
-	var response struct {
-		Info struct {
-			Address       string      `json:"address"`
-			PubKey        interface{} `json:"pub_key"`
-			AccountNumber uint64      `json:"account_number"`
-			Sequence      uint64      `json:"sequence"`
-		} `json:"info"`
-	}
+	var response auth.QueryAccountResponse
 	if err := json.Unmarshal(data, &response); err != nil {
 		LoggerError("Failed to parse account info response", []string{"error", err.Error(), "data", string(data)})
 		return respondWithError("failed to parse account info", 500)
 	}
 
-	// Return account info
-	return respondWithJSON(map[string]interface{}{
-		"address":        address,
-		"account_number": fmt.Sprintf("%d", response.Info.AccountNumber),
-		"sequence":       fmt.Sprintf("%d", response.Info.Sequence),
-		"pub_key":        response.Info.PubKey,
-	}, 200)
+	if response.Account == nil {
+		return respondWithError("acount does not exist", 500)
+	}
+	accbz, err := base64.StdEncoding.DecodeString(response.Account.Value)
+	if err != nil {
+		return respondWithError("failed to decode Any value", 500)
+	}
+	return respondWithBytes(accbz, 200)
 }
 
 // handleContractAddresses handles the /contract_addresses endpoint
@@ -185,7 +180,10 @@ func handleContractAddresses(req *wasmxhttp.HttpRequestIncoming) []byte {
 
 func respondWithJSON(data interface{}, statusCode int) []byte {
 	jsonData, _ := json.Marshal(data)
+	return respondWithBytes(jsonData, statusCode)
+}
 
+func respondWithBytes(jsonData []byte, statusCode int) []byte {
 	resp := wasmxhttp.HttpResponseWrap{
 		Error: "",
 		Data: wasmxhttp.HttpResponse{

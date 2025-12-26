@@ -155,10 +155,13 @@ type BroadcastTxAsyncResponse struct {
 }
 
 type PrepareTxRequest struct {
-	ToAddress  string `json:"to_address"`
-	Data       []byte `json:"data"`
-	GasLimit   uint64 `json:"gas_limit"`
-	PrivateKey []byte `json:"private_key"`
+	ToAddress    string       `json:"to_address"`
+	Data         []byte       `json:"data"`
+	Funds        []wasmx.Coin `json:"funds"`
+	Dependencies []string     `json:"dependencies"`
+	GasLimit     uint64       `json:"gas_limit"`
+	GasPrice     wasmx.Coin   `json:"gas_price"`
+	PrivateKey   []byte       `json:"private_key"`
 }
 
 type PrepareTxResponse struct {

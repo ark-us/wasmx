@@ -2,6 +2,8 @@ package lib
 
 import (
 	"encoding/json"
+
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 const MODULE_NAME = "oauth2_keys"
@@ -149,10 +151,11 @@ type CallData struct {
 
 // MsgInitGenesis for contract initialization
 type MsgInitGenesis struct {
-	ServerSecret    string `json:"server_secret,omitempty"`     // Master secret for key encryption
-	FunderPrivKey   string `json:"funder_priv_key,omitempty"`   // Private key for funding new accounts (hex encoded)
-	InitAccountAmt  string `json:"init_account_amt,omitempty"`  // Amount to send when initializing accounts (default: 1000000)
-	RoutePrefix     string `json:"route_prefix,omitempty"`      // HTTP route prefix (default: "/auth")
+	ServerSecret   string     `json:"server_secret,omitempty"`    // Master secret for key encryption
+	FunderPrivKey  string     `json:"funder_priv_key,omitempty"`  // Private key for funding new accounts (hex encoded)
+	InitAccountAmt wasmx.Coin `json:"init_account_amt,omitempty"` // Coin to send when initializing accounts (default: {"amount":"1000000","denom":"amyt"})
+	GasPrice       wasmx.Coin `json:"gas_price,omitempty"`        // Gas price for transactions
+	RoutePrefix    string     `json:"route_prefix,omitempty"`     // HTTP route prefix (default: "/auth")
 }
 
 // Helper to marshal JSON

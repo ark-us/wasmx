@@ -17,6 +17,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	networktypes "github.com/loredanacirstea/wasmx/x/network/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
@@ -690,6 +691,7 @@ func coreBroadcastTxAsync(_context interface{}, rnh memc.RuntimeHandler, params 
 	if rpcClient == nil {
 		return nil, fmt.Errorf("rpcClient nil in coreBroadcastTxAsync")
 	}
+	// we use goroutines because the ActionExecutor now is not paralelizable and we will end up waiting for this tx to be broadcasted, which will happen only after the current transaction is finished
 	ctx.GoRoutineGroup.Go(func() error {
 		res, err := rpcClient.BroadcastTxAsync(ctx.GoContextParent, txbz)
 		fmt.Println("--coreBroadcastTxAsync.BroadcastTxAsync--", err, res)
@@ -723,10 +725,13 @@ type ExecuteCliCommandResponse struct {
 }
 
 type PrepareTxRequest struct {
-	ToAddress  string `json:"to_address"`
-	Data       []byte `json:"data"`
-	GasLimit   uint64 `json:"gas_limit"`
-	PrivateKey []byte `json:"private_key"`
+	ToAddress    string    `json:"to_address"`
+	Data         []byte    `json:"data"`
+	Funds        sdk.Coins `json:"funds"`
+	Dependencies []string  `json:"dependencies"`
+	GasLimit     uint64    `json:"gas_limit"`
+	GasPrice     sdk.Coin  `json:"gas_price"`
+	PrivateKey   []byte    `json:"private_key"`
 }
 
 type PrepareTxResponse struct {
@@ -808,6 +813,8 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		return rnh.AllocateWriteMem(responsebz)
 	}
 
+	fmt.Println("--corePrepareTx.req--", string(reqbz))
+
 	var req PrepareTxRequest
 	err = json.Unmarshal(reqbz, &req)
 	if err != nil {
@@ -829,11 +836,30 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		return rnh.AllocateWriteMem(responsebz)
 	}
 
-	// Create MsgExecute message
-	msgExecute := &types.MsgExecuteContract{
-		Contract: toAddr.String(),
-		Sender:   fromAddrPrefixed.String(),
-		Msg:      req.Data,
+	// Determine message type: use bank.MsgSend for simple coin transfers, MsgExecuteContract for contract calls
+	var msg sdk.Msg
+	isSimpleTransfer := len(req.Data) == 0 && (req.Dependencies == nil || len(req.Dependencies) == 0)
+
+	if isSimpleTransfer && len(req.Funds) > 0 {
+		// Simple bank transfer
+		msgSend := &banktypes.MsgSend{
+			FromAddress: fromAddrPrefixed.String(),
+			ToAddress:   toAddr.String(),
+			Amount:      req.Funds,
+		}
+		msg = msgSend
+		fmt.Println("--corePrepareTx.msgSend--", fromAddrPrefixed.String(), toAddr.String(), req.Funds)
+	} else {
+		// Contract execution
+		msgExecute := &types.MsgExecuteContract{
+			Contract:     toAddr.String(),
+			Sender:       fromAddrPrefixed.String(),
+			Msg:          req.Data,
+			Funds:        req.Funds,
+			Dependencies: req.Dependencies,
+		}
+		msg = msgExecute
+		fmt.Println("--corePrepareTx.msgExecute--", fromAddrPrefixed.String(), toAddr.String(), string(req.Data), req.Funds)
 	}
 
 	// Get TxConfig
@@ -843,20 +869,12 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 	// Set gas limit
 	txBuilder.SetGasLimit(req.GasLimit)
 
-	// Calculate and set fees (using default gas price)
-	parsedGasPrices, err := sdk.ParseDecCoins("1000000000000amyt")
-	if err != nil {
-		resp.Error = fmt.Sprintf("failed to parse gas prices: %s", err.Error())
-		responsebz, _ := json.Marshal(&resp)
-		return rnh.AllocateWriteMem(responsebz)
-	}
-
-	feeAmount := parsedGasPrices.AmountOf("amyt").MulInt64(int64(req.GasLimit)).RoundInt()
-	fees := sdk.NewCoins(sdk.NewCoin("amyt", feeAmount))
+	feeAmount := req.GasPrice.Amount.MulRaw(int64(req.GasLimit))
+	fees := sdk.NewCoins(sdk.NewCoin(req.GasPrice.Denom, feeAmount))
 	txBuilder.SetFeeAmount(fees)
 
 	// Set message
-	err = txBuilder.SetMsgs(msgExecute)
+	err = txBuilder.SetMsgs(msg)
 	if err != nil {
 		resp.Error = fmt.Sprintf("failed to set messages: %s", err.Error())
 		responsebz, _ := json.Marshal(&resp)
@@ -879,6 +897,8 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		}
 	}
 	seq := accP.GetSequence()
+
+	fmt.Println("--corePrepareTx.acc--", seq)
 
 	// First round: set empty signature
 	sigV2 := signing.SignatureV2{
@@ -905,6 +925,8 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		PubKey:        pubKey,
 		Address:       accP.String(),
 	}
+
+	fmt.Println("--corePrepareTx.signerData--", signerData)
 
 	sigV2, err = tx.SignWithPrivKey(
 		ctx.Ctx.Context(),
@@ -935,6 +957,8 @@ func corePrepareTx(_context interface{}, rnh memc.RuntimeHandler, params []inter
 		responsebz, _ := json.Marshal(&resp)
 		return rnh.AllocateWriteMem(responsebz)
 	}
+
+	fmt.Println("--corePrepareTx.txBytes--", hex.EncodeToString(txBytes))
 
 	resp.TxBytes = txBytes
 	responsebz, err := json.Marshal(&resp)

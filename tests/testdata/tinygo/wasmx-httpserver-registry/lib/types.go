@@ -23,6 +23,18 @@ type CallData struct {
 	StartWebServer  *StartWebServerRequest  `json:"start_web_server,omitempty"`
 	CloseServer     *CloseServerRequest     `json:"close_server,omitempty"`
 	RoleChanged     *wasmx.RolesChangedHook `json:"RoleChanged,omitempty"`
+	InitGenesis     *InitGenesisRequest     `json:"init_genesis,omitempty"`
+}
+
+// InitGenesisRequest for contract initialization
+type InitGenesisRequest struct {
+	GasPrice wasmx.Coin `json:"gas_price,omitempty"` // Gas price for transactions
+}
+
+// InitGenesisResponse response
+type InitGenesisResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
 }
 
 // Requests / responses

@@ -94,6 +94,10 @@ func main() {
 		wasmx.OnlyRole(lib.MODULE_NAME, wasmx.ROLE_ROLES, "RoleChanged")
 		wasmx.Finish([]byte(`{"success":true}`))
 		return
+	case calldata.InitGenesis != nil:
+		res := lib.InitGenesis(calldata.InitGenesis)
+		wasmx.Finish(res)
+		return
 	}
 
 	wasmx.Revert(append([]byte("invalid function call data: "), calldataBz...))
