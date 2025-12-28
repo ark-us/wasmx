@@ -1,12 +1,13 @@
 package lib
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
-	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	httpclient "github.com/loredanacirstea/wasmx-env-httpclient"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // KayrosClient provides methods to interact with Kayros API
@@ -21,10 +22,24 @@ func NewKayrosClient(config KayrosConfig) *KayrosClient {
 	}
 }
 
-// getDataType returns the formatted data_type for Kayros API (wasmx_<chain_id>)
+// getDataType returns the formatted data_type for Kayros API
+// Format: "wasmx_<chain_id>[_<data_type_id>]" converted to hex and right-padded to 32 bytes
 func (kc *KayrosClient) getDataType() string {
 	chainId := wasmx.GetChainId()
-	return fmt.Sprintf("wasmx_%s", chainId)
+	dataType := fmt.Sprintf("wasmx_%s", chainId)
+
+	// Append data_type_id if provided
+	dataTypeId := sGet(CTX_DATA_TYPE_ID)
+	if dataTypeId != "" {
+		dataType = fmt.Sprintf("%s_%s", dataType, dataTypeId)
+	}
+
+	// Convert to bytes and right-pad to 32 bytes
+	dataTypeBytes := make([]byte, 32)
+	copy(dataTypeBytes, []byte(dataType))
+
+	// Return as hex string
+	return hex.EncodeToString(dataTypeBytes)
 }
 
 // makeRequest performs an HTTP GET request to the Kayros API
@@ -45,7 +60,7 @@ func (kc *KayrosClient) makeRequest(endpoint string) ([]byte, error) {
 			FilePath: "",
 		},
 	}
-
+	LoggerDebug("http request", []string{"url", url})
 	resp := httpclient.Request(&req)
 
 	if resp.Error != "" {
@@ -128,9 +143,9 @@ func (kc *KayrosClient) GetRecordWithPrev(uuid string) (*KayrosRecord, error) {
 }
 
 // GetRecordsFromPrev retrieves multiple Kayros records from a previous UUID with a limit
-// GET /api/database/records-from-prev?data_type=<data_type>&uuid=<uuid>&limit=<limit>
+// GET /api/database/records-since-prev?data_type=<data_type>&uuid=<uuid>&limit=<limit>
 func (kc *KayrosClient) GetRecordsFromPrev(uuid string, limit int) ([]KayrosRecord, error) {
-	endpoint := fmt.Sprintf("/api/database/records-from-prev?data_type=%s&uuid=%s&limit=%d",
+	endpoint := fmt.Sprintf("/api/database/records-since-prev?data_type=%s&uuid=%s&limit=%d",
 		kc.getDataType(), uuid, limit)
 
 	respData, err := kc.makeRequest(endpoint)
@@ -147,12 +162,15 @@ func (kc *KayrosClient) GetRecordsFromPrev(uuid string, limit int) ([]KayrosReco
 		return nil, fmt.Errorf("Kayros API error: %s", kayrosResp.Message)
 	}
 
-	return kayrosResp.Data, nil
+	return kayrosResp.Data.Records, nil
 }
 
 // makePostRequest performs an HTTP POST request to the Kayros API
 func (kc *KayrosClient) makePostRequest(endpoint string, body []byte) ([]byte, error) {
 	url := fmt.Sprintf("%s%s", kc.config.ApiBaseUrl, endpoint)
+
+	// Get user key from context
+	userKey := sGet("kayros_user_key")
 
 	req := httpclient.HttpRequestWrap{
 		Request: httpclient.HttpRequest{
@@ -160,6 +178,7 @@ func (kc *KayrosClient) makePostRequest(endpoint string, body []byte) ([]byte, e
 			Url:    url,
 			Header: http.Header{
 				"Content-Type": []string{"application/json"},
+				"X-User-Key":   []string{userKey},
 			},
 			Data: body,
 		},
@@ -168,7 +187,8 @@ func (kc *KayrosClient) makePostRequest(endpoint string, body []byte) ([]byte, e
 			FilePath: "",
 		},
 	}
-
+	reqbz, _ := json.Marshal(&req)
+	LoggerDebug("http request", []string{"url", url, "method", "POST", "data", string(body), "req", string(reqbz)})
 	resp := httpclient.Request(&req)
 
 	if resp.Error != "" {

@@ -331,6 +331,9 @@ var CONSENSUS_TENDERMINTP2P_LIBRARY = "tendermintp2p_library"
 var CONSENSUS_AVA_SNOWMAN = "consensus_ava_snowman_0.0.1"
 var CONSENSUS_AVA_SNOWMAN_LIBRARY = "ava_snowman_library"
 
+var CONSENSUS_KAYROSP2P = "consensus_kayrosp2p_0.0.1"
+var CONSENSUS_KAYROSP2P_LIBRARY = "kayrosp2p_library"
+
 var CONSENSUS_LEVEL_LIBRARY = "level0_library"
 var LEVEL0_v001 = "level0_0.0.1"
 var LEVEL0_ONDEMAND_v001 = "level0_ondemand_0.0.1"

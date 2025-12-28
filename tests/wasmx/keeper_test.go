@@ -14,6 +14,7 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
+	"github.com/loredanacirstea/wasmx/x/vmhttpclient"
 
 	// wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
 	wazero "github.com/loredanacirstea/wasmx-wazero"
@@ -26,6 +27,10 @@ var (
 	wasmRuntime   string
 	runKnownFixme bool
 )
+
+func init() {
+	vmhttpclient.Setup()
+}
 
 // TestMain is the main entry point for the tests.
 func TestMain(m *testing.M) {

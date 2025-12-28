@@ -43,13 +43,14 @@ type InstantiateMsg struct {
 
 // KayrosRecord represents a record in the Kayros database
 type KayrosRecord struct {
-	DataType     string `json:"data_type"`
-	DataItemHex  string `json:"data_item_hex"`
-	UuidHex      string `json:"uuid_hex"`
-	HashItemHex  string `json:"hash_item_hex"` // Kayros unique ID
-	PrevHashHex  string `json:"prev_hash_hex"`
-	HashType     string `json:"hash_type"`
-	Timestamp    string `json:"timestamp"`
+	DataType    string `json:"data_type"`
+	DataTypeHex string `json:"data_type_hex"`
+	DataItemHex string `json:"data_item_hex"`
+	UuidHex     string `json:"uuid_hex"`
+	HashItemHex string `json:"hash_item_hex"` // Kayros unique ID
+	PrevHashHex string `json:"prev_hash_hex,omitempty"` // Optional - may not be in all responses
+	HashType    string `json:"hash_type"`
+	Timestamp   string `json:"timestamp"`
 }
 
 // KayrosApiResponse is the common response structure from Kayros API
@@ -64,10 +65,17 @@ type KayrosRecordResponse struct {
 	Data KayrosRecord `json:"data"`
 }
 
+// KayrosRecordsData is the data structure for multiple record queries
+type KayrosRecordsData struct {
+	Count   int            `json:"count"`
+	Limit   int            `json:"limit"`
+	Records []KayrosRecord `json:"records"`
+}
+
 // KayrosRecordsResponse is the response for multiple record queries
 type KayrosRecordsResponse struct {
 	KayrosApiResponse
-	Data []KayrosRecord `json:"data"`
+	Data KayrosRecordsData `json:"data"`
 }
 
 // BlockCommit represents a commit from a validator for a specific block

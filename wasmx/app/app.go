@@ -169,6 +169,7 @@ import (
 	docs "github.com/loredanacirstea/wasmx/docs"
 
 	networkmodule "github.com/loredanacirstea/wasmx/x/network"
+	"github.com/loredanacirstea/wasmx/x/vmhttpclient"
 
 	networkmodulekeeper "github.com/loredanacirstea/wasmx/x/network/keeper"
 
@@ -261,7 +262,7 @@ func init() {
 	vmkv.Setup()
 	// vmimap.Setup()
 	// vmsmtp.Setup()
-	// vmhttpclient.Setup()
+	vmhttpclient.Setup()
 	// vmhttpserver.Setup()
 	// vmoauth2client.Setup()
 }

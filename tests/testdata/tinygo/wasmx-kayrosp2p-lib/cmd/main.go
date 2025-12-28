@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	fsm "github.com/loredanacirstea/wasmx-fsm/lib"
@@ -40,6 +38,10 @@ func Wasmx_multichain_json_i64_1() {}
 //export wasmx_p2p_json_i64_1
 func Wasmx_p2p_json_i64_1() {}
 
+//go:wasm-module httpclient
+//export wasmx_httpclient_i64_1
+func Wasmx_httpclient_i64_1() {}
+
 //go:wasm-module wasmxcore
 //export wasmx_nondeterministic_1
 func Wasmx_nondeterministic_1() {}
@@ -48,61 +50,10 @@ func Wasmx_nondeterministic_1() {}
 //export instantiate
 func Instantiate() {}
 
+// note, we cannot instantiate with storage this library
+// because it will read from the main consensus contract
+
 func main() {
-	entrypoint := os.Getenv("ENTRY_POINT")
-	lib.LoggerDebugExtended("fsm: ENTRY_POINT: "+entrypoint, nil)
-	// these entrypoints are internal by default
-	switch entrypoint {
-	case "instantiate":
-		databz := wasmx.GetCallData()
-		var msg lib.InstantiateMsg
-		if err := json.Unmarshal(databz, &msg); err != nil {
-			wasmx.Revert([]byte("invalid instantiate message: " + err.Error()))
-			return
-		}
-
-		// Initialize Kayros client with the provided API URL
-		config := lib.KayrosConfig{
-			ApiBaseUrl: msg.KayrosApiUrl,
-		}
-		if err := lib.InitializeKayrosClient(config); err != nil {
-			wasmx.Revert([]byte("failed to initialize Kayros client: " + err.Error()))
-			return
-		}
-
-		// Store consensus configuration
-		consensusConfig := lib.ConsensusConfig{
-			ThresholdCommit:   msg.ThresholdCommit,
-			ThresholdFinalize: msg.ThresholdFinalize,
-			GenesisUUID:       msg.GenesisUUID,
-		}
-		// Set defaults if not provided
-		if consensusConfig.ThresholdCommit == 0 {
-			consensusConfig.ThresholdCommit = 51
-		}
-		if consensusConfig.ThresholdFinalize == 0 {
-			consensusConfig.ThresholdFinalize = 75
-		}
-		if err := lib.SetConsensusConfig(consensusConfig); err != nil {
-			wasmx.Revert([]byte("failed to set consensus config: " + err.Error()))
-			return
-		}
-
-		// Set genesis UUID as initial last UUID if provided
-		if msg.GenesisUUID != "" {
-			lib.SetLastKayrosUUID(msg.GenesisUUID)
-		}
-
-		lib.LoggerInfo("Kayros client initialized", []string{
-			"api_url", msg.KayrosApiUrl,
-			"genesis_uuid", msg.GenesisUUID,
-			"threshold_commit", fmt.Sprintf("%d", consensusConfig.ThresholdCommit),
-			"threshold_finalize", fmt.Sprintf("%d", consensusConfig.ThresholdFinalize),
-		})
-		wasmx.Finish([]byte{})
-		return
-	}
-
 	// Only internal
 	wasmx.OnlyInternal(raftp2p.MODULE_NAME, "")
 
@@ -278,6 +229,26 @@ func main() {
 			raftp2p.Revert("Rollback failed: " + err.Error())
 			return
 		}
+	case "commitBlock":
+		if err := lib.CommitBlock(calld.Params, calld.Event); err != nil {
+			raftp2p.Revert("commitBlock failed: " + err.Error())
+			return
+		}
+	case "sendCommit":
+		if err := lib.SendCommit(calld.Params, calld.Event); err != nil {
+			raftp2p.Revert("sendCommit failed: " + err.Error())
+			return
+		}
+	case "cancelActiveIntervals":
+		// Cancel active intervals - this is handled by the FSM runtime
+		// Just acknowledge the action
+		lib.LoggerDebug("cancelActiveIntervals called", nil)
+	case "requestValidatorNodeInfoIfSynced":
+		// Request validator node info after state sync - stub for now
+		lib.LoggerDebug("requestValidatorNodeInfoIfSynced called", nil)
+	case "receiveUpdateNodeRequest":
+		raftp2p.Revert("receiveUpdateNodeRequest not implemented")
+		return
 	default:
 		wasmx.Revert(append([]byte("invalid function call data: "), databz...))
 		return

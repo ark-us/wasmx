@@ -60,7 +60,7 @@ func getAddressHex(addr []byte) string {
 }
 
 // Parsing utilities
-func parseInt32(s string) (int32, error) {
+func ParseInt32(s string) (int32, error) {
 	val, err := strconv.ParseInt(s, 10, 32)
 	if err != nil {
 		return 0, err
@@ -68,7 +68,7 @@ func parseInt32(s string) (int32, error) {
 	return int32(val), nil
 }
 
-func parseInt64(s string) (int64, error) {
+func ParseInt64(s string) (int64, error) {
 	return strconv.ParseInt(s, 10, 64)
 }
 

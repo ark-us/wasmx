@@ -15,7 +15,6 @@ import (
 )
 
 func StorageStore(key, value []byte) {
-	Log([]byte("storagestore"), [][32]byte{})
 	StorageStore_(utils.BytesToPackedPtr(key), utils.BytesToPackedPtr(value))
 }
 

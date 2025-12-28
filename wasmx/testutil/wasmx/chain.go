@@ -493,7 +493,12 @@ func (chain TestChain) InitConsensusContract(resInit *abci.ResponseInitChain, no
 		Contract: wasmxtypes.ROLE_CONSENSUS,
 		Msg:      msg,
 	})
-	chain.raftToLeader()
+	currentState = chain.GetCurrentState(chain.GetContext())
+	if strings.Contains(currentState, "Kayros-P2P") {
+		chain.kayrosToValidator()
+	} else {
+		chain.raftToLeader()
+	}
 	return err
 }
 
@@ -825,6 +830,63 @@ func (chain TestChain) raftToLeader() {
 		currentState = chain.GetCurrentState(chain.GetContext())
 		chain.suite.Require().Contains(currentState, "Leader")
 	}
+}
+
+// kayrosToValidator transitions Kayros P2P consensus to Validator state
+// Kayros P2P doesn't have leader election - all validators produce blocks based on Kayros ordering
+func (chain TestChain) kayrosToValidator() {
+	currentState := chain.GetCurrentState(chain.GetContext())
+	// Check if we're in Kayros P2P consensus
+	if !strings.Contains(currentState, "Kayros-P2P") {
+		return
+	}
+
+	// If in Node state, send becomeValidator event to transition to Validator
+	if strings.Contains(currentState, "Node") && !strings.Contains(currentState, "Validator") {
+		msg := []byte(`{"run":{"event": {"type": "becomeValidator", "params": []}}}`)
+		_, err := chain.App.NetworkKeeper.ExecuteContractInternal(chain.GetContext(), &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg,
+		})
+		chain.suite.Require().NoError(err)
+	}
+
+	currentState = chain.GetCurrentState(chain.GetContext())
+	chain.suite.Require().Contains(currentState, "Validator")
+}
+
+// KayrosCommitBlock triggers block production for Kayros P2P consensus
+// This simulates the Kayros ordering service providing transaction ordering
+func (chain TestChain) KayrosCommitBlock() (*abci.ResponseFinalizeBlock, error) {
+	currentState := chain.GetCurrentState(chain.GetContext())
+	if !strings.Contains(currentState, "Kayros-P2P") {
+		return nil, fmt.Errorf("not in Kayros P2P consensus mode: %s", currentState)
+	}
+
+	// If in active state, trigger the always transition to propose (if ifAllTransactions guard passes)
+	// The FSM will call getKayrosTxs, then ifAllTransactions, then commitBlock and sendCommit
+	if strings.Contains(currentState, "active") {
+		lastInterval := chain.GetLastInterval(chain.GetContext())
+		blockDelay := chain.GetBlockDelay(chain.GetContext())
+
+		msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
+		_, err := chain.App.NetworkKeeper.ExecuteEntryPointInternal(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg1,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("kayros commit block failed: %v", err)
+		}
+	}
+
+	lastBlock := chain.App.LastBlockHeight()
+	res, _, _, err := chain.GetBlock(chain.GetContext(), lastBlock)
+	if err != nil {
+		return nil, fmt.Errorf("get new committed block failed: %v", err)
+	}
+	return res, nil
 }
 
 func (suite *KeeperTestSuite) commitBlock(chain *TestChain, res *abci.ResponseFinalizeBlock) {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"time"
 
 	"cosmossdk.io/math"
@@ -46,7 +47,19 @@ func SystemContractsModify(wasmRuntime string) func([]wasmxtypes.SystemContract)
 				} else {
 					contracts[i].Pinned = false
 				}
+			}
+		}
+		for i := range contracts {
+			if contracts[i].Label == wasmxtypes.CONSENSUS_KAYROSP2P {
+				execmsg := &wasmxtypes.WasmxExecutionMessage{}
+				json.Unmarshal(contracts[i].InitMessage, execmsg)
 
+				msg := string(execmsg.Data)
+				msg = strings.Replace(msg, `{"key":"data_type_id","value":""}`, fmt.Sprintf(`{"key":"data_type_id","value":"%d"}`, time.Now().UnixMilli()), 1)
+				execmsg.Data = []byte(msg)
+
+				execmsgbz, _ := json.Marshal(execmsg)
+				contracts[i].InitMessage = execmsgbz
 			}
 		}
 		return contracts

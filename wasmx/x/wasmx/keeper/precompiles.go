@@ -155,6 +155,8 @@ func (k *Keeper) ActivateSystemContract(
 	var err error
 	k.SetSystemContract(ctx, contract)
 
+	k.Logger(ctx).Info("activating system contract", "label", contract.Label, "hex_address", contract.Address, "code_id", codeID, "role", contract.Role)
+
 	if contract.Pinned {
 		if err := k.pinCodeWithEvent(ctx, codeID, codeInfo.CodeHash, compiledFolderPath, contract.MeteringOff); err != nil {
 			return sdkerr.Wrap(err, "pin system contract: "+contract.Label)

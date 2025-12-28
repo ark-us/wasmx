@@ -162,6 +162,9 @@ var (
 	//go:embed 65.wasmx_ondemand_single_library.wasm
 	ondemand_single_library []byte
 
+	//go:embed 71.kayrosp2p_library.wasm
+	kayrosp2p_library []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -307,6 +310,15 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 			panic(err)
 		}
 		wasmbin = []byte(OnDemandSingle(libaddrstr))
+	case types.CONSENSUS_KAYROSP2P_LIBRARY:
+		wasmbin = kayrosp2p_library
+	case types.CONSENSUS_KAYROSP2P:
+		libaddr := types.AccAddressFromHex(types.ADDR_CONSENSUS_KAYROSP2P_LIBRARY)
+		libaddrstr, err := addrCodec.BytesToString(libaddr)
+		if err != nil {
+			panic(err)
+		}
+		wasmbin = []byte(KayrosP2P(libaddrstr))
 	case types.MULTICHAIN_REGISTRY_v001:
 		wasmbin = multichain_registry
 	case types.MULTICHAIN_REGISTRY_LOCAL_v001:

@@ -9,7 +9,8 @@ TINYGO_TARGETS := \
 	wasmx-fsm:28.finite_state_machine.wasm \
 	wasmx-raft-lib:2a.raft_library.wasm \
 	wasmx-raftp2p-lib:36.raftp2p_library.wasm \
-	wasmx-ondemand-single-lib:65.wasmx_ondemand_single_library.wasm
+	wasmx-ondemand-single-lib:65.wasmx_ondemand_single_library.wasm \
+	wasmx-kayrosp2p-lib:71.kayrosp2p_library.wasm
 
 # wasmx-gov:35.gov_0.0.1.wasm \
 # wasmx-gov-continuous:37.gov_cont_0.0.1.wasm \
@@ -72,7 +73,7 @@ $(TINYGO_MODULES):
 	if [ -z "$$out" ]; then echo "Unknown TinyGo module: $$mod"; exit 1; fi; \
 	if [ ! -f "$(TINYGO_DIR)/$$mod/cmd/main.go" ]; then echo "No cmd/main.go in $$mod"; exit 1; fi; \
 	echo "Tidying $$mod..."; \
-	(cd "$(TINYGO_DIR)/$$mod" && env GOWORK=off go mod tidy) 2>/dev/null; \
+	(cd "$(TINYGO_DIR)/$$mod" && env GOWORK=off go mod tidy); \
 	echo "Building $$mod -> $(PRECOMPILE_DIR)/$$out"; \
-	(cd "$(TINYGO_DIR)/$$mod" && env GOWORK=off tinygo build -o "$(abspath $(PRECOMPILE_DIR))/$$out" -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd) 2>/dev/null; \
+	(cd "$(TINYGO_DIR)/$$mod" && env GOWORK=off tinygo build -o "$(abspath $(PRECOMPILE_DIR))/$$out" -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd); \
 	echo "Built $(PRECOMPILE_DIR)/$$out"

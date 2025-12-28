@@ -1,19 +1,19 @@
+// @ts-nocheck
 import { createMachine } from "xstate";
 
 export const machine = createMachine({
   context: {
-    log: "",
-    votedFor: "0",
-    nextIndex: "[]",
-    currentTerm: "0",
-    blockTimeout: "roundTimeout",
-    max_tx_bytes: "65536",
-    roundTimeout: 4000,
-    currentNodeId: "0",
+    blockTimeout: "timeoutCommit",
+    max_tx_bytes: 65536,
+    timeoutCommit: 4000,
     max_block_gas: "20000000",
-    timeoutPrevote: 3000,
-    timeoutPropose: 3000,
-    timeoutPrecommit: 3000,
+    timeoutMissingTxs: 4000,
+    kayros_base_url: "https://kayros.provable.dev",
+    kayros_user_key: "",
+    threshold_commit: 51,
+    threshold_finalize: 75,
+    genesis_uuid: "",
+    data_type_id: "",
   },
   id: "Kayros-P2P-1",
   initial: "uninitialized",
@@ -218,15 +218,28 @@ export const machine = createMachine({
                       },
                     },
                   },
+                  after: {
+                    timeoutMissingTxs: {
+                      target: "propose",
+                    },
+                  },
                   always: {
                     target: "propose",
                     guard: {
                       type: "ifAllTransactions",
                     },
                   },
-                  entry: {
-                    type: "getKayrosTxs",
-                  },
+                  entry: [
+                    {
+                      type: "getKayrosTxs",
+                    },
+                    {
+                      type: "cancelActiveIntervals",
+                      params: {
+                        after: "timeoutMissingTxs",
+                      },
+                    },
+                  ],
                 },
                 propose: {
                   after: {
@@ -269,15 +282,15 @@ export const machine = createMachine({
       // Add your action code here
       // ...
     },
+    cancelActiveIntervals: function (context, event) {
+      // Add your action code here
+      // ...
+    },
     commitBlock: function (context, event) {
       // Add your action code here
       // ...
     },
     sendCommit: function (context, event) {
-      // Add your action code here
-      // ...
-    },
-    cancelActiveIntervals: function (context, event) {
       // Add your action code here
       // ...
     },

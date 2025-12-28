@@ -83,6 +83,9 @@ var ADDR_EMAIL_HANDLER = "0x0000000000000000000000000000000000000063"
 var ADDR_ONDEMAND_SINGLE_LIBRARY = "0x0000000000000000000000000000000000000064"
 var ADDR_ONDEMAND_SINGLE = "0x0000000000000000000000000000000000000065"
 
+var ADDR_CONSENSUS_KAYROSP2P_LIBRARY = "0x0000000000000000000000000000000000000071"
+var ADDR_CONSENSUS_KAYROSP2P = "0x0000000000000000000000000000000000000072"
+
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
 func StarterPrecompiles() SystemContracts {
@@ -598,6 +601,12 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 		panic("ConsensusPrecompiles: cannot marshal level0OnDemandInitMsg message")
 	}
 
+	// genesis uuid is a valid time-based uuid that should not exist in the kayros database - for a new chain
+	kayrosP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"blockTimeout","value":"timeoutCommit"},{"key":"max_tx_bytes","value":"65536"},{"key":"timeoutCommit","value":"4000"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutMissingTxs","value":"4000"},{"key":"kayros_base_url","value":"https://kayros.provable.dev"},{"key":"kayros_user_key","value":"0x73db4aa00c2519ec5c060af0be9751e2f5f920413db68aa5ca2501b0df9c972e"},{"key":"threshold_commit","value":"51"},{"key":"threshold_finalize","value":"75"},{"key":"genesis_uuid","value":""},{"key":"data_type_id","value":""}],"initialState":"uninitialized"}}`)})
+	if err != nil {
+		panic("ConsensusPrecompiles: cannot marshal kayrosP2PInitMsg message")
+	}
+
 	return []SystemContract{
 		{
 			Address:     ADDR_CONSENSUS_RAFT_LIBRARY,
@@ -800,6 +809,25 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 			StorageType: ContractStorageType_SingleConsensus,
 			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_LEVEL0_ONDEMAND_LIBRARY, ROLE_LIBRARY)},
 		},
+		{
+			Address:     ADDR_CONSENSUS_KAYROSP2P_LIBRARY,
+			Label:       CONSENSUS_KAYROSP2P_LIBRARY,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        &SystemContractRole{Role: ROLE_LIBRARY, Label: CONSENSUS_KAYROSP2P_LIBRARY},
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_CONSENSUS_KAYROSP2P,
+			Label:       CONSENSUS_KAYROSP2P,
+			InitMessage: kayrosP2PInitMsg,
+			Pinned:      false,
+			Role:        &SystemContractRole{Role: ROLE_CONSENSUS, Label: CONSENSUS_KAYROSP2P},
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{INTERPRETER_FSM, BuildDep(ADDR_CONSENSUS_KAYROSP2P_LIBRARY, ROLE_LIBRARY)},
+		},
 	}
 }
 
@@ -911,7 +939,8 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 
 	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
 	for i, val := range consensusPrecompiles {
-		if val.Label == CONSENSUS_TENDERMINTP2P {
+		// if val.Label == CONSENSUS_TENDERMINTP2P {
+		if val.Label == CONSENSUS_KAYROSP2P {
 			consensusPrecompiles[i].Role.Primary = true
 		}
 	}
@@ -1064,6 +1093,49 @@ func DefaultOnDemandSingleContracts(accBech32Codec mcodec.AccBech32Codec, feeCol
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	// precompiles = append(precompiles, SpecialPrecompiles()...)
+
+	precompiles, err := FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
+	if err != nil {
+		panic(err)
+	}
+	return precompiles
+}
+
+func DefaultKayrosP2PContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string, bondBaseDenom string) SystemContracts {
+
+	precompiles := StarterPrecompiles()
+	precompiles = append(precompiles, SimplePrecompiles()...)
+	precompiles = append(precompiles, InterpreterPrecompiles()...)
+	precompiles = append(precompiles, BasePrecompiles()...)
+	precompiles = append(precompiles, EIDPrecompiles()...)
+	precompiles = append(precompiles, HookPrecompiles()...)
+	precompiles = append(precompiles, CosmosPrecompiles(feeCollectorBech32, mintBech32, bondBaseDenom)...)
+
+	erc20CodeId := int32(0)
+	derc20CodeId := int32(0)
+	for i, p := range precompiles {
+		if p.Label == ERC20_v001 {
+			erc20CodeId = int32(i + 1)
+		}
+	}
+	for i, p := range precompiles {
+		if p.Label == DERC20_v001 {
+			derc20CodeId = int32(i + 1)
+		}
+	}
+	if erc20CodeId == int32(0) || derc20CodeId == int32(0) {
+		panic(fmt.Sprintf("erc20 or derc20 contracts not found: erc20CodeId %d, derc20CodeId %d", erc20CodeId, derc20CodeId))
+	}
+
+	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
+	for i, val := range consensusPrecompiles {
+		if val.Label == CONSENSUS_KAYROSP2P {
+			consensusPrecompiles[i].Role.Primary = true
+		}
+	}
+	precompiles = append(precompiles, consensusPrecompiles...)
+	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
+	precompiles = append(precompiles, ChatPrecompiles()...)
 
 	precompiles, err := FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
 	if err != nil {

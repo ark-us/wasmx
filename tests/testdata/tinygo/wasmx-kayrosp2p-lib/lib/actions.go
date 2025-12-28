@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	p2p "github.com/loredanacirstea/wasmx-env-p2p/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	fsm "github.com/loredanacirstea/wasmx-fsm/lib"
 	raftlib "github.com/loredanacirstea/wasmx-raft-lib/lib"
 )
@@ -15,84 +15,68 @@ import (
 const (
 	CHAT_ROOM_PROTOCOL           = "kayros_p2p_protocol"
 	CHAT_ROOM_MEMPOOL            = CHAT_ROOM_PROTOCOL
-	CHAT_ROOM_BLOCKHASH          = "kayros_blockhash_chatroom"
 	STORAGE_KEY_KAYROS_CONFIG    = "kayros_config"
 	STORAGE_KEY_LAST_UUID        = "kayros_last_uuid"
 	STORAGE_KEY_CONSENSUS_CONFIG = "consensus_config"
-	STORAGE_KEY_BLOCK_COMMITS    = "block_commits_"    // Prefix for block commit mappings
-	STORAGE_KEY_PENDING_TXS      = "pending_txs"       // Transactions needed for current block
-	STORAGE_KEY_KAYROS_TX_META   = "kayros_tx_meta_"   // Prefix for Kayros tx metadata
-	STORAGE_KEY_BLOCK_KAYROS     = "block_kayros_"     // Prefix for block Kayros metadata
-	MAX_TXS_PER_BLOCK            = 100                 // Default max transactions to fetch from Kayros per block
+	STORAGE_KEY_BLOCK_COMMITS    = "block_commits_"  // Prefix for block commit mappings
+	STORAGE_KEY_PENDING_TXS      = "pending_txs"     // Transactions needed for current block
+	STORAGE_KEY_KAYROS_TX_META   = "kayros_tx_meta_" // Prefix for Kayros tx metadata
+	STORAGE_KEY_BLOCK_KAYROS     = "block_kayros_"   // Prefix for block Kayros metadata
+	MAX_TXS_PER_BLOCK            = 100               // Default max transactions to fetch from Kayros per block
+
+	CTX_KAYROS_BASE_URL    = "kayros_base_url"
+	CTX_KAYROS_USER_KEY    = "kayros_user_key"
+	CTX_DATA_TYPE_ID       = "data_type_id"
+	CTX_THRESHOLD_COMMIT   = "threshold_commit"
+	CTX_THRESHOLD_FINALIZE = "threshold_finalize"
+	CTX_GENESIS_UUID       = "genesis_uuid"
 )
-
-var kayrosClient *KayrosClient
-
-// InitializeKayrosClient initializes the Kayros client with configuration
-func InitializeKayrosClient(config KayrosConfig) error {
-	kayrosClient = NewKayrosClient(config)
-	// Store config in state
-	configData, err := json.Marshal(config)
-	if err != nil {
-		return err
-	}
-	wasmx.StorageStore([]byte(STORAGE_KEY_KAYROS_CONFIG), configData)
-	return nil
-}
 
 // GetKayrosClient retrieves the Kayros client, initializing if needed
 func GetKayrosClient() (*KayrosClient, error) {
-	if kayrosClient != nil {
-		return kayrosClient, nil
+	config := KayrosConfig{
+		ApiBaseUrl: sGet(CTX_KAYROS_BASE_URL),
 	}
-
-	// Try to load from state
-	configData := wasmx.StorageLoad([]byte(STORAGE_KEY_KAYROS_CONFIG))
-	if len(configData) == 0 {
-		return nil, fmt.Errorf("kayros client not initialized")
-	}
-
-	var config KayrosConfig
-	if err := json.Unmarshal(configData, &config); err != nil {
-		return nil, err
-	}
-
-	kayrosClient = NewKayrosClient(config)
+	kayrosClient := NewKayrosClient(config)
 	return kayrosClient, nil
 }
 
 // GetLastKayrosUUID retrieves the last processed Kayros UUID from state
 func GetLastKayrosUUID() string {
-	data := wasmx.StorageLoad([]byte(STORAGE_KEY_LAST_UUID))
+	data := sGet(STORAGE_KEY_LAST_UUID)
 	return string(data)
 }
 
 // SetLastKayrosUUID stores the last processed Kayros UUID in state
 func SetLastKayrosUUID(uuid string) {
-	wasmx.StorageStore([]byte(STORAGE_KEY_LAST_UUID), []byte(uuid))
+	sSet(STORAGE_KEY_LAST_UUID, uuid)
 }
 
 // GetConsensusConfig retrieves the consensus configuration from state
 func GetConsensusConfig() (*ConsensusConfig, error) {
-	data := wasmx.StorageLoad([]byte(STORAGE_KEY_CONSENSUS_CONFIG))
-	if len(data) == 0 {
-		return nil, fmt.Errorf("consensus config not initialized")
+	thresholdCommit := 51   // default
+	thresholdFinalize := 75 // default
+
+	commitStr := sGet(CTX_THRESHOLD_COMMIT)
+	if commitStr != "" {
+		if val, err := fsm.ParseInt32(commitStr); err == nil {
+			thresholdCommit = int(val)
+		}
 	}
-	var config ConsensusConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, err
+
+	finalizeStr := sGet(CTX_THRESHOLD_FINALIZE)
+	if finalizeStr != "" {
+		if val, err := fsm.ParseInt32(finalizeStr); err == nil {
+			thresholdFinalize = int(val)
+		}
+	}
+
+	config := ConsensusConfig{
+		ThresholdCommit:   thresholdCommit,
+		ThresholdFinalize: thresholdFinalize,
+		GenesisUUID:       sGet(CTX_GENESIS_UUID),
 	}
 	return &config, nil
-}
-
-// SetConsensusConfig stores the consensus configuration in state
-func SetConsensusConfig(config ConsensusConfig) error {
-	data, err := json.Marshal(config)
-	if err != nil {
-		return err
-	}
-	wasmx.StorageStore([]byte(STORAGE_KEY_CONSENSUS_CONFIG), data)
-	return nil
 }
 
 // GetBlockCommitMapping retrieves the commit mapping for a specific block
@@ -308,10 +292,6 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 			LoggerError("failed to get consensus config for genesis UUID", []string{"error", err.Error()})
 			return err
 		}
-		if config.GenesisUUID == "" {
-			LoggerInfo("no genesis UUID configured, skipping block production", []string{})
-			return nil
-		}
 		lastUUID = config.GenesisUUID
 		LoggerInfo("using genesis UUID", []string{"uuid", lastUUID})
 	}
@@ -361,8 +341,15 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 			LoggerError("failed to store Kayros tx metadata", []string{"txHash", txHash, "error", err.Error()})
 		}
 
+		// Convert hex hash to base64 for mempool check (mempool uses base64 format)
+		txHashBase64, err := HexHashToBase64(txHash)
+		if err != nil {
+			LoggerError("failed to decode tx hash from Kayros", []string{"txHash", txHash, "error", err.Error()})
+			continue
+		}
+
 		// Check if we have this transaction in our mempool
-		if mp.HasSeen(txHash) {
+		if mp.HasSeen(txHashBase64) {
 			LoggerDebug("transaction in mempool", []string{"txHash", txHash, "kayrosId", record.HashItemHex})
 			continue
 		}
@@ -391,12 +378,8 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 		}
 	}
 
-	// Update the last processed UUID to the last record's UUID
-	if len(records) > 0 {
-		lastRecord := records[len(records)-1]
-		SetLastKayrosUUID(lastRecord.UuidHex)
-		LoggerDebug("updated last Kayros UUID", []string{"uuid", lastRecord.UuidHex})
-	}
+	// Note: LastKayrosUUID is updated in CommitBlock after successful block commit
+	// This ensures we don't skip transactions if block commit fails
 	return nil
 }
 
@@ -558,13 +541,52 @@ func CheckConsensusThresholds(mapping *BlockCommitMapping) error {
 
 	// Check commit threshold for potential rollback (e.g., 51% have committed but disagree)
 	if commitPercentage >= config.ThresholdCommit && len(hashCounts) > 1 {
-		// We have enough commits but they disagree - this might require rollback
-		LoggerInfo("commit threshold reached but hashes disagree, may need rollback", []string{
+		// We have enough commits but they disagree - check if we need to rollback
+		LoggerInfo("commit threshold reached but hashes disagree, checking rollback", []string{
 			"blockNumber", fmt.Sprintf("%d", mapping.BlockNumber),
 			"uniqueHashes", fmt.Sprintf("%d", len(hashCounts)),
 			"commitPercentage", fmt.Sprintf("%d", commitPercentage),
 		})
-		// TODO: Implement rollback logic if our hash doesn't match the majority
+
+		// Get our block hash to compare
+		st, err := raftlib.GetCurrentState()
+		if err != nil {
+			return err
+		}
+		ourHash := base64.StdEncoding.EncodeToString(st.NextHash)
+
+		// If our hash doesn't match the majority hash, we need to rollback
+		if ourHash != maxHash {
+			LoggerInfo("our hash doesn't match majority, initiating rollback", []string{
+				"blockNumber", fmt.Sprintf("%d", mapping.BlockNumber),
+				"ourHash", ourHash,
+				"majorityHash", maxHash,
+			})
+
+			// Rollback to the block before the disagreement
+			// Using raft.Rollback which handles multiple blocks
+			rollbackHeight := mapping.BlockNumber - 1
+			err := raftlib.Rollback([]fsm.ActionParam{
+				{Key: "height", Value: fmt.Sprintf("%d", rollbackHeight)},
+			}, fsm.EventObject{})
+			if err != nil {
+				LoggerError("rollback failed", []string{"error", err.Error()})
+				return err
+			}
+
+			// Clear pending txs and reset Kayros UUID to re-fetch
+			SetPendingTxHashes([]string{})
+
+			// Reset LastKayrosUUID to the UUID from the last good block
+			// This will cause GetKayrosTxs to re-fetch from that point
+			lastGoodBlockMeta, err := GetBlockKayrosMetadata(rollbackHeight)
+			if err == nil && lastGoodBlockMeta != nil && lastGoodBlockMeta.LastUUID != "" {
+				SetLastKayrosUUID(lastGoodBlockMeta.LastUUID)
+				LoggerInfo("reset Kayros UUID after rollback", []string{"uuid", lastGoodBlockMeta.LastUUID})
+			}
+
+			LoggerInfo("rollback completed", []string{"toHeight", fmt.Sprintf("%d", rollbackHeight)})
+		}
 	}
 
 	return nil
@@ -868,7 +890,7 @@ func ReceiveMissingTransactions(params []fsm.ActionParam, event fsm.EventObject)
 }
 
 // IfAllTransactions is a guard that checks if we have all transactions needed for the current block
-func IfAllTransactions(params []fsm.GuardParam, event fsm.EventObject) bool {
+func IfAllTransactions(params []fsm.ActionParam, event fsm.EventObject) bool {
 	// Get pending transaction hashes
 	pendingHashes, err := GetPendingTxHashes()
 	if err != nil {
@@ -892,7 +914,15 @@ func IfAllTransactions(params []fsm.GuardParam, event fsm.EventObject) bool {
 	// Check if all pending transactions are in mempool
 	missingCount := 0
 	for _, txHash := range pendingHashes {
-		if !mp.HasSeen(txHash) {
+		// Convert hex hash to base64 for mempool check (mempool uses base64 format)
+		txHashBase64, err := HexHashToBase64(txHash)
+		if err != nil {
+			LoggerError("failed to convert tx hash to base64", []string{"txHash", txHash, "error", err.Error()})
+			missingCount++
+			continue
+		}
+
+		if !mp.HasSeen(txHashBase64) {
 			missingCount++
 		}
 	}
