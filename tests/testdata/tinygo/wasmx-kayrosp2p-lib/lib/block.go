@@ -116,6 +116,17 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 	validatorInfos := consutils.SortTendermintValidators(activeInfos)
 	validatorSet := typestnd.TendermintValidators{Validators: validatorInfos}
 
+	// Use the first validator as proposer for deterministic block hash across all validators
+	var proposerAddress wasmx.HexString
+	var proposerBech32 wasmx.Bech32String
+	if len(validatorInfos) > 0 {
+		proposerAddress = validatorInfos[0].HexAddress
+		proposerBech32 = validatorInfos[0].OperatorAddress
+	} else {
+		proposerAddress = wasmx.HexString("")
+		proposerBech32 = wasmx.Bech32String("")
+	}
+
 	lastBlockCommit := getLastBlockCommitInternal(st)
 
 	// Get previous block validators for the last block commit signatures
@@ -173,7 +184,7 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 		Height:             height,
 		Time:               timeISO,
 		NextValidatorsHash: nextValsHash,
-		ProposerAddress:    st.ValidatorAddress,
+		ProposerAddress:    proposerAddress, // First validator for deterministic hash
 	}
 	prepareResp, err := consensuswrap.PrepareProposal(prepareReq)
 	if err != nil {
@@ -195,6 +206,8 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 
 	lastCommitHashHex := wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetCommitHash(sortedBlockCommits))))
 
+	// In Kayros consensus, all validators build blocks independently
+	// ProposerAddress must be deterministic to ensure same block hash across all validators
 	header := typestnd.Header{
 		Version:            typestnd.VersionConsensus{Block: typestnd.BlockProtocol, App: st.Version.Consensus.App},
 		ChainID:            st.ChainID,
@@ -209,7 +222,7 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 		AppHash:            wasmx.HexString(strings.ToUpper(hex.EncodeToString(st.AppHash))),
 		LastResultsHash:    wasmx.HexString(strings.ToUpper(hex.EncodeToString(st.LastResultsHash))),
 		EvidenceHash:       wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetEvidenceHash(evidence)))),
-		ProposerAddress:    st.ValidatorAddress,
+		ProposerAddress:    proposerAddress, // First validator for deterministic hash
 	}
 	hhash, err := consensuswrap.HeaderHash(header)
 	if err != nil {
@@ -229,7 +242,7 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 		Height:             prepareReq.Height,
 		Time:               prepareReq.Time,
 		NextValidatorsHash: prepareReq.NextValidatorsHash,
-		ProposerAddress:    prepareReq.ProposerAddress,
+		ProposerAddress:    proposerAddress, // First validator for deterministic hash
 	}
 	processResp, err := consensuswrap.ProcessProposal(processReq)
 	if err != nil {
@@ -270,7 +283,7 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 	st.NextHash = hhash
 	raftlib.SetCurrentState(st)
 
-	err = appendLogWithKayrosMeta(processReq, header, sortedBlockCommits, optimisticExecution, metainfo, validatorSet)
+	err = appendLogWithKayrosMeta(processReq, header, sortedBlockCommits, optimisticExecution, metainfo, validatorSet, proposerBech32)
 	if err != nil {
 		return err
 	}
@@ -296,7 +309,7 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 }
 
 // appendLogWithKayrosMeta creates a BlockEntry and LogEntryAggregate with Kayros metadata
-func appendLogWithKayrosMeta(processReq typestnd.RequestProcessProposal, header typestnd.Header, blockCommit typestnd.BlockCommit, optimisticExecution bool, meta map[string][]byte, validatorSet typestnd.TendermintValidators) error {
+func appendLogWithKayrosMeta(processReq typestnd.RequestProcessProposal, header typestnd.Header, blockCommit typestnd.BlockCommit, optimisticExecution bool, meta map[string][]byte, validatorSet typestnd.TendermintValidators, proposerBech32 wasmx.Bech32String) error {
 	if meta == nil {
 		meta = make(map[string][]byte)
 	}
@@ -328,11 +341,6 @@ func appendLogWithKayrosMeta(processReq typestnd.RequestProcessProposal, header 
 		return fmt.Errorf("failed to get current node ID: %v", err)
 	}
 
-	validator, err := getValidatorByHexAddrInternal(wasmx.HexString(processReq.ProposerAddress))
-	if err != nil {
-		return fmt.Errorf("failed to get validator: %v", err)
-	}
-
 	contractAddress := wasmx.GetAddressBz()
 
 	validatorSetBytes, err := json.Marshal(&validatorSet)
@@ -340,14 +348,14 @@ func appendLogWithKayrosMeta(processReq typestnd.RequestProcessProposal, header 
 		return fmt.Errorf("failed to marshal validator set: %v", err)
 	}
 
-	// Create BlockEntry
+	// Create BlockEntry with deterministic proposer address to ensure same block hash
 	blockEntry := blocks.BlockEntry{
 		Index:           processReq.Height,
 		ReaderContract:  contractAddress,
 		WriterContract:  contractAddress,
 		Data:            blockData,
 		Header:          blockHeader,
-		ProposerAddress: validator.OperatorAddress,
+		ProposerAddress: proposerBech32, // First validator for deterministic hash
 		LastCommit:      commit,
 		Evidence:        []byte(`{"evidence":[]}`),
 		Result:          []byte{},
@@ -434,37 +442,29 @@ func SendCommit(params []fsm.ActionParam, event fsm.EventObject) error {
 	}
 	msg, _ := json.Marshal(&payload)
 
-	// Send to all peers
-	peers := make([]string, 0, len(nodes)-1)
-	for i := range nodes {
-		if int32(i) != ourId && raftlib.IsNodeActive(nodes[i]) {
-			peers = append(peers, nodes[i].Node.IP)
-		}
-	}
-
-	if len(peers) == 0 {
-		LoggerDebug("no peers to send commit to", nil)
-		return nil
-	}
-
+	// Broadcast to chat room instead of sending to individual peers
 	contract := wasmx.GetAddress()
-	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{
+	chainId := wasmx.GetChainId()
+	protocolId := fmt.Sprintf("%s_%s", PROTOCOL_ID, chainId)
+	topic := fmt.Sprintf("%s_%s", CHAT_ROOM_PROTOCOL, chainId)
+
+	_, err = p2p.SendMessageToChatRoom(p2p.SendMessageToChatRoomRequest{
 		Contract:   contract,
 		Sender:     contract,
 		Msg:        msg,
-		ProtocolId: PROTOCOL_ID,
-		Peers:      peers,
+		ProtocolId: protocolId,
+		Topic:      topic,
 	})
 
 	if err != nil {
-		LoggerError("failed to send commit", []string{"error", err.Error()})
+		LoggerError("failed to send commit to chat room", []string{"error", err.Error(), "topic", topic})
 		return err
 	}
 
-	LoggerInfo("sent commit", []string{
+	LoggerInfo("sent commit to chat room", []string{
 		"blockNumber", fmt.Sprintf("%d", commit.BlockNumber),
 		"blockHash", commit.BlockHash,
-		"peerCount", fmt.Sprintf("%d", len(peers)),
+		"topic", topic,
 	})
 
 	return nil

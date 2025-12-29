@@ -39,6 +39,7 @@ type InstantiateMsg struct {
 	GenesisUUID       string `json:"genesis_uuid"`         // First UUID to start from on genesis
 	ThresholdCommit   int    `json:"threshold_commit"`     // Percentage threshold for commit (e.g., 51) - determines when to rollback
 	ThresholdFinalize int    `json:"threshold_finalize"`   // Percentage threshold for finalization (e.g., 75) - determines when block is finalized
+	MaxBlockTx        int    `json:"max_block_tx"`         // Maximum transactions per block (default: 100)
 }
 
 // KayrosRecord represents a record in the Kayros database

@@ -11,10 +11,11 @@ import (
 	raftlib "github.com/loredanacirstea/wasmx-raft-lib/lib"
 )
 
-// Chat room topics (parity with AS config)
+// Chat room topics (must match raftp2p for message propagation)
 const (
-	CHAT_ROOM_PROTOCOL           = "kayros_p2p_protocol"
+	CHAT_ROOM_PROTOCOL           = "chat_room_protocol" // Same as raftp2p for compatibility
 	CHAT_ROOM_MEMPOOL            = CHAT_ROOM_PROTOCOL
+	CHAT_ROOM_NODE               = "chat_room_node" // For commit messages
 	STORAGE_KEY_KAYROS_CONFIG    = "kayros_config"
 	STORAGE_KEY_LAST_UUID        = "kayros_last_uuid"
 	STORAGE_KEY_CONSENSUS_CONFIG = "consensus_config"
@@ -22,7 +23,6 @@ const (
 	STORAGE_KEY_PENDING_TXS      = "pending_txs"     // Transactions needed for current block
 	STORAGE_KEY_KAYROS_TX_META   = "kayros_tx_meta_" // Prefix for Kayros tx metadata
 	STORAGE_KEY_BLOCK_KAYROS     = "block_kayros_"   // Prefix for block Kayros metadata
-	MAX_TXS_PER_BLOCK            = 100               // Default max transactions to fetch from Kayros per block
 
 	CTX_KAYROS_BASE_URL    = "kayros_base_url"
 	CTX_KAYROS_USER_KEY    = "kayros_user_key"
@@ -30,6 +30,7 @@ const (
 	CTX_THRESHOLD_COMMIT   = "threshold_commit"
 	CTX_THRESHOLD_FINALIZE = "threshold_finalize"
 	CTX_GENESIS_UUID       = "genesis_uuid"
+	CTX_MAX_BLOCK_TX       = "max_block_tx"
 )
 
 // GetKayrosClient retrieves the Kayros client, initializing if needed
@@ -77,6 +78,17 @@ func GetConsensusConfig() (*ConsensusConfig, error) {
 		GenesisUUID:       sGet(CTX_GENESIS_UUID),
 	}
 	return &config, nil
+}
+
+// GetMaxBlockTx retrieves the maximum number of transactions per block from context
+func GetMaxBlockTx() int {
+	maxTxStr := sGet(CTX_MAX_BLOCK_TX)
+	if maxTxStr != "" {
+		if val, err := fsm.ParseInt32(maxTxStr); err == nil && val > 0 {
+			return int(val)
+		}
+	}
+	return 20
 }
 
 // GetBlockCommitMapping retrieves the commit mapping for a specific block
@@ -297,7 +309,8 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 	}
 
 	// Fetch records from Kayros starting from the last UUID
-	limit := MAX_TXS_PER_BLOCK
+	// Use configured max or default
+	limit := GetMaxBlockTx()
 	records, err := client.GetRecordsFromPrev(lastUUID, limit)
 	if err != nil {
 		LoggerError("failed to fetch records from Kayros", []string{"error", err.Error(), "lastUUID", lastUUID})
@@ -563,15 +576,30 @@ func CheckConsensusThresholds(mapping *BlockCommitMapping) error {
 				"majorityHash", maxHash,
 			})
 
-			// Rollback to the block before the disagreement
-			// Using raft.Rollback which handles multiple blocks
-			rollbackHeight := mapping.BlockNumber - 1
-			err := raftlib.Rollback([]fsm.ActionParam{
-				{Key: "height", Value: fmt.Sprintf("%d", rollbackHeight)},
-			}, fsm.EventObject{})
+			// Get current height to determine how many blocks to rollback
+			currentHeight, err := raftlib.GetLastLogIndex()
 			if err != nil {
-				LoggerError("rollback failed", []string{"error", err.Error()})
 				return err
+			}
+
+			// Target height is the block before the disagreement
+			targetHeight := mapping.BlockNumber - 1
+
+			// Rollback one block at a time from current height down to target height
+			// raft.Rollback expects the height to rollback TO (not FROM)
+			for height := currentHeight; height > targetHeight; height-- {
+				LoggerDebug("rolling back block", []string{
+					"height", fmt.Sprintf("%d", height),
+					"targetHeight", fmt.Sprintf("%d", targetHeight),
+				})
+
+				err := raftlib.Rollback([]fsm.ActionParam{
+					{Key: "height", Value: fmt.Sprintf("%d", height)},
+				}, fsm.EventObject{})
+				if err != nil {
+					LoggerError("rollback failed", []string{"height", fmt.Sprintf("%d", height), "error", err.Error()})
+					return err
+				}
 			}
 
 			// Clear pending txs and reset Kayros UUID to re-fetch
@@ -579,13 +607,16 @@ func CheckConsensusThresholds(mapping *BlockCommitMapping) error {
 
 			// Reset LastKayrosUUID to the UUID from the last good block
 			// This will cause GetKayrosTxs to re-fetch from that point
-			lastGoodBlockMeta, err := GetBlockKayrosMetadata(rollbackHeight)
+			lastGoodBlockMeta, err := GetBlockKayrosMetadata(targetHeight)
 			if err == nil && lastGoodBlockMeta != nil && lastGoodBlockMeta.LastUUID != "" {
 				SetLastKayrosUUID(lastGoodBlockMeta.LastUUID)
 				LoggerInfo("reset Kayros UUID after rollback", []string{"uuid", lastGoodBlockMeta.LastUUID})
 			}
 
-			LoggerInfo("rollback completed", []string{"toHeight", fmt.Sprintf("%d", rollbackHeight)})
+			LoggerInfo("rollback completed", []string{
+				"fromHeight", fmt.Sprintf("%d", currentHeight),
+				"toHeight", fmt.Sprintf("%d", targetHeight),
+			})
 		}
 	}
 
@@ -674,11 +705,13 @@ func RequestMissingTransactions(txHashes []string) error {
 	}
 
 	contract := wasmx.GetAddress()
+	chainId := wasmx.GetChainId()
+	protocolId := fmt.Sprintf("%s_%s", PROTOCOL_ID, chainId)
 	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{
 		Contract:   contract,
 		Sender:     contract,
 		Msg:        msg,
-		ProtocolId: PROTOCOL_ID,
+		ProtocolId: protocolId,
 		Peers:      peers,
 	})
 
@@ -801,11 +834,13 @@ func ReceiveMissingTransactionsRequest(params []fsm.ActionParam, event fsm.Event
 
 	// Send response to the requesting peer
 	contract := wasmx.GetAddress()
+	chainId := wasmx.GetChainId()
+	protocolId := fmt.Sprintf("%s_%s", PROTOCOL_ID, chainId)
 	_, err = p2p.SendMessageToPeers(p2p.SendMessageToPeersRequest{
 		Contract:   contract,
 		Sender:     contract,
 		Msg:        msg,
-		ProtocolId: PROTOCOL_ID,
+		ProtocolId: protocolId,
 		Peers:      []string{sender},
 	})
 

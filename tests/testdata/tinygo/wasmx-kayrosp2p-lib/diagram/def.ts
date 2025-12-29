@@ -14,6 +14,7 @@ export const machine = createMachine({
     threshold_finalize: 75,
     genesis_uuid: "",
     data_type_id: "",
+    max_block_tx: "",
   },
   id: "Kayros-P2P-1",
   initial: "uninitialized",
