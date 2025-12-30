@@ -366,6 +366,20 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 	allTxHashes := []string{}
 
 	for txHash, record := range deduplicatedRecords {
+		// Convert hex hash to base64 for mempool check (mempool uses base64 format)
+		txHashBase64, err := HexHashToBase64(txHash)
+		if err != nil {
+			LoggerError("failed to decode tx hash from Kayros", []string{"txHash", txHash, "error", err.Error()})
+			continue
+		}
+
+		// Check if we have already processed this transaction before
+		// and skip it if yes
+		if mp.IsRecentlyProcessed(txHashBase64) {
+			LoggerDebug("transaction already processed", []string{"hash", txHash, "kayrosId", record.HashItemHex})
+			continue
+		}
+
 		allTxHashes = append(allTxHashes, txHash)
 
 		// Store Kayros metadata for this transaction
@@ -380,15 +394,8 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 			LoggerError("failed to store Kayros tx metadata", []string{"txHash", txHash, "error", err.Error()})
 		}
 
-		// Convert hex hash to base64 for mempool check (mempool uses base64 format)
-		txHashBase64, err := HexHashToBase64(txHash)
-		if err != nil {
-			LoggerError("failed to decode tx hash from Kayros", []string{"txHash", txHash, "error", err.Error()})
-			continue
-		}
-
 		// Check if we have this transaction in our mempool
-		if mp.HasSeen(txHashBase64) {
+		if mp.IsInMempool(txHashBase64) {
 			LoggerDebug("transaction in mempool", []string{"txHash", txHash, "kayrosId", record.HashItemHex})
 			continue
 		}
@@ -954,35 +961,14 @@ func ReceiveMissingTransactions(params []fsm.ActionParam, event fsm.EventObject)
 		"txCount", fmt.Sprintf("%d", len(response.Transactions)),
 	})
 
-	// Add transactions to mempool
-	mp, err := raftlib.GetMempool()
-	if err != nil {
-		return err
-	}
-
 	addedCount := 0
-	chainId := wasmx.GetChainId()
-	for i, tx := range response.Transactions {
-		txHash := response.TxHashes[i]
-		if !mp.HasSeen(txHash) {
-			// Add to mempool with default gas (0) and our chain as leader
-			mp.Add(txHash, tx, 0, chainId)
-			addedCount++
-		}
+	for _, tx := range response.Transactions {
+		raftlib.AddTransactionToMempool(tx)
 	}
-
-	// Save the updated mempool
-	if addedCount > 0 {
-		if err := raftlib.SetMempool(mp); err != nil {
-			LoggerError("failed to save mempool", []string{"error", err.Error()})
-		}
-	}
-
 	LoggerInfo("added missing transactions to mempool", []string{
 		"addedCount", fmt.Sprintf("%d", addedCount),
 		"fromPeer", sender,
 	})
-
 	return nil
 }
 
@@ -1019,7 +1005,7 @@ func IfAllTransactions(params []fsm.ActionParam, event fsm.EventObject) bool {
 			continue
 		}
 
-		if !mp.HasSeen(txHashBase64) {
+		if !mp.IsInMempool(txHashBase64) {
 			missingCount++
 		}
 	}
