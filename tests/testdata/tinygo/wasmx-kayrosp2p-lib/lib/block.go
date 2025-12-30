@@ -117,6 +117,7 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 	validatorSet := typestnd.TendermintValidators{Validators: validatorInfos}
 
 	// Use the first validator as proposer for deterministic block hash across all validators
+	// TODO we need to change Kayros to accept some additional data, like the proposerAddress
 	var proposerAddress wasmx.HexString
 	var proposerBech32 wasmx.Bech32String
 	if len(validatorInfos) > 0 {
@@ -127,7 +128,7 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 		proposerBech32 = wasmx.Bech32String("")
 	}
 
-	lastBlockCommit := getLastBlockCommitInternal(st)
+	// lastBlockCommit := getLastBlockCommitInternal(st)
 
 	// Get previous block validators for the last block commit signatures
 	previousBlock, err := raftlib.GetLogEntryAggregate(height - 1)
@@ -138,63 +139,49 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 		previousValidatorSet = validatorSet
 	}
 
-	signatures := consutils.FilterAndSortCommitSignatures(lastBlockCommit.Signatures, previousValidatorSet.Validators)
-	if len(signatures) != len(previousValidatorSet.Validators) && height > (raftlib.LOG_START+1) {
-		raftlib.Revert(fmt.Sprintf(`last block validator set length mismatch with signature list: expected %d, got %d`, len(signatures), len(previousValidatorSet.Validators)))
-	}
+	// signatures := consutils.FilterAndSortCommitSignatures(lastBlockCommit.Signatures, previousValidatorSet.Validators)
+	// if len(signatures) != len(previousValidatorSet.Validators) && height > (raftlib.LOG_START+1) {
+	// 	raftlib.Revert(fmt.Sprintf(`last block validator set length mismatch with signature list: expected %d, got %d`, len(signatures), len(previousValidatorSet.Validators)))
+	// }
 
 	lastCommit := typestnd.CommitInfo{Round: 0, Votes: []typestnd.VoteInfo{}}
 	localLastCommit := typestnd.ExtendedCommitInfo{Round: 0, Votes: []typestnd.ExtendedVoteInfo{}}
-	for i := 0; i < len(signatures); i++ {
-		commitSig := signatures[i]
-		val := previousValidatorSet.Validators[i]
+	// for i := 0; i < len(signatures); i++ {
+	// 	commitSig := signatures[i]
+	// 	val := previousValidatorSet.Validators[i]
 
-		vaddress := wasmx.AddrCanonicalize(string(val.OperatorAddress))
-		validator := typestnd.Validator{Address: vaddress, Power: val.VotingPower}
-		voteInfo := typestnd.VoteInfo{Validator: validator, BlockIDFlag: commitSig.BlockIDFlag}
-		lastCommit.Votes = append(lastCommit.Votes, voteInfo)
+	// 	vaddress := wasmx.AddrCanonicalize(string(val.OperatorAddress))
+	// 	validator := typestnd.Validator{Address: vaddress, Power: val.VotingPower}
+	// 	voteInfo := typestnd.VoteInfo{Validator: validator, BlockIDFlag: commitSig.BlockIDFlag}
+	// 	lastCommit.Votes = append(lastCommit.Votes, voteInfo)
 
-		extendedVoteInfo := typestnd.ExtendedVoteInfo{
-			Validator:          validator,
-			VoteExtension:      []byte{},
-			ExtensionSignature: []byte{},
-			BlockIDFlag:        commitSig.BlockIDFlag,
-		}
-		localLastCommit.Votes = append(localLastCommit.Votes, extendedVoteInfo)
-	}
+	// 	extendedVoteInfo := typestnd.ExtendedVoteInfo{
+	// 		Validator:          validator,
+	// 		VoteExtension:      []byte{},
+	// 		ExtensionSignature: []byte{},
+	// 		BlockIDFlag:        commitSig.BlockIDFlag,
+	// 	}
+	// 	localLastCommit.Votes = append(localLastCommit.Votes, extendedVoteInfo)
+	// }
 
 	nextValsHash, err := consensuswrap.ValidatorsHash(validatorInfos)
 	if err != nil {
 		return err
 	}
 	misbehavior := []typestnd.Misbehavior{}
-	timeNow := time.Now()
-	timeISO := timeNow.UTC().Format(time.RFC3339Nano)
 
-	t, _ := time.Parse(time.RFC3339Nano, st.LastTime)
-	if t.UnixMilli() >= timeNow.UnixMilli() {
-		raftlib.Revert(fmt.Sprintf(`last block time %s higher than current time %s, revert and skip round`, st.LastTime, timeISO))
-	}
-
-	prepareReq := typestnd.RequestPrepareProposal{
-		MaxTxBytes:         maxDataBytes,
-		Txs:                txs,
-		LocalLastCommit:    localLastCommit,
-		Misbehavior:        misbehavior,
-		Height:             height,
-		Time:               timeISO,
-		NextValidatorsHash: nextValsHash,
-		ProposerAddress:    proposerAddress, // First validator for deterministic hash
-	}
-	prepareResp, err := consensuswrap.PrepareProposal(prepareReq)
-	if err != nil {
-		return err
-	}
-
-	sortedBlockCommits := lastBlockCommit
-	if height > (raftlib.LOG_START + 1) {
-		sortedBlockCommits, err = consutils.GetSortedBlockCommits(lastBlockCommit, previousValidatorSet.Validators)
-		sortedBlockCommits = consutils.CleanAbsentCommits(sortedBlockCommits)
+	// STEP 1: Get block data for temporary header (without calling PrepareProposal yet)
+	// sortedBlockCommits := lastBlockCommit
+	// if height > (raftlib.LOG_START + 1) {
+	// 	sortedBlockCommits, err = consutils.GetSortedBlockCommits(lastBlockCommit, previousValidatorSet.Validators)
+	// 	sortedBlockCommits = consutils.CleanAbsentCommits(sortedBlockCommits)
+	// }
+	// empty, we dont need to keep signatures from validators
+	// TODO revisit this if we extend kayros to receive signatures and blob data from nodes
+	sortedBlockCommits := typestnd.BlockCommit{
+		Height:  height,
+		Round:   height,
+		BlockID: st.LastBlockID,
 	}
 	evidence := typestnd.Evidence{}
 	consHash := []byte{}
@@ -206,13 +193,73 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 
 	lastCommitHashHex := wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetCommitHash(sortedBlockCommits))))
 
-	// In Kayros consensus, all validators build blocks independently
-	// ProposerAddress must be deterministic to ensure same block hash across all validators
+	// STEP 2: Create temporary header with zero timestamp to calculate hash for Kayros
+	// Use a valid zero timestamp in RFC3339Nano format
+	zeroTime := "0001-01-01T00:00:00.000000000Z"
+
+	tempHeader := typestnd.Header{
+		Version:            typestnd.VersionConsensus{Block: typestnd.BlockProtocol, App: st.Version.Consensus.App},
+		ChainID:            st.ChainID,
+		Height:             height,
+		Time:               zeroTime, // Valid zero timestamp for initial hash
+		LastBlockID:        st.LastBlockID,
+		LastCommitHash:     lastCommitHashHex,
+		DataHash:           wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetTxsHash(txs)))),
+		ValidatorsHash:     wasmx.HexString(strings.ToUpper(hex.EncodeToString(nextValsHash))),
+		NextValidatorsHash: wasmx.HexString(strings.ToUpper(hex.EncodeToString(nextValsHash))),
+		ConsensusHash:      wasmx.HexString(strings.ToUpper(hex.EncodeToString(consHash))),
+		AppHash:            wasmx.HexString(strings.ToUpper(hex.EncodeToString(st.AppHash))),
+		LastResultsHash:    wasmx.HexString(strings.ToUpper(hex.EncodeToString(st.LastResultsHash))),
+		EvidenceHash:       wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetEvidenceHash(evidence)))),
+		ProposerAddress:    proposerAddress, // First validator for deterministic hash
+	}
+
+	// STEP 3: Calculate hash of header with empty timestamp
+	tempHash, err := consensuswrap.HeaderHash(tempHeader)
+	if err != nil {
+		return err
+	}
+	tempHashHex := hex.EncodeToString(tempHash)
+
+	// STEP 4: Get deterministic timestamp from Kayros
+	kayrosClient, err := GetKayrosClient()
+	if err != nil {
+		return fmt.Errorf("failed to get Kayros client: %w", err)
+	}
+
+	kayrosTimestamp, err := kayrosClient.GetBlockTimestamp(wasmx.HexString(tempHashHex))
+	if err != nil {
+		return fmt.Errorf("failed to get block timestamp from Kayros: %w", err)
+	}
+
+	LoggerInfo("got Kayros timestamp for block", []string{
+		"height", raftlib.Int64ToString(height),
+		"tempHash", tempHashHex,
+		"kayrosTimestamp", kayrosTimestamp,
+	})
+
+	// STEP 5: Now call PrepareProposal with the Kayros timestamp
+	prepareReq := typestnd.RequestPrepareProposal{
+		MaxTxBytes:         maxDataBytes,
+		Txs:                txs,
+		LocalLastCommit:    localLastCommit,
+		Misbehavior:        misbehavior,
+		Height:             height,
+		Time:               kayrosTimestamp, // Use Kayros timestamp
+		NextValidatorsHash: nextValsHash,
+		ProposerAddress:    proposerAddress, // First validator for deterministic hash
+	}
+	prepareResp, err := consensuswrap.PrepareProposal(prepareReq)
+	if err != nil {
+		return err
+	}
+
+	// STEP 6: Build final header with Kayros timestamp
 	header := typestnd.Header{
 		Version:            typestnd.VersionConsensus{Block: typestnd.BlockProtocol, App: st.Version.Consensus.App},
 		ChainID:            st.ChainID,
 		Height:             height,
-		Time:               prepareReq.Time,
+		Time:               kayrosTimestamp, // Use Kayros timestamp
 		LastBlockID:        st.LastBlockID,
 		LastCommitHash:     lastCommitHashHex,
 		DataHash:           wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetTxsHash(prepareResp.Txs)))),
@@ -224,13 +271,17 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 		EvidenceHash:       wasmx.HexString(strings.ToUpper(hex.EncodeToString(consutils.GetEvidenceHash(evidence)))),
 		ProposerAddress:    proposerAddress, // First validator for deterministic hash
 	}
+
+	// STEP 7: Calculate final hash with Kayros timestamp
 	hhash, err := consensuswrap.HeaderHash(header)
 	if err != nil {
 		return err
 	}
-	LoggerInfo("Kayros block proposal", []string{
+
+	LoggerInfo("Kayros block proposal with deterministic timestamp", []string{
 		"height", raftlib.Int64ToString(height),
 		"hash", base64.StdEncoding.EncodeToString(hhash),
+		"timestamp", kayrosTimestamp,
 		"txCount", fmt.Sprintf("%d", len(txs)),
 	})
 
@@ -240,7 +291,7 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 		Misbehavior:        prepareReq.Misbehavior,
 		Hash:               hhash,
 		Height:             prepareReq.Height,
-		Time:               prepareReq.Time,
+		Time:               kayrosTimestamp, // Use Kayros timestamp
 		NextValidatorsHash: prepareReq.NextValidatorsHash,
 		ProposerAddress:    proposerAddress, // First validator for deterministic hash
 	}
@@ -419,6 +470,22 @@ func SendCommit(params []fsm.ActionParam, event fsm.EventObject) error {
 	commit.Signature = signature
 
 	commitBytes, _ = json.Marshal(commit)
+
+	// Store our own commit in the mapping before broadcasting
+	mapping, err := GetBlockCommitMapping(lastIndex)
+	if err != nil {
+		LoggerError("failed to get block commit mapping", []string{"error", err.Error()})
+	} else {
+		mapping.Commits[ourAddress] = commit
+		if err := SetBlockCommitMapping(mapping); err != nil {
+			LoggerError("failed to save our own commit", []string{"error", err.Error()})
+		} else {
+			LoggerDebug("stored our own commit", []string{
+				"blockNumber", fmt.Sprintf("%d", lastIndex),
+				"blockHash", commit.BlockHash,
+			})
+		}
+	}
 
 	// Build P2P message payload
 	payload := struct {

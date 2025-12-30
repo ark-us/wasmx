@@ -55,7 +55,7 @@ func SystemContractsModify(wasmRuntime string) func([]wasmxtypes.SystemContract)
 				json.Unmarshal(contracts[i].InitMessage, execmsg)
 
 				msg := string(execmsg.Data)
-				msg = strings.Replace(msg, `{"key":"data_type_id","value":""}`, fmt.Sprintf(`{"key":"data_type_id","value":"%d"}`, time.Now().UnixMilli()), 1)
+				msg = strings.Replace(msg, `{"key":"data_type_id","value":""}`, fmt.Sprintf(`{"key":"data_type_id","value":"%d"}`, time.Now().Unix()), 1)
 				execmsg.Data = []byte(msg)
 
 				execmsgbz, _ := json.Marshal(execmsg)

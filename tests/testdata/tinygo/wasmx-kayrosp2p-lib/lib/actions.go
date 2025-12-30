@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	consensuswrap "github.com/loredanacirstea/wasmx-env-consensus/lib"
+	typestnd "github.com/loredanacirstea/wasmx-env-consensus/lib"
 	p2p "github.com/loredanacirstea/wasmx-env-p2p/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	fsm "github.com/loredanacirstea/wasmx-fsm/lib"
@@ -233,7 +235,7 @@ func BuildBlockKayrosMetadata(blockNumber int64) (*KayrosBlockMetadata, error) {
 
 // RegisterWithKayros registers a transaction with Kayros via POST /api/grpc/single-hash
 // This action is called when a new transaction is received
-func RegisterWithKayros(params []fsm.ActionParam, event fsm.EventObject) error {
+func RegisterWithKayros(params []fsm.ActionParam, event fsm.EventObject) (*KayrosRegistrationResponse, error) {
 	// Extract transaction from event params
 	txB64 := ""
 	for _, p := range event.Params {
@@ -243,13 +245,13 @@ func RegisterWithKayros(params []fsm.ActionParam, event fsm.EventObject) error {
 		}
 	}
 	if txB64 == "" {
-		return fmt.Errorf("no transaction found in event")
+		return nil, fmt.Errorf("no transaction found in event")
 	}
 
 	// Decode transaction
 	txBytes, err := base64.StdEncoding.DecodeString(txB64)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Compute transaction hash (hex encoded for Kayros)
@@ -261,7 +263,7 @@ func RegisterWithKayros(params []fsm.ActionParam, event fsm.EventObject) error {
 	if err != nil {
 		LoggerError("failed to get Kayros client", []string{"error", err.Error()})
 		// Don't fail the transaction if Kayros is unavailable
-		return nil
+		return nil, nil
 	}
 
 	// Register transaction with Kayros via POST /api/grpc/single-hash
@@ -269,20 +271,20 @@ func RegisterWithKayros(params []fsm.ActionParam, event fsm.EventObject) error {
 	if err != nil {
 		LoggerError("failed to register transaction with Kayros", []string{"txHash", txHash, "error", err.Error()})
 		// Don't fail the transaction if Kayros registration fails
-		return nil
+		return nil, nil
 	}
 
 	if !resp.Success {
 		LoggerDebug("Kayros registration returned failure", []string{"txHash", txHash, "message", resp.Message})
-		return nil
+		return nil, nil
 	}
 
 	LoggerInfo("transaction registered with Kayros", []string{
 		"txHash", txHash,
-		"uuid", resp.UUID,
+		"uuid", string(resp.TimeUUID),
 	})
 
-	return nil
+	return resp, nil
 }
 
 // GetKayrosTxs fetches transactions from Kayros for block production
@@ -328,6 +330,31 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 		return nil
 	}
 
+	// Deduplicate records by transaction hash, keeping the oldest (smallest UUID) for each
+	// This handles cases where the same transaction was registered multiple times
+	deduplicatedRecords := make(map[string]KayrosRecord)
+	for _, record := range records {
+		txHash := record.DataItemHex
+		if existing, exists := deduplicatedRecords[txHash]; exists {
+			// Keep the one with smaller UUID (older timestamp)
+			if record.UuidHex < existing.UuidHex {
+				deduplicatedRecords[txHash] = record
+				LoggerDebug("found duplicate tx, keeping older registration", []string{
+					"txHash", txHash,
+					"oldUUID", existing.UuidHex,
+					"newUUID", record.UuidHex,
+				})
+			}
+		} else {
+			deduplicatedRecords[txHash] = record
+		}
+	}
+
+	LoggerInfo("deduplicated Kayros records", []string{
+		"original", fmt.Sprintf("%d", len(records)),
+		"deduplicated", fmt.Sprintf("%d", len(deduplicatedRecords)),
+	})
+
 	// Get mempool to check which transactions we already have
 	mp, err := raftlib.GetMempool()
 	if err != nil {
@@ -338,8 +365,7 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 	missingTxHashes := []string{}
 	allTxHashes := []string{}
 
-	for _, record := range records {
-		txHash := record.DataItemHex
+	for txHash, record := range deduplicatedRecords {
 		allTxHashes = append(allTxHashes, txHash)
 
 		// Store Kayros metadata for this transaction
@@ -559,14 +585,49 @@ func CheckConsensusThresholds(mapping *BlockCommitMapping) error {
 			"blockNumber", fmt.Sprintf("%d", mapping.BlockNumber),
 			"uniqueHashes", fmt.Sprintf("%d", len(hashCounts)),
 			"commitPercentage", fmt.Sprintf("%d", commitPercentage),
+			"hashPercentage", fmt.Sprintf("%d", hashPercentage),
 		})
 
-		// Get our block hash to compare
-		st, err := raftlib.GetCurrentState()
+		// CRITICAL: Only rollback if the leading hash has >= ThresholdCommit percentage
+		// Otherwise, with a 2-way split (e.g., 33% vs 33%), we'd arbitrarily pick one
+		if hashPercentage < config.ThresholdCommit {
+			LoggerInfo("no clear majority yet, waiting for more commits", []string{
+				"blockNumber", fmt.Sprintf("%d", mapping.BlockNumber),
+				"hashPercentage", fmt.Sprintf("%d", hashPercentage),
+				"requiredPercentage", fmt.Sprintf("%d", config.ThresholdCommit),
+			})
+			return nil
+		}
+
+		// Get the hash of the specific block we're checking (not NextHash which is for the next block)
+		blockEntry, err := raftlib.GetLogEntryAggregate(mapping.BlockNumber)
 		if err != nil {
+			LoggerError("failed to get block entry for consensus check", []string{
+				"blockNumber", fmt.Sprintf("%d", mapping.BlockNumber),
+				"error", err.Error(),
+			})
 			return err
 		}
-		ourHash := base64.StdEncoding.EncodeToString(st.NextHash)
+		if blockEntry == nil {
+			// We don't have this block yet, can't compare
+			LoggerDebug("we don't have this block yet, skipping consensus check", []string{
+				"blockNumber", fmt.Sprintf("%d", mapping.BlockNumber),
+			})
+			return nil
+		}
+
+		// Get the hash from the block header
+		var header typestnd.Header
+		if err := json.Unmarshal(blockEntry.Data.Header, &header); err != nil {
+			LoggerError("failed to unmarshal block header", []string{"error", err.Error()})
+			return err
+		}
+		blockHash, err := consensuswrap.HeaderHash(header)
+		if err != nil {
+			LoggerError("failed to compute header hash", []string{"error", err.Error()})
+			return err
+		}
+		ourHash := base64.StdEncoding.EncodeToString(blockHash)
 
 		// If our hash doesn't match the majority hash, we need to rollback
 		if ourHash != maxHash {
@@ -574,6 +635,7 @@ func CheckConsensusThresholds(mapping *BlockCommitMapping) error {
 				"blockNumber", fmt.Sprintf("%d", mapping.BlockNumber),
 				"ourHash", ourHash,
 				"majorityHash", maxHash,
+				"majorityPercentage", fmt.Sprintf("%d", hashPercentage),
 			})
 
 			// Get current height to determine how many blocks to rollback

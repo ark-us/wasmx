@@ -1,6 +1,7 @@
 package lib
 
 import (
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	raftlib "github.com/loredanacirstea/wasmx-raft-lib/lib"
 )
 
@@ -12,20 +13,20 @@ const (
 
 // StateSyncRequest mirrors the AS request with start index
 type StateSyncRequest struct {
-    StartIndex  int64  `json:"start_index"`
-    PeerAddress string `json:"peer_address"`
+	StartIndex  int64  `json:"start_index"`
+	PeerAddress string `json:"peer_address"`
 }
 
 // StateSyncResponse mirrors the AS response with batch indexes and entries
 type StateSyncResponse struct {
-    StartBatchIndex int64                       `json:"start_batch_index"`
-    LastBatchIndex  int64                       `json:"last_batch_index"`
-    LastLogIndex    int64                       `json:"last_log_index"`
-    TrustedLogIndex int64                       `json:"trusted_log_index"`
-    TrustedLogHash  []byte                      `json:"trusted_log_hash"`
-    TermID          int32                       `json:"termId"`
-    PeerAddress     string                      `json:"peer_address"`
-    Entries         []raftlib.LogEntryAggregate `json:"entries"`
+	StartBatchIndex int64                       `json:"start_batch_index"`
+	LastBatchIndex  int64                       `json:"last_batch_index"`
+	LastLogIndex    int64                       `json:"last_log_index"`
+	TrustedLogIndex int64                       `json:"trusted_log_index"`
+	TrustedLogHash  []byte                      `json:"trusted_log_hash"`
+	TermID          int32                       `json:"termId"`
+	PeerAddress     string                      `json:"peer_address"`
+	Entries         []raftlib.LogEntryAggregate `json:"entries"`
 }
 
 // KayrosConfig holds the configuration for Kayros API client
@@ -35,11 +36,11 @@ type KayrosConfig struct {
 
 // InstantiateMsg is the message passed during contract instantiation
 type InstantiateMsg struct {
-	KayrosApiUrl      string `json:"kayros_api_url"`       // e.g., "https://kayros.provable.dev"
-	GenesisUUID       string `json:"genesis_uuid"`         // First UUID to start from on genesis
-	ThresholdCommit   int    `json:"threshold_commit"`     // Percentage threshold for commit (e.g., 51) - determines when to rollback
-	ThresholdFinalize int    `json:"threshold_finalize"`   // Percentage threshold for finalization (e.g., 75) - determines when block is finalized
-	MaxBlockTx        int    `json:"max_block_tx"`         // Maximum transactions per block (default: 100)
+	KayrosApiUrl      string `json:"kayros_api_url"`     // e.g., "https://kayros.provable.dev"
+	GenesisUUID       string `json:"genesis_uuid"`       // First UUID to start from on genesis
+	ThresholdCommit   int    `json:"threshold_commit"`   // Percentage threshold for commit (e.g., 51) - determines when to rollback
+	ThresholdFinalize int    `json:"threshold_finalize"` // Percentage threshold for finalization (e.g., 75) - determines when block is finalized
+	MaxBlockTx        int    `json:"max_block_tx"`       // Maximum transactions per block (default: 100)
 }
 
 // KayrosRecord represents a record in the Kayros database
@@ -48,7 +49,7 @@ type KayrosRecord struct {
 	DataTypeHex string `json:"data_type_hex"`
 	DataItemHex string `json:"data_item_hex"`
 	UuidHex     string `json:"uuid_hex"`
-	HashItemHex string `json:"hash_item_hex"` // Kayros unique ID
+	HashItemHex string `json:"hash_item_hex"`           // Kayros unique ID
 	PrevHashHex string `json:"prev_hash_hex,omitempty"` // Optional - may not be in all responses
 	HashType    string `json:"hash_type"`
 	Timestamp   string `json:"timestamp"`
@@ -118,31 +119,41 @@ type MissingTransactionsResponse struct {
 
 // KayrosRegistrationRequest is the request body for POST /api/grpc/single-hash
 type KayrosRegistrationRequest struct {
-	DataType string `json:"data_type"`
-	DataItem string `json:"data_item"` // Transaction hash
+	DataType wasmx.HexString `json:"data_type"`
+	DataItem wasmx.HexString `json:"data_item"` // Transaction hash
 }
 
 // KayrosRegistrationResponse is the response from the registration API
 type KayrosRegistrationResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	UUID    string `json:"uuid,omitempty"`
+	Success      bool            `json:"success"`
+	Message      string          `json:"message"`
+	DataType     string          `json:"data_type"`
+	DataItem     string          `json:"data_item"`
+	ComputedHash wasmx.HexString `json:"computed_hash_hex"`
+	TimeUUID     wasmx.HexString `json:"timeuuid_hex"`
+	DataTypeHex  wasmx.HexString `json:"data_type_hex"`
+	DataItemHex  wasmx.HexString `json:"data_item_hex"`
+}
+
+type KayrosRegistrationResponseWrap struct {
+	KayrosApiResponse
+	Data KayrosRegistrationResponse `json:"data"`
 }
 
 // KayrosTxMetadata stores Kayros ordering information for a transaction
 // This metadata is included in the block's Metainfo field
 type KayrosTxMetadata struct {
-	TxHash      string `json:"tx_hash"`       // Transaction hash (data_item)
-	UUID        string `json:"uuid"`          // Kayros UUID for ordering
-	HashItem    string `json:"hash_item"`     // Kayros unique ID (hash_item_hex)
-	Timestamp   string `json:"timestamp"`     // Kayros timestamp
-	PrevHash    string `json:"prev_hash"`     // Previous hash in the ordering chain
-	BlockNumber int64  `json:"block_number"`  // Block this tx is included in
+	TxHash      string `json:"tx_hash"`      // Transaction hash (data_item)
+	UUID        string `json:"uuid"`         // Kayros UUID for ordering
+	HashItem    string `json:"hash_item"`    // Kayros unique ID (hash_item_hex)
+	Timestamp   string `json:"timestamp"`    // Kayros timestamp
+	PrevHash    string `json:"prev_hash"`    // Previous hash in the ordering chain
+	BlockNumber int64  `json:"block_number"` // Block this tx is included in
 }
 
 // KayrosBlockMetadata contains all Kayros metadata for transactions in a block
 type KayrosBlockMetadata struct {
 	Transactions []KayrosTxMetadata `json:"transactions"`
-	FirstUUID    string             `json:"first_uuid"`  // First UUID in this block
-	LastUUID     string             `json:"last_uuid"`   // Last UUID in this block
+	FirstUUID    string             `json:"first_uuid"` // First UUID in this block
+	LastUUID     string             `json:"last_uuid"`  // Last UUID in this block
 }

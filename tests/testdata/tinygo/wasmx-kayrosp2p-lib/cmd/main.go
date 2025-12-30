@@ -120,7 +120,7 @@ func main() {
 			return
 		}
 	case "registerWithKayros":
-		err := lib.RegisterWithKayros(calld.Params, calld.Event)
+		_, err := lib.RegisterWithKayros(calld.Params, calld.Event)
 		if err != nil {
 			raftp2p.Revert(err.Error())
 			return

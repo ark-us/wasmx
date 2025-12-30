@@ -165,6 +165,7 @@ func HeaderHash(header Header) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("--HeaderHash.bz---", string(bz))
 	out := utils.PackedPtrToBytes(HeaderHash_(utils.BytesToPackedPtr(bz)))
 	return out, nil
 }
