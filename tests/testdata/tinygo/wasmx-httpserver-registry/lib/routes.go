@@ -232,7 +232,9 @@ func HandleHttpRequestIncoming() {
 	calld, _ := json.Marshal(call)
 	ok, respData := wasmx.CallSimple(wasmx.Bech32String(best.ContractAddress), calld, false, MODULE_NAME)
 	if !ok {
-		wasmx.Revert([]byte("httpserver forward failed: " + string(respData) + "; address: " + best.ContractAddress + "; calldata: " + string(calld)))
+		// Return HTTP 500 error instead of reverting, so clients get proper status code
+		LoggerError("httpserver forward failed", []string{"error", string(respData), "address", best.ContractAddress})
+		respondWithError("internal server error: "+string(respData), 500)
 		return
 	}
 	wasmx.Finish(respData)

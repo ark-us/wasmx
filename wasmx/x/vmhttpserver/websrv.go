@@ -63,6 +63,9 @@ func (k *WebsrvServer) Route(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, response.Data.RedirectUrl, response.Data.StatusCode)
 		return
 	}
+	if response.Data.StatusCode != 0 {
+		w.WriteHeader(response.Data.StatusCode)
+	}
 	w.Write([]byte(response.Data.Data))
 }
 

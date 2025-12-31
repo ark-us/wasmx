@@ -21,3 +21,28 @@ Login → Authorize → Token Exchange:
 - oauth2-server calls wasmx-oauth2-keys contract with generate_ephemeral_key message
 - wasmx-oauth2-keys generates key pair (actions.go:64-129)
 - Stores ephemeral key in oauth2-keys contract storage
+
+
+POST Request Flow with OAuth2:
+
+Browser sends POST with "Authorization: Bearer <oauth_token>"
+                    ↓
+wasmx-httpserver-registry.handleMutatingRequest()
+                    ↓
+Calls wasmx-oauth2-keys.QueryValidateAndGetKey(oauth_token)
+    ├── Lookup: token.<token> → public_key
+    ├── Lookup: key.<pubkey_hex> → encrypted key pair
+    ├── Derive encryption key: HKDF(server_secret, oauth_token)
+    ├── Decrypt private key with AES-256-GCM
+    └── Return plaintext private key + address
+                    ↓
+httpserver-registry builds transaction:
+    ├── Target contract + HttpRequestHandler calldata
+    ├── Signs with ephemeral private key
+    └── wasmxcore.PrepareTx(..., keyResponse.PrivateKey)
+                    ↓
+Broadcast transaction: wasmxcore.BroadcastTxAsync(txBytes)
+                    ↓
+Return {"tx_hash": "..."} to browser
+
+The wasmx-oauth2-keys contract stores encrypted ephemeral private keys and decrypts them on demand. The wasmx-httpserver-registry contract signs transactions with these ephemeral keys for POST/PUT/DELETE requests when UseTransaction=true on the route. The browser never needs to sign - it just sends the OAuth token.

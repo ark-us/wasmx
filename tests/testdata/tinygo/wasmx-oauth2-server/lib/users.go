@@ -16,18 +16,18 @@ func RegisterUser(req RegisterUserRequest) []byte {
 	fmt.Println("--wasmx.oauth2server.RegisterUser--")
 	// Validate request
 	if req.Email == "" {
-		Revert("email is required")
+		return []byte(`{"error":"email is required"}`)
 	}
 	if req.Password == "" {
-		Revert("password is required")
+		return []byte(`{"error":"password is required"}`)
 	}
 	if len(req.Password) < 8 {
-		Revert("password must be at least 8 characters")
+		return []byte(`{"error":"password must be at least 8 characters"}`)
 	}
 
 	// Check if email already exists
 	if getUserByEmail(req.Email) != nil {
-		Revert("email already registered")
+		return []byte(`{"error":"email already registered"}`)
 	}
 	fmt.Println("--wasmx.oauth2server.RegisterUser2--")
 
@@ -103,27 +103,27 @@ func RegisterUser(req RegisterUserRequest) []byte {
 func Login(req LoginRequest) []byte {
 	// Validate request
 	if req.Email == "" {
-		Revert("email is required")
+		return []byte(`{"error":"email is required"}`)
 	}
 	if req.Password == "" {
-		Revert("password is required")
+		return []byte(`{"error":"password is required"}`)
 	}
 
 	// Get user by email
 	user := getUserByEmail(req.Email)
 	if user == nil {
-		Revert("invalid email or password")
+		return []byte(`{"error":"invalid email or password"}`)
 	}
 
 	// Check if user is active
 	if !user.Active {
-		Revert("user account is disabled")
+		return []byte(`{"error":"user account is disabled"}`)
 	}
 
 	// Verify password
 	passwordHash := hashPassword(req.Password)
 	if passwordHash != user.PasswordHash {
-		Revert("invalid email or password")
+		return []byte(`{"error":"invalid email or password"}`)
 	}
 
 	// Generate session ID
@@ -181,7 +181,7 @@ func Login(req LoginRequest) []byte {
 func Logout(req LogoutRequest) []byte {
 	// Validate request
 	if req.SessionID == "" {
-		Revert("session_id is required")
+		return []byte(`{"error":"session_id is required"}`)
 	}
 
 	// Get session
