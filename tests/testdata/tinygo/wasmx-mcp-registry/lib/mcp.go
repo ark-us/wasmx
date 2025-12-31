@@ -99,27 +99,34 @@ func RegisterHttpRoutes(req *RegisterHttpRoutesRequest) []byte {
 	httpRegistryAddr := wasmx.GetAddressByRole(wasmx.ROLE_HTTP_SERVER)
 	LoggerInfo("HTTP registry address", []string{"addr", string(httpRegistryAddr)})
 
-	routes := []string{
-		"/sse",
-		"/.well-known/ai-plugin.json",
-		"/openapi.json",
-		"/tools",
+	// Define routes with their transaction requirements
+	// /sse needs use_transaction=true for MCP tool calls that modify state
+	type routeConfig struct {
+		route          string
+		useTransaction bool
+	}
+	routes := []routeConfig{
+		{"/sse", true}, // MCP protocol endpoint - needs transaction for mutating tools
+		{"/.well-known/ai-plugin.json", false},
+		{"/openapi.json", false},
+		{"/tools", false},
 	}
 
 	for _, rt := range routes {
-		LoggerInfo("Registering route", []string{"route", rt, "contract", self})
+		LoggerInfo("Registering route", []string{"route", rt.route, "contract", self, "use_transaction", fmt.Sprintf("%v", rt.useTransaction)})
 		msg := map[string]interface{}{
 			"set_route": map[string]interface{}{
-				"route":            rt,
+				"route":            rt.route,
 				"contract_address": self,
+				"use_transaction":  rt.useTransaction,
 			},
 		}
 		bz, _ := json.Marshal(msg)
 		ok, data := wasmx.CallSimple(httpRegistryAddr, bz, false, MODULE_NAME)
 		if !ok {
-			LoggerError("failed to set route", []string{"route", rt, "error", string(data)})
+			LoggerError("failed to set route", []string{"route", rt.route, "error", string(data)})
 		} else {
-			LoggerInfo("Successfully registered route", []string{"route", rt})
+			LoggerInfo("Successfully registered route", []string{"route", rt.route})
 		}
 	}
 

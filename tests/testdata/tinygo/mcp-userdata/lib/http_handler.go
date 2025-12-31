@@ -10,6 +10,9 @@ import (
 )
 
 // HandleHttpRequest handles incoming HTTP requests for this tool contract
+// Supports both:
+// 1. Path-based routing (OpenAI style): POST /tools/userdata/get_favorite_color with body {"color": "blue"}
+// 2. JSON-RPC style: POST /tools/userdata with body {"method": "tools/call", "params": {...}}
 func HandleHttpRequest(req HttpRequestIncoming) []byte {
 	// Extract path from Url or RequestURI (remove query string)
 	path := req.Url
@@ -32,7 +35,6 @@ func HandleHttpRequest(req HttpRequestIncoming) []byte {
 		return marshalHttpResponse(sendErrorResponse("Unauthorized: invalid token", 401))
 	}
 
-	// All requests under /tools/userdata/* should be MCP JSON-RPC requests
 	if req.Method != "POST" {
 		return marshalHttpResponse(sendErrorResponse("Method not allowed", 405))
 	}
@@ -40,21 +42,68 @@ func HandleHttpRequest(req HttpRequestIncoming) []byte {
 	// Get request body
 	body := req.Data
 
-	// Parse JSON-RPC request
+	// Try to parse as JSON-RPC first
 	var rpcReq JSONRPCRequest
-	if err := json.Unmarshal(body, &rpcReq); err != nil {
-		return marshalHttpResponse(sendJSONRPCError(nil, -32700, "Parse error: "+err.Error()))
+	if err := json.Unmarshal(body, &rpcReq); err == nil && rpcReq.Method != "" {
+		// JSON-RPC style request
+		switch rpcReq.Method {
+		case "tools/list":
+			return marshalHttpResponse(handleToolsList(&rpcReq, userID))
+		case "tools/call":
+			return marshalHttpResponse(handleToolsCall(&rpcReq, userID))
+		default:
+			return marshalHttpResponse(sendJSONRPCError(rpcReq.ID, -32601, "Method not found: "+rpcReq.Method))
+		}
 	}
 
-	// Route based on JSON-RPC method
-	switch rpcReq.Method {
-	case "tools/list":
-		return marshalHttpResponse(handleToolsList(&rpcReq, userID))
-	case "tools/call":
-		return marshalHttpResponse(handleToolsCall(&rpcReq, userID))
-	default:
-		return marshalHttpResponse(sendJSONRPCError(rpcReq.ID, -32601, "Method not found: "+rpcReq.Method))
+	// Path-based routing (OpenAI style)
+	// Extract tool name from path: /tools/userdata/get_favorite_color -> get_favorite_color
+	toolName := extractToolNameFromPath(path)
+	if toolName == "" {
+		return marshalHttpResponse(sendPlainJSONError("Invalid path: could not extract tool name", 400))
 	}
+
+	// Parse body as tool arguments
+	var arguments map[string]interface{}
+	if len(body) > 0 {
+		if err := json.Unmarshal(body, &arguments); err != nil {
+			return marshalHttpResponse(sendPlainJSONError("Invalid JSON body: "+err.Error(), 400))
+		}
+	}
+	if arguments == nil {
+		arguments = map[string]interface{}{}
+	}
+
+	// Execute the tool
+	executeReq := ExecuteToolRequest{
+		ToolName:  toolName,
+		Arguments: arguments,
+		UserID:    userID,
+	}
+
+	resultBz := ExecuteTool(executeReq)
+
+	// Parse result
+	var toolResult ExecuteToolResponse
+	if err := json.Unmarshal(resultBz, &toolResult); err != nil {
+		return marshalHttpResponse(sendPlainJSONError("Failed to parse tool result: "+err.Error(), 500))
+	}
+
+	// Return plain JSON response (not JSON-RPC) for path-based requests
+	return marshalHttpResponse(sendPlainJSONResponse(toolResult))
+}
+
+// extractToolNameFromPath extracts the tool name from a path like /tools/userdata/get_favorite_color
+func extractToolNameFromPath(path string) string {
+	// Remove leading slash and split
+	path = strings.TrimPrefix(path, "/")
+	parts := strings.Split(path, "/")
+
+	// Expected format: tools/userdata/<tool_name>
+	if len(parts) >= 3 && parts[0] == "tools" && parts[1] == "userdata" {
+		return parts[2]
+	}
+	return ""
 }
 
 // extractToken extracts Bearer token from Authorization header
@@ -86,7 +135,7 @@ func validateToken(token string) (string, bool) {
 	// Call OAuth2 server to validate token
 	validateMsg := map[string]interface{}{
 		"validate_access_token": map[string]interface{}{
-			"access_token": token,
+			"token": token,
 		},
 	}
 	msgBz, _ := json.Marshal(validateMsg)
@@ -240,6 +289,68 @@ func sendErrorResponse(message string, statusCode int) HttpResponseWrap {
 			Status:     fmt.Sprintf("%d %s", statusCode, http.StatusText(statusCode)),
 			Header:     map[string][]string{"Content-Type": []string{"text/plain"}},
 			Data:       []byte(message),
+		},
+	}
+}
+
+// sendPlainJSONError sends a plain JSON error response (for path-based routing)
+func sendPlainJSONError(message string, statusCode int) HttpResponseWrap {
+	errorResp := map[string]interface{}{
+		"error": message,
+	}
+	jsonData, _ := json.Marshal(errorResp)
+	return HttpResponseWrap{
+		Error: "",
+		Data: HttpResponse{
+			StatusCode: statusCode,
+			Status:     fmt.Sprintf("%d %s", statusCode, http.StatusText(statusCode)),
+			Header:     map[string][]string{"Content-Type": []string{"application/json"}},
+			Data:       jsonData,
+		},
+	}
+}
+
+// sendPlainJSONResponse sends a plain JSON response (for path-based routing)
+func sendPlainJSONResponse(result ExecuteToolResponse) HttpResponseWrap {
+	statusCode := 200
+	if result.IsError {
+		statusCode = 400
+	}
+
+	// Build response based on content
+	var responseData []byte
+	if len(result.Content) == 1 && result.Content[0].Type == "text" {
+		// Single text content - try to parse as JSON, otherwise wrap
+		text := result.Content[0].Text
+		var jsonCheck interface{}
+		if err := json.Unmarshal([]byte(text), &jsonCheck); err == nil {
+			// Already valid JSON
+			responseData = []byte(text)
+		} else {
+			// Wrap in result object
+			resp := map[string]interface{}{
+				"result": text,
+			}
+			responseData, _ = json.Marshal(resp)
+		}
+	} else {
+		// Multiple content items or non-text - wrap in content array
+		resp := map[string]interface{}{
+			"content": result.Content,
+		}
+		if result.IsError {
+			resp["isError"] = true
+		}
+		responseData, _ = json.Marshal(resp)
+	}
+
+	return HttpResponseWrap{
+		Error: "",
+		Data: HttpResponse{
+			StatusCode: statusCode,
+			Status:     fmt.Sprintf("%d %s", statusCode, http.StatusText(statusCode)),
+			Header:     map[string][]string{"Content-Type": []string{"application/json"}},
+			Data:       responseData,
 		},
 	}
 }

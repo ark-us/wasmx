@@ -66,8 +66,10 @@ func main() {
 		wasmx.Finish(res)
 		return
 	case calldata.HttpRequestHandler != nil:
-		// Called by HTTP server registry contract with HTTP request data
-		wasmx.OnlyRole(lib.MODULE_NAME, wasmx.ROLE_HTTP_SERVER, string(databz))
+		// Called either:
+		// 1. Directly by HTTP server for GET/read requests
+		// 2. Via transaction signed by user's ephemeral key for POST/write requests
+		// OAuth token validation inside HandleHttpRequest ensures user authorization
 		res := lib.HandleHttpRequest(*calldata.HttpRequestHandler)
 		wasmx.Finish(res)
 		return
