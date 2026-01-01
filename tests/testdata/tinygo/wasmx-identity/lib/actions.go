@@ -140,28 +140,44 @@ func AddAddress(msg *MsgAddAddress) []byte {
 		return MarshalJSON(map[string]string{"error": "sender not authorized for this user"})
 	}
 
+	return addAddressToUser(msg.UserID, msg.Address, msg.PublicKey, msg.ServiceDomain, msg.Permissions, msg.ExpiresAt)
+}
+
+// AddAddressInternal adds a new address to an existing user (internal call from trusted contracts)
+// This bypasses sender verification and is only callable by internal contracts
+func AddAddressInternal(msg *MsgAddAddressInternal) []byte {
+	LoggerInfo("AddAddressInternal called", []string{"user_id", msg.UserID, "address", msg.Address})
+
+	// Only allow internal calls from trusted contracts
+	wasmx.OnlyInternal(MODULE_NAME, "AddAddressInternal")
+
+	return addAddressToUser(msg.UserID, msg.Address, msg.PublicKey, msg.ServiceDomain, msg.Permissions, msg.ExpiresAt)
+}
+
+// addAddressToUser is the internal implementation for adding an address to a user
+func addAddressToUser(userID, address string, publicKey []byte, serviceDomain string, permissions []Permission, expiresAt int64) []byte {
 	// Load user
-	user, err := LoadUser(msg.UserID)
+	user, err := LoadUser(userID)
 	if err != nil || user == nil {
-		LoggerError("User not found", []string{"user_id", msg.UserID})
+		LoggerError("User not found", []string{"user_id", userID})
 		return MarshalJSON(map[string]string{"error": "user not found"})
 	}
 
 	// Check if address is already associated with a user
-	existingUserID := LoadUserIDByAddress(msg.Address)
+	existingUserID := LoadUserIDByAddress(address)
 	if existingUserID != "" {
-		LoggerError("Address already registered", []string{"address", msg.Address, "existing_user_id", existingUserID})
+		LoggerError("Address already registered", []string{"address", address, "existing_user_id", existingUserID})
 		return MarshalJSON(map[string]string{"error": "address already registered to another user"})
 	}
 
 	// Check if address already in user's list
-	if AddressInList(msg.Address, user.Addresses) {
-		LoggerError("Address already in user list", []string{"address", msg.Address})
+	if AddressInList(address, user.Addresses) {
+		LoggerError("Address already in user list", []string{"address", address})
 		return MarshalJSON(map[string]string{"error": "address already in user list"})
 	}
 
 	// Add address to user's list
-	user.Addresses = append(user.Addresses, msg.Address)
+	user.Addresses = append(user.Addresses, address)
 	user.UpdatedAt = GetBlockTime()
 
 	// Save updated user
@@ -172,24 +188,24 @@ func AddAddress(msg *MsgAddAddress) []byte {
 
 	// Create address info
 	addrInfo := &AddressInfo{
-		Address:       msg.Address,
-		PublicKey:     msg.PublicKey,
-		ServiceDomain: msg.ServiceDomain,
-		Permissions:   msg.Permissions,
-		ExpiresAt:     msg.ExpiresAt,
+		Address:       address,
+		PublicKey:     publicKey,
+		ServiceDomain: serviceDomain,
+		Permissions:   permissions,
+		ExpiresAt:     expiresAt,
 		CreatedAt:     GetBlockTime(),
 	}
 
 	// Save address info
-	if err := SaveAddressInfo(msg.UserID, addrInfo); err != nil {
+	if err := SaveAddressInfo(userID, addrInfo); err != nil {
 		LoggerError("Failed to save address info", []string{"error", err.Error()})
 		return MarshalJSON(map[string]string{"error": "failed to save address info"})
 	}
 
 	// Save address to user ID mapping
-	SaveUserIDByAddress(msg.Address, msg.UserID)
+	SaveUserIDByAddress(address, userID)
 
-	LoggerInfo("Address added", []string{"user_id", msg.UserID, "address", msg.Address})
+	LoggerInfo("Address added", []string{"user_id", userID, "address", address})
 
 	return MarshalJSON(MsgAddAddressResponse{Success: true})
 }

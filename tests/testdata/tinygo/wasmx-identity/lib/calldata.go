@@ -37,6 +37,10 @@ func RouteCallData(data []byte) []byte {
 		return AddAddress(callData.AddAddress)
 	}
 
+	if callData.AddAddressInternal != nil {
+		return AddAddressInternal(callData.AddAddressInternal)
+	}
+
 	if callData.RemoveAddress != nil {
 		return RemoveAddress(callData.RemoveAddress)
 	}

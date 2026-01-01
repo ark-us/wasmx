@@ -2,9 +2,12 @@ package lib
 
 import (
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 
 	"cosmossdk.io/math"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // InitGenesis initializes the contract with genesis state
@@ -120,6 +123,26 @@ func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
 	SaveTokenMapping(msg.OAuthToken, publicKey)
 
 	fmt.Println("Ephemeral key generated", []string{"public_key", hex.EncodeToString(publicKey), "user_id", msg.UserID})
+
+	// Derive address from public key
+	address, err := DeriveAddressFromPublicKey(publicKey)
+	if err != nil {
+		LoggerError("Failed to derive address from public key", []string{"error", err.Error()})
+		return MarshalJSON(map[string]string{"error": "failed to derive address"})
+	}
+
+	fmt.Println("Ephemeral address derived", []string{"address", address})
+
+	// Register address with wasmx-identity
+	if err := registerAddressWithIdentity(msg.UserID, address, publicKey, msg.ServiceDomain, msg.ExpiresAt); err != nil {
+		LoggerError("Failed to register address with identity", []string{"error", err.Error()})
+		// Don't fail the whole operation, just log the error
+		// The ephemeral key is still usable, just not linked to identity
+	}
+
+	// Fund the ephemeral account
+	initAccountResp := InitAccount(&MsgInitAccount{Address: address})
+	fmt.Println("InitAccount response", []string{"response", string(initAccountResp)})
 
 	return MarshalJSON(MsgGenerateEphemeralKeyResponse{
 		PublicKey:  publicKey,
@@ -330,4 +353,81 @@ func QueryValidateAndGetKey(msg *MsgQueryValidateAndGetKey) []byte {
 		PrivateKey: privateKey,
 		Address:    address,
 	})
+}
+
+// registerAddressWithIdentity registers the ephemeral address with the wasmx-identity contract
+func registerAddressWithIdentity(userID, address string, publicKey []byte, serviceDomain string, expiresAt int64) error {
+	// Get wasmx-identity contract address
+	identityAddr := wasmx.GetAddressByRole(wasmx.ROLE_ACCOUNT_IDENTITY)
+	if identityAddr == "" {
+		return errors.New("identity contract not found")
+	}
+
+	fmt.Println("registerAddressWithIdentity", []string{"identity_addr", string(identityAddr), "user_id", userID, "address", address})
+
+	// First, check if user exists by querying identity
+	queryMsg := map[string]interface{}{
+		"query_user_by_id": map[string]string{
+			"user_id": userID,
+		},
+	}
+	queryBz, _ := json.Marshal(queryMsg)
+
+	ok, respData := wasmx.CallSimple(identityAddr, queryBz, true, MODULE_NAME)
+	fmt.Println("Query user by ID response", []string{"ok", fmt.Sprintf("%v", ok), "response", string(respData)})
+
+	// Check if user exists
+	var queryResp struct {
+		User  interface{} `json:"user"`
+		Error string      `json:"error"`
+	}
+	json.Unmarshal(respData, &queryResp)
+
+	if queryResp.Error != "" && queryResp.Error == "user not found" {
+		// User doesn't exist, create with RegisterUser
+		fmt.Println("User not found, registering new user", []string{"user_id", userID})
+		registerMsg := map[string]interface{}{
+			"register_user": map[string]interface{}{
+				"address":        address,
+				"public_key":     publicKey,
+				"service_domain": serviceDomain,
+				"expires_at":     expiresAt,
+			},
+		}
+		registerBz, _ := json.Marshal(registerMsg)
+
+		ok, respData = wasmx.CallSimple(identityAddr, registerBz, false, MODULE_NAME)
+		fmt.Println("RegisterUser response", []string{"ok", fmt.Sprintf("%v", ok), "response", string(respData)})
+
+		if !ok {
+			return errors.New("failed to register user: " + string(respData))
+		}
+
+		// Note: RegisterUser generates its own userID, but we're using the OAuth2 userID
+		// This means we need to track the mapping separately or modify identity contract
+		// For now, we'll proceed with the identity contract's generated userID
+		return nil
+	}
+
+	// User exists, add address using AddAddressInternal
+	fmt.Println("User exists, adding address internally", []string{"user_id", userID})
+	addMsg := map[string]interface{}{
+		"add_address_internal": map[string]interface{}{
+			"user_id":        userID,
+			"address":        address,
+			"public_key":     publicKey,
+			"service_domain": serviceDomain,
+			"expires_at":     expiresAt,
+		},
+	}
+	addBz, _ := json.Marshal(addMsg)
+
+	ok, respData = wasmx.CallSimple(identityAddr, addBz, false, MODULE_NAME)
+	fmt.Println("AddAddressInternal response", []string{"ok", fmt.Sprintf("%v", ok), "response", string(respData)})
+
+	if !ok {
+		return errors.New("failed to add address: " + string(respData))
+	}
+
+	return nil
 }

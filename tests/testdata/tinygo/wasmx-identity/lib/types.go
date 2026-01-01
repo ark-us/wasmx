@@ -70,6 +70,21 @@ type MsgAddAddressResponse struct {
 	Success bool `json:"success"`
 }
 
+// MsgAddAddressInternal adds a new address to an existing user (internal call from trusted contracts)
+type MsgAddAddressInternal struct {
+	UserID        string       `json:"user_id"`
+	Address       string       `json:"address"`
+	PublicKey     []byte       `json:"public_key"`
+	ServiceDomain string       `json:"service_domain,omitempty"`
+	Permissions   []Permission `json:"permissions,omitempty"`
+	ExpiresAt     int64        `json:"expires_at,omitempty"`
+}
+
+type MsgAddAddressInternalResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+}
+
 // MsgRemoveAddress removes an address from a user
 type MsgRemoveAddress struct {
 	UserID  string `json:"user_id"`
@@ -146,11 +161,12 @@ type QueryValidatePermissionResponse struct {
 
 // CallData structure for routing
 type CallData struct {
-	RegisterUser      *MsgRegisterUser      `json:"register_user,omitempty"`
-	AddAddress        *MsgAddAddress        `json:"add_address,omitempty"`
-	RemoveAddress     *MsgRemoveAddress     `json:"remove_address,omitempty"`
-	UpdatePermissions *MsgUpdatePermissions `json:"update_permissions,omitempty"`
-	SetPrimaryAddress *MsgSetPrimaryAddress `json:"set_primary_address,omitempty"`
+	RegisterUser        *MsgRegisterUser        `json:"register_user,omitempty"`
+	AddAddress          *MsgAddAddress          `json:"add_address,omitempty"`
+	AddAddressInternal  *MsgAddAddressInternal  `json:"add_address_internal,omitempty"`
+	RemoveAddress       *MsgRemoveAddress       `json:"remove_address,omitempty"`
+	UpdatePermissions   *MsgUpdatePermissions   `json:"update_permissions,omitempty"`
+	SetPrimaryAddress   *MsgSetPrimaryAddress   `json:"set_primary_address,omitempty"`
 
 	QueryUserByID           *MsgQueryUserByID           `json:"query_user_by_id,omitempty"`
 	QueryUserByAddress      *MsgQueryUserByAddress      `json:"query_user_by_address,omitempty"`
