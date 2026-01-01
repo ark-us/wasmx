@@ -135,7 +135,7 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 			txData := adaptableTx.GetSigningTxData()
 
 			// DEBUG: Print transaction bytes for debugging signature verification
-			fmt.Printf("--DEBUG.TxData.BodyBytes-- %s\n", hex.EncodeToString(txData.BodyBytes))
+			fmt.Printf("--DEBUG.TxData.BodyBytes-- %d\n", len(txData.BodyBytes))
 			fmt.Printf("--DEBUG.TxData.AuthInfoBytes-- %s\n", hex.EncodeToString(txData.AuthInfoBytes))
 			fmt.Printf("--DEBUG.SignerData-- chainId=%s accNum=%d seq=%d\n", chainID, accNum, acc.GetSequence())
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"cosmossdk.io/math"
+	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -430,4 +431,104 @@ func registerAddressWithIdentity(userID, address string, publicKey []byte, servi
 	}
 
 	return nil
+}
+
+// SignAndBroadcastTx signs and broadcasts a transaction using the ephemeral key
+// This allows the oauth2-keys contract to handle all transaction signing,
+// ensuring consistent address derivation with the funded ephemeral address
+func SignAndBroadcastTx(msg *MsgSignAndBroadcastTx) []byte {
+	fmt.Println("SignAndBroadcastTx called", []string{
+		"target_contract", msg.TargetContract,
+		"gas_limit", fmt.Sprintf("%d", msg.GasLimit),
+	})
+
+	// Validate OAuth token and get the ephemeral key
+	validateResp := QueryValidateAndGetKey(&MsgQueryValidateAndGetKey{
+		OAuthToken: msg.OAuthToken,
+	})
+
+	var keyResp QueryValidateAndGetKeyResponse
+	if err := json.Unmarshal(validateResp, &keyResp); err != nil {
+		LoggerError("SignAndBroadcastTx: failed to parse validation response", []string{"error", err.Error()})
+		return MarshalJSON(MsgSignAndBroadcastTxResponse{
+			Success: false,
+			Error:   "failed to validate OAuth token",
+		})
+	}
+
+	if !keyResp.Valid {
+		LoggerError("SignAndBroadcastTx: invalid OAuth token", []string{"reason", keyResp.Reason})
+		return MarshalJSON(MsgSignAndBroadcastTxResponse{
+			Success: false,
+			Error:   "invalid OAuth token: " + keyResp.Reason,
+		})
+	}
+
+	fmt.Println("SignAndBroadcastTx: key validated", []string{
+		"address", keyResp.Address,
+		"public_key", hex.EncodeToString(keyResp.PublicKey),
+	})
+
+	// Load gas price from storage (if msg doesn't provide one)
+	gasPrice := msg.GasPrice
+	if gasPrice.Amount.IsNil() || gasPrice.Amount.IsZero() {
+		storedGasPrice := LoadGasPrice()
+		if storedGasPrice != nil {
+			gasPrice = *storedGasPrice
+		}
+	}
+
+	// Prepare the transaction using PrepareTx
+	// This will derive the from address from the private key on the host side
+	txBytes, err := wasmxcore.PrepareTx(
+		msg.TargetContract,
+		msg.Calldata,
+		nil, // no coins to send with the call
+		nil, // no events
+		msg.GasLimit,
+		gasPrice,
+		keyResp.PrivateKey,
+	)
+	if err != nil {
+		LoggerError("SignAndBroadcastTx: failed to prepare transaction", []string{"error", err.Error()})
+		return MarshalJSON(MsgSignAndBroadcastTxResponse{
+			Success: false,
+			Error:   "failed to prepare transaction: " + err.Error(),
+		})
+	}
+
+	fmt.Println("SignAndBroadcastTx: transaction prepared", []string{"tx_bytes_len", fmt.Sprintf("%d", len(txBytes))})
+
+	// Broadcast the transaction
+	broadcastResp, err := wasmxcore.BroadcastTxAsync(txBytes)
+	fmt.Println("SignAndBroadcastTx: tx broadcasted", err, broadcastResp)
+	if err != nil {
+		LoggerError("SignAndBroadcastTx: failed to broadcast transaction", []string{"error", err.Error()})
+		return MarshalJSON(MsgSignAndBroadcastTxResponse{
+			Success: false,
+			Error:   "failed to broadcast transaction: " + err.Error(),
+		})
+	}
+
+	if broadcastResp.Error != "" {
+		LoggerError("SignAndBroadcastTx: transaction broadcast error", []string{"error", broadcastResp.Error})
+		return MarshalJSON(MsgSignAndBroadcastTxResponse{
+			Success: false,
+			Error:   "transaction broadcast error: " + broadcastResp.Error,
+		})
+	}
+
+	// Get transaction hash
+	txHash := broadcastResp.TxHash
+
+	fmt.Println("SignAndBroadcastTx: transaction broadcasted", []string{
+		"tx_hash", hex.EncodeToString(txHash),
+		"address", keyResp.Address,
+	})
+
+	return MarshalJSON(MsgSignAndBroadcastTxResponse{
+		Success: true,
+		TxHash:  txHash,
+		Address: keyResp.Address,
+	})
 }

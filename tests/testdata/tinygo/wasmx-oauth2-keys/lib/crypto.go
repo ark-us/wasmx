@@ -12,6 +12,7 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	"golang.org/x/crypto/hkdf"
+	"golang.org/x/crypto/ripemd160"
 )
 
 // GenerateRandomSecret generates a random secret for key encryption
@@ -117,19 +118,22 @@ func DecryptPrivateKey(encrypted []byte, encryptionKey []byte) ([]byte, error) {
 }
 
 // DeriveAddressFromPublicKey derives a bech32 address from a secp256k1 public key
+// Uses RIPEMD-160(SHA256(pubkey)) which is the Cosmos SDK standard
 func DeriveAddressFromPublicKey(pubKeyBytes []byte) (string, error) {
 	// Verify public key is valid secp256k1 format (33 bytes compressed)
 	if len(pubKeyBytes) != 33 {
 		return "", errors.New("invalid public key length, expected 33 bytes")
 	}
 
-	// Hash the public key with SHA256
-	hash := sha256.Sum256(pubKeyBytes)
+	// Hash the public key with SHA256 first
+	sha256Hash := sha256.Sum256(pubKeyBytes)
 
-	// Take first 20 bytes as the address bytes
-	addrBytes := hash[:20]
+	// Then hash with RIPEMD-160 (Cosmos SDK standard)
+	ripemd160Hasher := ripemd160.New()
+	ripemd160Hasher.Write(sha256Hash[:])
+	addrBytes := ripemd160Hasher.Sum(nil)
 
-	// Use wasmx-env SDK to convert to bech32 with "wasmx" prefix
+	// Use wasmx-env SDK to convert to bech32 with correct prefix
 	bech32Addr := wasmx.AddrHumanize(addrBytes)
 
 	return bech32Addr, nil

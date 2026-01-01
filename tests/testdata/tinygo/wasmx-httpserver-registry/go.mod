@@ -6,7 +6,6 @@ toolchain go1.24.4
 
 require (
 	github.com/loredanacirstea/wasmx-env v0.0.0
-	github.com/loredanacirstea/wasmx-env-core v0.0.0
 	github.com/loredanacirstea/wasmx-env-httpserver v0.0.0
 )
 

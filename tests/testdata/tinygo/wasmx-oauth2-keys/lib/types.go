@@ -91,7 +91,23 @@ type MsgInitAccount struct {
 
 type MsgInitAccountResponse struct {
 	Success bool   `json:"success"`
-	TxHash  string `json:"tx_hash"`
+	TxHash  []byte `json:"tx_hash"`
+	Error   string `json:"error,omitempty"`
+}
+
+// MsgSignAndBroadcastTx signs and broadcasts a transaction using the ephemeral key
+type MsgSignAndBroadcastTx struct {
+	OAuthToken     string     `json:"oauth_token"`
+	TargetContract string     `json:"target_contract"` // Bech32 address of the contract to call
+	Calldata       []byte     `json:"calldata"`        // The calldata to send to the target contract
+	GasLimit       uint64     `json:"gas_limit"`
+	GasPrice       wasmx.Coin `json:"gas_price"`
+}
+
+type MsgSignAndBroadcastTxResponse struct {
+	Success bool   `json:"success"`
+	TxHash  []byte `json:"tx_hash"`
+	Address string `json:"address"` // The ephemeral address that signed the transaction
 	Error   string `json:"error,omitempty"`
 }
 
@@ -141,6 +157,7 @@ type CallData struct {
 	RevokeKey            *MsgRevokeKey            `json:"revoke_key,omitempty"`
 	DeleteExpiredKeys    *MsgDeleteExpiredKeys    `json:"delete_expired_keys,omitempty"`
 	InitAccount          *MsgInitAccount          `json:"init_account,omitempty"`
+	SignAndBroadcastTx   *MsgSignAndBroadcastTx   `json:"sign_and_broadcast_tx,omitempty"`
 
 	QueryGetPublicKey      *MsgQueryGetPublicKey      `json:"query_get_public_key,omitempty"`
 	QueryGetKeyInfo        *MsgQueryGetKeyInfo        `json:"query_get_key_info,omitempty"`

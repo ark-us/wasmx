@@ -47,6 +47,10 @@ func RouteCallData(data []byte) []byte {
 		return InitAccount(callData.InitAccount)
 	}
 
+	if callData.SignAndBroadcastTx != nil {
+		return SignAndBroadcastTx(callData.SignAndBroadcastTx)
+	}
+
 	// Handle queries
 	if callData.QueryGetPublicKey != nil {
 		return QueryGetPublicKey(callData.QueryGetPublicKey)

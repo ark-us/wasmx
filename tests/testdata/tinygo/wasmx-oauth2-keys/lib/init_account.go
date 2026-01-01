@@ -94,12 +94,9 @@ func InitAccount(msg *MsgInitAccount) []byte {
 	}
 
 	// Get transaction hash
-	txHash := ""
-	if broadcastResp.Response != nil {
-		txHash = broadcastResp.Response.Hash.String()
-	}
+	txHash := broadcastResp.TxHash
 
-	fmt.Println("InitAccount: transaction broadcasted", []string{"tx_hash", txHash, "to_address", msg.Address})
+	fmt.Println("InitAccount: transaction broadcasted", []string{"tx_hash", hex.EncodeToString(txHash), "to_address", msg.Address})
 
 	return MarshalJSON(MsgInitAccountResponse{
 		Success: true,

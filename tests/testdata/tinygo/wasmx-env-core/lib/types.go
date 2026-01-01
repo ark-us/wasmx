@@ -150,8 +150,8 @@ type ResultBroadcastTx struct {
 }
 
 type BroadcastTxAsyncResponse struct {
-	Error    string             `json:"error"`
-	Response *ResultBroadcastTx `json:"response"`
+	Error  string `json:"error"`
+	TxHash []byte `json:"txhash"`
 }
 
 type PrepareTxRequest struct {

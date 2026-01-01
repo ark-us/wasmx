@@ -19,6 +19,7 @@ import (
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
 	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
+	networkgrpc "github.com/loredanacirstea/wasmx/x/network/keeper"
 )
 
 // OAuth2 response types
@@ -554,6 +555,18 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 
+	// Setup RPC client for transaction broadcasting (mimics production)
+	rpcClient := networkgrpc.NewABCIClient(
+		appA.App,
+		appA.App.GetBaseApp(),
+		appA.Context().Logger(),
+		appA.App.GetNetworkKeeper(),
+		appA.App.GetTendermintConfig(),
+		appA.App.GetServerConfig(),
+		appA.App.GetActionExecutor().(*networkgrpc.ActionExecutor),
+	)
+	appA.App.SetRpcClient(rpcClient)
+
 	// ========================================
 	// PART 1: Setup OAuth2 Server
 	// ========================================
@@ -908,184 +921,107 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	suite.Require().True(foundGetColor, "get_favorite_color tool should be registered")
 
 	// ========================================
-	// PART 7: Test Direct Tool Calls (GET and SET)
+	// PART 7: HTTP POST with Transaction Signing
 	// ========================================
-	suite.T().Log("--- Part 7: Direct Tool Calls ---")
+	suite.T().Log("--- Part 7: HTTP POST with Transaction Signing ---")
 
-	// Use the mcp-userdata contract address (userAddress) that was instantiated earlier
-	// The mcp-userdata contract validates tokens internally and gets the user_id from oauth2-server
-	// We already have the user_id from login: loginResp.UserID
-	suite.T().Logf("Testing with User ID: %s", loginResp.UserID)
+	// This tests the full flow:
+	// 1. HTTP POST → httpserver-registry
+	// 2. httpserver-registry → oauth2-keys.SignAndBroadcastTx
+	// 3. oauth2-keys → PrepareTx (derives address from private key)
+	// 4. oauth2-keys → BroadcastTxAsync (broadcasts transaction)
+	// 5. ABCIClient processes transaction
 
-	// Test 1: GET favorite color (should be empty initially)
-	suite.T().Log("Test 1: GET favorite color (should be empty initially)")
-
-	getColorRPC := MCPJSONRPCRequest{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "tools/call",
-		Params: map[string]interface{}{
-			"name":      "get_favorite_color",
-			"arguments": map[string]interface{}{},
-		},
+	setColorPayload := map[string]interface{}{
+		"color": "red",
 	}
-	getColorRPCBz, _ := json.Marshal(getColorRPC)
+	setColorBody, _ := json.Marshal(setColorPayload)
 
-	// Build HTTP request to call the mcp-userdata contract
-	getColorHttpReq := map[string]interface{}{
-		"HttpRequestHandler": map[string]interface{}{
-			"method":         "POST",
-			"url":            "/tools/userdata",
-			"header":        map[string][]string{"Authorization": {"Bearer " + accessToken}, "Content-Type": {"application/json"}},
-			"content_length": len(getColorRPCBz),
-			"data":           getColorRPCBz,
-			"remote_address": "127.0.0.1:12345",
-			"request_uri":    "/tools/userdata",
-		},
-	}
-	getColorHttpReqBz, _ := json.Marshal(getColorHttpReq)
+	req, err := http.NewRequest(
+		"POST",
+		testServerAddr+"/tools/userdata/set_favorite_color",
+		bytes.NewBuffer(setColorBody),
+	)
+	suite.Require().NoError(err)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
 
-	getColorResult := appA.ExecuteContract(sender, userAddress, types.WasmxExecutionMessage{Data: getColorHttpReqBz}, nil, nil)
+	resp, err = client.Do(req)
+	suite.Require().NoError(err)
+	defer resp.Body.Close()
 
-	// Decode the execute response to get the HTTP response wrapper
-	var httpRespWrapper1 struct {
-		Error string `json:"error"`
-		Data  struct {
-			StatusCode int    `json:"status_code"`
-			Data       []byte `json:"data"`
-		} `json:"data"`
-	}
-	err = appA.DecodeExecuteResponse(getColorResult, &httpRespWrapper1)
-	suite.Require().NoError(err, "Should decode execute response")
-	suite.T().Logf("GET favorite_color response: statusCode=%d", httpRespWrapper1.Data.StatusCode)
-	suite.Require().Equal(200, httpRespWrapper1.Data.StatusCode, "HTTP status should be 200")
+	body, _ = io.ReadAll(resp.Body)
+	suite.T().Logf("HTTP POST response: status=%d body=%s", resp.StatusCode, string(body))
 
-	// Parse JSON-RPC response
-	var rpcResp1 MCPJSONRPCResponse
-	err = json.Unmarshal(httpRespWrapper1.Data.Data, &rpcResp1)
-	suite.Require().NoError(err, "Should parse JSON-RPC response")
-	suite.Require().Nil(rpcResp1.Error, "Should not have RPC error")
+	// Should succeed if transaction signing works
+	suite.Require().Equal(http.StatusOK, resp.StatusCode, "HTTP POST should succeed with transaction signing")
 
-	// Check the result content
-	result1, ok := rpcResp1.Result.(map[string]interface{})
-	suite.Require().True(ok, "Result should be a map")
-	content1, ok := result1["content"].([]interface{})
-	suite.Require().True(ok, "Content should be an array")
-	suite.Require().Greater(len(content1), 0, "Content should have items")
+	var httpPostResp map[string]interface{}
+	err = json.Unmarshal(body, &httpPostResp)
+	suite.Require().NoError(err)
+	suite.Require().NotEmpty(httpPostResp["tx_hash"], "Should return transaction hash")
+	suite.Require().NotEmpty(httpPostResp["address"], "Should return signing address")
 
-	contentItem1, ok := content1[0].(map[string]interface{})
-	suite.Require().True(ok, "Content item should be a map")
-	text1 := contentItem1["text"].(string)
-	suite.T().Logf("GET result: %s", text1)
-	suite.Require().Contains(text1, "No favorite color set", "Should indicate no color set initially")
+	txHash, _ := httpPostResp["tx_hash"].([]byte)
+	signingAddr, _ := httpPostResp["address"].(string)
 
-	// Test 2: SET favorite color to "blue"
-	suite.T().Log("Test 2: SET favorite color to 'blue'")
+	suite.T().Logf("Transaction signed successfully:")
+	suite.T().Logf("- TX Hash: %x", txHash)
+	suite.T().Logf("- Signing Address: %s", signingAddr)
 
-	setColorRPC := MCPJSONRPCRequest{
-		JSONRPC: "2.0",
-		ID:      2,
-		Method:  "tools/call",
-		Params: map[string]interface{}{
-			"name": "set_favorite_color",
-			"arguments": map[string]interface{}{
-				"color": "blue",
-			},
-		},
-	}
-	setColorRPCBz, _ := json.Marshal(setColorRPC)
+	// Verify the address matches what was funded
+	suite.Require().Equal(keyResponse.Address, signingAddr, "Signing address should match funded ephemeral address")
 
-	setColorHttpReq := map[string]interface{}{
-		"HttpRequestHandler": map[string]interface{}{
-			"method":         "POST",
-			"url":            "/tools/userdata",
-			"header":        map[string][]string{"Authorization": {"Bearer " + accessToken}, "Content-Type": {"application/json"}},
-			"content_length": len(setColorRPCBz),
-			"data":           setColorRPCBz,
-			"remote_address": "127.0.0.1:12345",
-			"request_uri":    "/tools/userdata",
-		},
-	}
-	setColorHttpReqBz, _ := json.Marshal(setColorHttpReq)
+	suite.T().Log("HTTP POST with transaction signing tests passed!")
 
-	setColorResult := appA.ExecuteContract(sender, userAddress, types.WasmxExecutionMessage{Data: setColorHttpReqBz}, nil, nil)
+	// ========================================
+	// PART 8: HTTP POST for Read Operation (with Bearer Token)
+	// ========================================
+	suite.T().Log("--- Part 8: HTTP POST for Read Operation (with Bearer Token) ---")
 
-	var httpRespWrapper2 struct {
-		Error string `json:"error"`
-		Data  struct {
-			StatusCode int    `json:"status_code"`
-			Data       []byte `json:"data"`
-		} `json:"data"`
-	}
-	err = appA.DecodeExecuteResponse(setColorResult, &httpRespWrapper2)
-	suite.Require().NoError(err, "Should decode execute response")
-	suite.T().Logf("SET favorite_color response: statusCode=%d", httpRespWrapper2.Data.StatusCode)
-	suite.Require().Equal(200, httpRespWrapper2.Data.StatusCode, "HTTP status should be 200")
+	time.Sleep(time.Second * 5)
 
-	var rpcResp2 MCPJSONRPCResponse
-	err = json.Unmarshal(httpRespWrapper2.Data.Data, &rpcResp2)
-	suite.Require().NoError(err, "Should parse JSON-RPC response")
-	suite.Require().Nil(rpcResp2.Error, "Should not have RPC error")
+	// This tests the full flow for read operations (no transaction):
+	// 1. HTTP POST → httpserver-registry
+	// 2. httpserver-registry → validates Bearer token via oauth2-keys
+	// 3. httpserver-registry → forwards to mcp-userdata contract (use_transaction=false)
+	// 4. mcp-userdata → returns user's favorite color
+	// Note: OpenAI MCP tool format uses POST even for reads; use_transaction flag controls TX signing
 
-	result2, ok := rpcResp2.Result.(map[string]interface{})
-	suite.Require().True(ok, "Result should be a map")
-	content2, ok := result2["content"].([]interface{})
-	suite.Require().True(ok, "Content should be an array")
+	getColorPayload := map[string]interface{}{}
+	getColorBody, _ := json.Marshal(getColorPayload)
 
-	contentItem2, ok := content2[0].(map[string]interface{})
-	suite.Require().True(ok, "Content item should be a map")
-	text2 := contentItem2["text"].(string)
-	suite.T().Logf("SET result: %s", text2)
-	suite.Require().Contains(text2, "Successfully set favorite color to blue", "Should confirm color was set")
+	getReq, err := http.NewRequest(
+		"POST",
+		testServerAddr+"/tools/userdata/get_favorite_color",
+		bytes.NewBuffer(getColorBody),
+	)
+	suite.Require().NoError(err)
+	getReq.Header.Set("Authorization", "Bearer "+accessToken)
+	getReq.Header.Set("Content-Type", "application/json")
 
-	// Test 3: GET favorite color again (should now return "blue")
-	suite.T().Log("Test 3: GET favorite color again (should return 'blue')")
+	getResp, err := client.Do(getReq)
+	suite.Require().NoError(err)
+	defer getResp.Body.Close()
 
-	getColorResult2 := appA.ExecuteContract(sender, userAddress, types.WasmxExecutionMessage{Data: getColorHttpReqBz}, nil, nil)
+	getBody, _ := io.ReadAll(getResp.Body)
+	suite.T().Logf("HTTP POST (read) response: status=%d body=%s", getResp.StatusCode, string(getBody))
 
-	var httpRespWrapper3 struct {
-		Error string `json:"error"`
-		Data  struct {
-			StatusCode int    `json:"status_code"`
-			Data       []byte `json:"data"`
-		} `json:"data"`
-	}
-	err = appA.DecodeExecuteResponse(getColorResult2, &httpRespWrapper3)
-	suite.Require().NoError(err, "Should decode execute response")
-	suite.T().Logf("GET favorite_color response (after SET): statusCode=%d", httpRespWrapper3.Data.StatusCode)
-	suite.Require().Equal(200, httpRespWrapper3.Data.StatusCode, "HTTP status should be 200")
+	// Should succeed and return the color we set
+	suite.Require().Equal(http.StatusOK, getResp.StatusCode, "HTTP POST (read) should succeed")
 
-	var rpcResp3 MCPJSONRPCResponse
-	err = json.Unmarshal(httpRespWrapper3.Data.Data, &rpcResp3)
-	suite.Require().NoError(err, "Should parse JSON-RPC response")
-	suite.Require().Nil(rpcResp3.Error, "Should not have RPC error")
+	var getColorResp map[string]interface{}
+	err = json.Unmarshal(getBody, &getColorResp)
+	suite.Require().NoError(err)
 
-	result3, ok := rpcResp3.Result.(map[string]interface{})
-	suite.Require().True(ok, "Result should be a map")
-	content3, ok := result3["content"].([]interface{})
-	suite.Require().True(ok, "Content should be an array")
+	// Verify we got the color back
+	color, ok := getColorResp["color"].(string)
+	suite.Require().True(ok, "Response should contain color field")
+	suite.Require().Equal("red", color, "Should return the color we set")
 
-	contentItem3, ok := content3[0].(map[string]interface{})
-	suite.Require().True(ok, "Content item should be a map")
-	text3 := contentItem3["text"].(string)
-	suite.T().Logf("GET result (after SET): %s", text3)
-	suite.Require().Contains(text3, "blue", "Should return the color that was set")
+	suite.T().Logf("Color retrieved successfully: %s", color)
+	suite.T().Log("HTTP POST (read operation) with Bearer token tests passed!")
 
-	suite.T().Log("=== All MCP OAuth2 Flow Tests Passed! ===")
-	suite.T().Log("")
-	suite.T().Log("Summary:")
-	suite.T().Log("✓ User registration via HTTP")
-	suite.T().Log("✓ User login with session")
-	suite.T().Log("✓ OAuth2 authorization code flow with PKCE")
-	suite.T().Log("✓ Token exchange with ephemeral key generation")
-	suite.T().Log("✓ Token validation returns public key and address")
-	suite.T().Log("✓ MCP tools registered with MCP registry")
-	suite.T().Log("✓ /sse route configured for transaction signing")
-	suite.T().Log("✓ GET favorite_color returns 'no color set' initially")
-	suite.T().Log("✓ SET favorite_color stores per-user data")
-	suite.T().Log("✓ GET favorite_color returns stored value")
-	suite.T().Log("")
-	suite.T().Log("Note: Full HTTP transaction signing flow requires RPC server (not available in test env)")
 }
 
 // MCPJSONRPCRequest represents a JSON-RPC request for MCP
@@ -1098,9 +1034,9 @@ type MCPJSONRPCRequest struct {
 
 // MCPJSONRPCResponse represents a JSON-RPC response from MCP
 type MCPJSONRPCResponse struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      interface{} `json:"id"`
-	Result  interface{} `json:"result,omitempty"`
+	JSONRPC string       `json:"jsonrpc"`
+	ID      interface{}  `json:"id"`
+	Result  interface{}  `json:"result,omitempty"`
 	Error   *MCPRPCError `json:"error,omitempty"`
 }
 

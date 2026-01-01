@@ -11,7 +11,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
-	rpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -527,8 +527,8 @@ type UpdateSystemCacheResponse struct {
 }
 
 type BroadcastTxAsyncResponse struct {
-	Error    string                      `json:"error"`
-	Response *rpctypes.ResultBroadcastTx `json:"response"`
+	Error  string `json:"error"`
+	TxHash []byte `json:"txhash"`
 }
 
 func coreWasmxStorageStoreGlobal(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
@@ -691,18 +691,13 @@ func coreBroadcastTxAsync(_context interface{}, rnh memc.RuntimeHandler, params 
 	if rpcClient == nil {
 		return nil, fmt.Errorf("rpcClient nil in coreBroadcastTxAsync")
 	}
+	resp.TxHash = tmhash.Sum(txbz)
 	// we use goroutines because the ActionExecutor now is not paralelizable and we will end up waiting for this tx to be broadcasted, which will happen only after the current transaction is finished
 	ctx.GoRoutineGroup.Go(func() error {
 		res, err := rpcClient.BroadcastTxAsync(ctx.GoContextParent, txbz)
 		fmt.Println("--coreBroadcastTxAsync.BroadcastTxAsync--", err, res)
 		return err
 	})
-	// if err != nil {
-	// 	resp.Error = err.Error()
-	// }
-	// if res != nil {
-	// 	resp.Response = res
-	// }
 	responsebz, err := json.Marshal(&resp)
 	if err != nil {
 		return nil, err

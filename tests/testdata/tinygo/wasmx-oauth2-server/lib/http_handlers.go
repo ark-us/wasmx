@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -195,7 +196,7 @@ func handleRegisterInit(req wasmxhttp.HttpRequestIncoming) []byte {
 	// Parse response
 	var response struct {
 		Success bool   `json:"success"`
-		TxHash  string `json:"tx_hash"`
+		TxHash  []byte `json:"tx_hash"`
 		Error   string `json:"error"`
 	}
 	if err := json.Unmarshal(data, &response); err != nil {
@@ -228,7 +229,7 @@ func handleRegisterInit(req wasmxhttp.HttpRequestIncoming) []byte {
 	fmt.Println("Account initialized successfully:", reqData.Address, "TxHash:", response.TxHash)
 	respBody, _ := json.Marshal(map[string]interface{}{
 		"success": true,
-		"tx_hash": response.TxHash,
+		"tx_hash": hex.EncodeToString(response.TxHash),
 		"address": reqData.Address,
 	})
 	return marshalHTTP(wasmxhttp.HttpResponseWrap{
@@ -549,29 +550,13 @@ func handleRegisterTx(req wasmxhttp.HttpRequestIncoming) []byte {
 		})
 	}
 
-	if broadcastResp.Response != nil && broadcastResp.Response.Code != 0 {
-		fmt.Println("ERROR: Transaction execution failed:", broadcastResp.Response.Log)
-		return marshalHTTP(wasmxhttp.HttpResponseWrap{
-			Error: "",
-			Data: wasmxhttp.HttpResponse{
-				Status:     "500 Internal Server Error",
-				StatusCode: 500,
-				Header:     http.Header{"Content-Type": []string{"application/json"}},
-				Data:       []byte(`{"error":"transaction execution failed: ` + broadcastResp.Response.Log + `"}`),
-			},
-		})
-	}
-
-	var txHash string
-	if broadcastResp.Response != nil {
-		txHash = broadcastResp.Response.Hash.String()
-		fmt.Println("SUCCESS: Transaction broadcasted successfully, TxHash:", txHash)
-	}
+	txHash := broadcastResp.TxHash
+	fmt.Println("SUCCESS: Transaction broadcasted successfully, TxHash:", hex.EncodeToString(txHash))
 
 	// Return success response
 	respBody, _ := json.Marshal(map[string]interface{}{
 		"success": true,
-		"tx_hash": txHash,
+		"tx_hash": hex.EncodeToString(txHash),
 		"address": reqData.Address,
 	})
 

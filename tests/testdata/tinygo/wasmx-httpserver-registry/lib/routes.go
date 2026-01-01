@@ -1,13 +1,13 @@
 package lib
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
 	"strings"
 
-	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	wasmxhttp "github.com/loredanacirstea/wasmx-env-httpserver/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
@@ -278,7 +278,7 @@ func pickBestRoute(routes []RouteRecord, url string) *RouteRecord {
 	return nil
 }
 
-// handleMutatingRequest handles POST/PUT/DELETE requests by creating and broadcasting a signed transaction
+// handleMutatingRequest handles POST/PUT/DELETE requests by delegating transaction signing to oauth2-keys contract
 func handleMutatingRequest(req HttpRequestIncoming, targetContract string) {
 	// Extract OAuth token from Authorization header
 	authHeader := req.Header.Get("Authorization")
@@ -305,44 +305,6 @@ func handleMutatingRequest(req HttpRequestIncoming, targetContract string) {
 		return
 	}
 
-	// Call OAuth2 keys contract to validate token and get ephemeral key
-	validateQuery := map[string]interface{}{
-		"query_validate_and_get_key": map[string]string{
-			"oauth_token": oauthToken,
-		},
-	}
-	validateQueryBz, _ := json.Marshal(validateQuery)
-	fmt.Println("--wasmx.httpserver.handleMutatingRequest--", string(validateQueryBz))
-
-	ok, validateResp := wasmx.CallSimple(oauth2KeysAddr, validateQueryBz, true, MODULE_NAME)
-	fmt.Println("--wasmx.httpserver.handleMutatingRequest.resp--", ok, string(validateResp))
-	if !ok {
-		LoggerError("Failed to validate OAuth token", []string{"error", string(validateResp)})
-		respondWithError("failed to validate OAuth token", 401)
-		return
-	}
-
-	var keyResponse struct {
-		Valid      bool   `json:"valid"`
-		PublicKey  string `json:"public_key"`
-		PrivateKey []byte `json:"private_key"`
-		Address    string `json:"address"`
-		Reason     string `json:"reason"`
-	}
-	if err := json.Unmarshal(validateResp, &keyResponse); err != nil {
-		LoggerError("Failed to parse key response", []string{"error", err.Error()})
-		respondWithError("failed to parse key response", 500)
-		return
-	}
-
-	if !keyResponse.Valid {
-		LoggerError("OAuth token invalid", []string{"reason", keyResponse.Reason})
-		respondWithError("OAuth token invalid: "+keyResponse.Reason, 401)
-		return
-	}
-
-	LoggerInfo("OAuth token validated", []string{"address", keyResponse.Address})
-
 	// Build transaction calldata for target contract
 	call := map[string]interface{}{
 		"HttpRequestHandler": req,
@@ -355,46 +317,52 @@ func handleMutatingRequest(req HttpRequestIncoming, targetContract string) {
 		gasPrice = &wasmx.Coin{}
 	}
 
-	// Prepare and sign transaction using PrepareTx
-	gasLimit := uint64(30000000) // Default gas limit
-	txBytes, err := wasmxcore.PrepareTx(
-		targetContract,
-		calld,
-		nil,
-		nil,
-		gasLimit,
-		*gasPrice,
-		keyResponse.PrivateKey,
-	)
-	if err != nil {
-		LoggerError("Failed to prepare transaction", []string{"error", err.Error()})
-		respondWithError("failed to prepare transaction: "+err.Error(), 500)
+	// Delegate signing and broadcasting to oauth2-keys contract
+	// This ensures consistent address derivation with the funded ephemeral address
+	signAndBroadcastReq := map[string]interface{}{
+		"sign_and_broadcast_tx": map[string]interface{}{
+			"oauth_token":     oauthToken,
+			"target_contract": targetContract,
+			"calldata":        calld,
+			"gas_limit":       uint64(30000000),
+			"gas_price":       gasPrice,
+		},
+	}
+	signAndBroadcastBz, _ := json.Marshal(signAndBroadcastReq)
+	fmt.Println("--wasmx.httpserver.handleMutatingRequest--", string(signAndBroadcastBz))
+
+	ok, signResp := wasmx.CallSimple(oauth2KeysAddr, signAndBroadcastBz, false, MODULE_NAME)
+	fmt.Println("--wasmx.httpserver.handleMutatingRequest.resp--", ok, string(signResp))
+	if !ok {
+		LoggerError("Failed to sign and broadcast transaction", []string{"error", string(signResp)})
+		respondWithError("failed to sign and broadcast transaction: "+string(signResp), 500)
 		return
 	}
 
-	LoggerInfo("Transaction prepared", []string{"tx_bytes_len", fmt.Sprintf("%d", len(txBytes))})
-
-	// Broadcast transaction
-	broadcastResp, err := wasmxcore.BroadcastTxAsync(txBytes)
-	if err != nil {
-		LoggerError("Failed to broadcast transaction", []string{"error", err.Error()})
-		respondWithError("failed to broadcast transaction: "+err.Error(), 500)
+	var signResponse struct {
+		Success bool   `json:"success"`
+		TxHash  []byte `json:"tx_hash"`
+		Address string `json:"address"`
+		Error   string `json:"error"`
+	}
+	if err := json.Unmarshal(signResp, &signResponse); err != nil {
+		LoggerError("Failed to parse sign response", []string{"error", err.Error()})
+		respondWithError("failed to parse sign response", 500)
 		return
 	}
 
-	if broadcastResp.Error != "" {
-		LoggerError("Transaction broadcast error", []string{"error", broadcastResp.Error})
-		respondWithError("transaction broadcast error: "+broadcastResp.Error, 500)
+	if !signResponse.Success {
+		LoggerError("Sign and broadcast failed", []string{"error", signResponse.Error})
+		// Check if it's an auth error
+		if strings.Contains(signResponse.Error, "invalid OAuth token") {
+			respondWithError(signResponse.Error, 401)
+		} else {
+			respondWithError(signResponse.Error, 500)
+		}
 		return
 	}
 
-	// Return transaction hash
-	txHash := ""
-	if broadcastResp.Response != nil {
-		txHash = broadcastResp.Response.Hash.String()
-	}
-
-	LoggerInfo("Transaction broadcasted", []string{"tx_hash", txHash})
+	LoggerInfo("Transaction broadcasted", []string{"tx_hash", hex.EncodeToString(signResponse.TxHash), "address", signResponse.Address})
 
 	response := wasmxhttp.HttpResponseWrap{
 		Error: "",
@@ -402,7 +370,7 @@ func handleMutatingRequest(req HttpRequestIncoming, targetContract string) {
 			Status:     "200 OK",
 			StatusCode: 200,
 			Header:     http.Header{"Content-Type": []string{"application/json"}},
-			Data:       []byte(fmt.Sprintf(`{"tx_hash":"%s"}`, txHash)),
+			Data:       []byte(fmt.Sprintf(`{"tx_hash":"%x","address":"%s"}`, signResponse.TxHash, signResponse.Address)),
 		},
 	}
 

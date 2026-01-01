@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -69,7 +70,7 @@ func handleRegisterInit(req *wasmxhttp.HttpRequestIncoming) []byte {
 	// Return success response
 	return respondWithJSON(map[string]interface{}{
 		"success": true,
-		"tx_hash": response.TxHash,
+		"tx_hash": hex.EncodeToString(response.TxHash),
 		"address": reqData.Address,
 	}, 200)
 }

@@ -556,36 +556,11 @@ func generateEphemeralKey(oauthToken, userID, identityUserID string, expiresAt i
 	fmt.Println("Expires At:", expiresAt)
 	fmt.Println("===============================")
 
-	// Initialize the blockchain account by sending it some native coins
-	// This ensures the account has an account number for signing transactions
-	user := getUser(userID)
-	if user != nil && user.Address != "" {
-		initAccountMsg := map[string]interface{}{
-			"init_account": map[string]interface{}{
-				"address": user.Address,
-			},
-		}
-
-		initMsgBz, err := json.Marshal(initAccountMsg)
-		if err != nil {
-			LoggerError("Failed to marshal init account message", []string{"error", err.Error()})
-			fmt.Println("WARNING: Failed to marshal init account message:", err.Error())
-			return
-		}
-
-		// Call oauth2-keys contract to initialize the account
-		ok, data := wasmx.CallSimple(keysAddr, initMsgBz, false, MODULE_NAME)
-		if !ok {
-			LoggerError("Failed to initialize account", []string{"error", string(data), "address", user.Address})
-			fmt.Println("WARNING: Failed to initialize account:", string(data))
-			return
-		}
-
-		fmt.Println("=== ACCOUNT INITIALIZED ===")
-		fmt.Println("Address:", user.Address)
-		fmt.Println("Response:", string(data))
-		fmt.Println("===========================")
-	}
+	// Note: Account initialization for the ephemeral address is now done
+	// inside GenerateEphemeralKey in oauth2-keys contract.
+	// We don't need to initialize user.Address separately since:
+	// 1. The ephemeral address is what needs funding for OAuth2 transactions
+	// 2. The user's original address should already be funded if they registered with their own wallet
 }
 
 // revokeEphemeralKey revokes an ephemeral key associated with an OAuth token
