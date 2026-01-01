@@ -110,7 +110,7 @@ func getFavoriteColor(userID string, arguments map[string]interface{}) ExecuteTo
 	return ExecuteToolResponse{
 		Content: []ContentItem{{
 			Type: "text",
-			Text: fmt.Sprintf("User %s's favorite color is %s", userID, color),
+			Text: fmt.Sprintf(`{"color":"%s"}`, color),
 		}},
 		IsError: false,
 	}

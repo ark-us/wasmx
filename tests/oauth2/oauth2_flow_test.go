@@ -550,7 +550,7 @@ func min(a, b int) int {
 // This verifies that authenticated users can execute tools that change state on their behalf
 func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	sender := suite.GetRandomAccount()
-	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(500000000)
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -581,7 +581,7 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 		"init_genesis": map[string]interface{}{
 			"funder_priv_key": funderPrivKeyHex,
 			"init_account_amt": map[string]string{
-				"amount": "1000000",
+				"amount": "100000000000000000",
 				"denom":  "amyt",
 			},
 			"gas_price": map[string]string{
@@ -725,6 +725,8 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 		"email":    {mcpTestEmail},
 		"password": {mcpTestPassword},
 	}
+
+	time.Sleep(time.Second * 5)
 
 	resp, err = client.PostForm(testServerAddr+"/login", loginData)
 	suite.Require().NoError(err)
@@ -878,6 +880,9 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	suite.T().Logf("- Public Key: %s", keyResponse.PublicKey)
 	suite.T().Logf("- Blockchain Address: %s", keyResponse.Address)
 
+	// make sure the tx that initialized our login ephemeral key has been executed
+	time.Sleep(time.Second * 10)
+
 	// ========================================
 	// PART 6: Verify MCP Tools Registration
 	// ========================================
@@ -1013,7 +1018,7 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	var getColorResp map[string]interface{}
 	err = json.Unmarshal(getBody, &getColorResp)
 	suite.Require().NoError(err)
-
+	fmt.Println("--getColorResp--", getColorResp)
 	// Verify we got the color back
 	color, ok := getColorResp["color"].(string)
 	suite.Require().True(ok, "Response should contain color field")
