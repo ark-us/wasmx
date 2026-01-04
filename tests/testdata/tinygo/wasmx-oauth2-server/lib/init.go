@@ -22,8 +22,8 @@ func InitGenesis(req InitGenesisRequest) []byte {
 func OnRoleChanged() []byte {
 	// Load initialization data
 	initDataBz := wasmx.StorageLoad([]byte(STORAGE_INIT_DATA))
+	var initData InitGenesisRequest
 	if len(initDataBz) > 0 {
-		var initData InitGenesisRequest
 		if err := json.Unmarshal(initDataBz, &initData); err == nil {
 			// Register initial clients if provided
 			if len(initData.InitialClients) > 0 {
@@ -61,9 +61,9 @@ func OnRoleChanged() []byte {
 		}
 	}
 
-	// Register HTTP routes with HTTP registry
+	// Register HTTP routes with HTTP registry (including static routes from init data)
 	httpRegistryAddr := wasmx.GetAddressByRole(wasmx.ROLE_HTTP_SERVER)
-	registerHttpRoutes(httpRegistryAddr)
+	registerHttpRoutes(httpRegistryAddr, initData.StaticRoutes)
 
 	LoggerInfo("OAuth2 server initialized on RoleChanged", nil)
 	return []byte(`{"success": true}`)

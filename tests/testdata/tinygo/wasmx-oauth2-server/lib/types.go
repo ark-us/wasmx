@@ -269,6 +269,12 @@ type RefreshToken struct {
 
 // Init Types
 
+type StaticRoute struct {
+	Route      string `json:"route"`       // URL prefix, e.g. "/static"
+	FolderPath string `json:"folder_path"` // Filesystem path, e.g. "/var/www/static"
+}
+
 type InitGenesisRequest struct {
 	InitialClients []RegisterOAuthClientRequest `json:"initial_clients,omitempty"`
+	StaticRoutes   []StaticRoute                `json:"static_routes,omitempty"`
 }

@@ -103,6 +103,9 @@ type WebsrvConfig struct {
 	MaxOpenConnections     int               `json:"max_open_connections"`
 	RouteToContractAddress map[string]string `json:"route_to_contract_address"`
 	RequestBodyMaxSize     int64             `json:"request_body_max_size"`
+	// StaticRoutes maps route prefixes to filesystem folder paths
+	// e.g. "/static" -> "/var/www/static"
+	StaticRoutes map[string]string `json:"static_routes"`
 }
 
 func (c WebsrvConfig) Validate() error {

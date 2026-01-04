@@ -8,22 +8,26 @@ import (
 const MODULE_NAME = "httpserver-registry"
 
 const (
-	storageKeyConfig = "config"
-	storageKeyRoutes = "routes"
+	storageKeyConfig       = "config"
+	storageKeyRoutes       = "routes"
+	storageKeyStaticRoutes = "static_routes"
 )
 
 // CallData defines all entrypoints
 type CallData struct {
-	ConnectDatabase *ConnectDatabaseRequest `json:"connect_database,omitempty"`
-	SetRoute        *SetRouteRequest        `json:"set_route,omitempty"`
-	SetRoutes       *SetRoutesRequest       `json:"set_routes,omitempty"`
-	RemoveRoute     *RemoveRouteRequest     `json:"remove_route,omitempty"`
-	GetRoute        *GetRouteRequest        `json:"get_route,omitempty"`
-	GetRoutes       *GetRoutesRequest       `json:"get_routes,omitempty"`
-	StartWebServer  *StartWebServerRequest  `json:"start_web_server,omitempty"`
-	CloseServer     *CloseServerRequest     `json:"close_server,omitempty"`
-	RoleChanged     *wasmx.RolesChangedHook `json:"RoleChanged,omitempty"`
-	InitGenesis     *InitGenesisRequest     `json:"init_genesis,omitempty"`
+	ConnectDatabase   *ConnectDatabaseRequest   `json:"connect_database,omitempty"`
+	SetRoute          *SetRouteRequest          `json:"set_route,omitempty"`
+	SetRoutes         *SetRoutesRequest         `json:"set_routes,omitempty"`
+	RemoveRoute       *RemoveRouteRequest       `json:"remove_route,omitempty"`
+	GetRoute          *GetRouteRequest          `json:"get_route,omitempty"`
+	GetRoutes         *GetRoutesRequest         `json:"get_routes,omitempty"`
+	SetStaticRoute    *SetStaticRouteRequest    `json:"set_static_route,omitempty"`
+	RemoveStaticRoute *RemoveStaticRouteRequest `json:"remove_static_route,omitempty"`
+	GetStaticRoutes   *GetStaticRoutesRequest   `json:"get_static_routes,omitempty"`
+	StartWebServer    *StartWebServerRequest    `json:"start_web_server,omitempty"`
+	CloseServer       *CloseServerRequest       `json:"close_server,omitempty"`
+	RoleChanged       *wasmx.RolesChangedHook   `json:"RoleChanged,omitempty"`
+	InitGenesis       *InitGenesisRequest       `json:"init_genesis,omitempty"`
 }
 
 // InitGenesisRequest for contract initialization
@@ -87,6 +91,35 @@ type RouteRecord struct {
 
 type GetRoutesResponse struct {
 	Routes []RouteRecord `json:"routes"`
+}
+
+// Static route types
+type SetStaticRouteRequest struct {
+	Route      string `json:"route"`       // URL prefix, e.g. "/static"
+	FolderPath string `json:"folder_path"` // Filesystem path, e.g. "/var/www/static"
+}
+
+type SetStaticRouteResponse struct {
+	Error string `json:"error,omitempty"`
+}
+
+type RemoveStaticRouteRequest struct {
+	Route string `json:"route"`
+}
+
+type RemoveStaticRouteResponse struct {
+	Error string `json:"error,omitempty"`
+}
+
+type GetStaticRoutesRequest struct{}
+
+type StaticRouteRecord struct {
+	Route      string `json:"route"`
+	FolderPath string `json:"folder_path"`
+}
+
+type GetStaticRoutesResponse struct {
+	Routes []StaticRouteRecord `json:"routes"`
 }
 
 type StartWebServerRequest struct {

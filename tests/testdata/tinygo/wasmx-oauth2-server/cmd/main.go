@@ -43,13 +43,19 @@ func main() {
 	case "instantiate":
 		data := wasmx.GetCallData()
 		if len(data) > 0 {
-			var req lib.InitGenesisRequest
-			if err := json.Unmarshal(data, &req); err != nil {
-				wasmx.Revert([]byte("invalid instantiate request: " + err.Error()))
-				return
+			// Try parsing wrapped format first: {"init_genesis": {...}}
+			var calldata lib.CallData
+			if err := json.Unmarshal(data, &calldata); err == nil && calldata.InitGenesis != nil {
+				lib.InitGenesis(*calldata.InitGenesis)
+			} else {
+				// Fall back to direct format
+				var req lib.InitGenesisRequest
+				if err := json.Unmarshal(data, &req); err != nil {
+					wasmx.Revert([]byte("invalid instantiate request: " + err.Error()))
+					return
+				}
+				lib.InitGenesis(req)
 			}
-			// Store the init data first
-			lib.InitGenesis(req)
 		}
 		// Initialize and register HTTP routes
 		// This is called during chain initialization when the contract is activated

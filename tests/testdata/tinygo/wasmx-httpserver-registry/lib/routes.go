@@ -161,6 +161,19 @@ func StartWebServer(req StartWebServerRequest) []byte {
 	}
 	req.Config.RouteToContractAddress = routeMap
 
+	// Build static routes map from DB
+	staticRoutes := loadStaticRoutes()
+	staticRouteMap := make(map[string]string, len(staticRoutes))
+	LoggerInfo("HTTP Server Static Routes:", []string{"count", fmt.Sprintf("%d", len(staticRoutes))})
+	for _, sr := range staticRoutes {
+		staticRouteMap[sr.Route] = sr.FolderPath
+		LoggerInfo("  Static route registered", []string{
+			"route", sr.Route,
+			"folder", sr.FolderPath,
+		})
+	}
+	req.Config.StaticRoutes = staticRouteMap
+
 	resp := wasmxhttp.StartWebServer(&wasmxhttp.StartWebServerRequest{Config: req.Config})
 	if resp.Error != "" {
 		return marshalErr(resp.Error)
@@ -260,6 +273,74 @@ func loadRoutes() []RouteRecord {
 func storeRoutes(routes []RouteRecord) {
 	bz, _ := json.Marshal(routes)
 	wasmx.StorageStore([]byte(storageKeyRoutes), bz)
+}
+
+// Static route management
+
+func loadStaticRoutes() []StaticRouteRecord {
+	data := wasmx.StorageLoad([]byte(storageKeyStaticRoutes))
+	if len(data) == 0 {
+		return []StaticRouteRecord{}
+	}
+	var routes []StaticRouteRecord
+	if err := json.Unmarshal(data, &routes); err != nil {
+		return []StaticRouteRecord{}
+	}
+	return routes
+}
+
+func storeStaticRoutes(routes []StaticRouteRecord) {
+	bz, _ := json.Marshal(routes)
+	wasmx.StorageStore([]byte(storageKeyStaticRoutes), bz)
+}
+
+// SetStaticRoute registers or updates a static route mapping
+func SetStaticRoute(req SetStaticRouteRequest) []byte {
+	// basic validation
+	if !strings.HasPrefix(req.Route, "/") {
+		return marshalErr("route must start with /")
+	}
+	if req.FolderPath == "" {
+		return marshalErr("folder_path is required")
+	}
+	routes := loadStaticRoutes()
+	// update or insert
+	found := false
+	for i, r := range routes {
+		if r.Route == req.Route {
+			routes[i].FolderPath = req.FolderPath
+			found = true
+			break
+		}
+	}
+	if !found {
+		routes = append(routes, StaticRouteRecord{
+			Route:      req.Route,
+			FolderPath: req.FolderPath,
+		})
+	}
+	storeStaticRoutes(routes)
+	return []byte(`{"success":true}`)
+}
+
+// RemoveStaticRoute removes a static route mapping
+func RemoveStaticRoute(req RemoveStaticRouteRequest) []byte {
+	routes := loadStaticRoutes()
+	newRoutes := routes[:0]
+	for _, r := range routes {
+		if r.Route != req.Route {
+			newRoutes = append(newRoutes, r)
+		}
+	}
+	storeStaticRoutes(newRoutes)
+	return []byte(`{"success":true}`)
+}
+
+// GetStaticRoutes returns all static route mappings
+func GetStaticRoutes() []byte {
+	rs := loadStaticRoutes()
+	resp, _ := json.Marshal(GetStaticRoutesResponse{Routes: rs})
+	return resp
 }
 
 // pickBestRoute returns the longest prefix match for url

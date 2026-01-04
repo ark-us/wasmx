@@ -137,6 +137,22 @@ func httpserverRegistryInitMsg() []byte {
 	return initMsg
 }
 
+func oauth2ServerInitMsg() []byte {
+	initGenesis := map[string]interface{}{
+		"init_genesis": map[string]interface{}{
+			"static_routes": []map[string]string{},
+		},
+	}
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	data, _ := json.Marshal(initGenesis)
+	msg.Data = data
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("oauth2ServerInitMsg: cannot marshal init message")
+	}
+	return initMsg
+}
+
 func StarterPrecompiles() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
@@ -1017,7 +1033,7 @@ func SpecialPrecompiles() SystemContracts {
 		{
 			Address:     ADDR_OAUTH2_SERVER,
 			Label:       OAUTH2_SERVER_v001,
-			InitMessage: initMsg,
+			InitMessage: oauth2ServerInitMsg(),
 			Pinned:      true,
 			MeteringOff: true,
 			Role:        &SystemContractRole{Role: ROLE_OAUTH2_SERVER, Label: ROLE_OAUTH2_SERVER, Primary: true},

@@ -80,6 +80,20 @@ func main() {
 		res := lib.GetRoutes()
 		wasmx.Finish(res)
 		return
+	case calldata.SetStaticRoute != nil:
+		wasmx.OnlyInternal(lib.MODULE_NAME, "SetStaticRoute")
+		res := lib.SetStaticRoute(*calldata.SetStaticRoute)
+		wasmx.Finish(res)
+		return
+	case calldata.RemoveStaticRoute != nil:
+		wasmx.OnlyInternal(lib.MODULE_NAME, "RemoveStaticRoute")
+		res := lib.RemoveStaticRoute(*calldata.RemoveStaticRoute)
+		wasmx.Finish(res)
+		return
+	case calldata.GetStaticRoutes != nil:
+		res := lib.GetStaticRoutes()
+		wasmx.Finish(res)
+		return
 	case calldata.StartWebServer != nil:
 		lib.LoggerInfo("StartWebServer called", nil)
 		res := lib.StartWebServer(*calldata.StartWebServer)

@@ -6,7 +6,7 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
-func registerHttpRoutes(registryAddr wasmx.Bech32String) {
+func registerHttpRoutes(registryAddr wasmx.Bech32String, staticRoutes []StaticRoute) {
 	self := string(wasmx.GetAddress())
 
 	// Get HTTP registry address by role if not provided
@@ -51,6 +51,23 @@ func registerHttpRoutes(registryAddr wasmx.Bech32String) {
 		if !ok {
 			// log and continue; don't hard fail init
 			LoggerError("failed to set route", []string{"route", rt, "error", string(data)})
+		}
+	}
+
+	// Register static routes
+	for _, sr := range staticRoutes {
+		msg := map[string]interface{}{
+			"set_static_route": map[string]interface{}{
+				"route":       sr.Route,
+				"folder_path": sr.FolderPath,
+			},
+		}
+		bz, _ := json.Marshal(msg)
+		ok, data := wasmx.CallSimple(httpRegistryAddr, bz, false, MODULE_NAME)
+		if !ok {
+			LoggerError("failed to set static route", []string{"route", sr.Route, "folder", sr.FolderPath, "error", string(data)})
+		} else {
+			LoggerInfo("Static route registered", []string{"route", sr.Route, "folder", sr.FolderPath})
 		}
 	}
 
