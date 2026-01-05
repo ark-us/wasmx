@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"bytes"
@@ -15,8 +15,9 @@ import (
 	"github.com/loredanacirstea/mailverif/dkim"
 	"github.com/loredanacirstea/mailverif/dns"
 	"github.com/loredanacirstea/mailverif/utils"
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
-	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // TODO remove me
@@ -270,7 +271,7 @@ func sendEmailInternal(
 		mxHost := strings.TrimSuffix(mx.Host, ".")
 		addr := fmt.Sprintf("%s:25", mxHost)
 
-		fmt.Println("Trying to send to %s...", addr)
+		wasmx.LoggerInfo(MODULE_NAME, "trying to send", []string{"to", addr})
 
 		tlsConfig := &vmsmtp.TlsConfig{
 			ServerName: mxHost,
@@ -305,7 +306,7 @@ func sendEmailInternal(
 			return fmt.Errorf(sendresp.Error)
 		}
 		vmsmtp.Quit(&vmsmtp.SmtpQuitRequest{Id: mxHost})
-		fmt.Println("Email sent successfully to", to)
+		wasmx.LoggerInfo(MODULE_NAME, "email sent successfully", []string{"to", to})
 		return nil
 	}
 	return fmt.Errorf("could not deliver email to any MX server for %s", toDomain)

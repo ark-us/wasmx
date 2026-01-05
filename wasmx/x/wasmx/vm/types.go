@@ -53,6 +53,7 @@ type Context struct {
 	RuntimeHandler           memc.RuntimeHandler
 	ContractInfo             *types.ContractDependency
 	newIVmFn                 memc.NewIVmFn
+	DataDir                  string
 }
 
 // not used at this point
@@ -82,6 +83,7 @@ func (c *Context) Clone() *Context {
 		RuntimeHandler:           c.RuntimeHandler,
 		ContractInfo:             c.ContractInfo.Clone(),
 		newIVmFn:                 c.newIVmFn,
+		DataDir:                  c.DataDir,
 	}
 }
 

@@ -9,10 +9,6 @@ import (
 	utils "github.com/loredanacirstea/wasmx-env-utils"
 )
 
-//go:wasm-module smtp
-//export wasmx_smtp_i64_1
-func wasmx_smtp_i64_1() {}
-
 //go:wasmimport smtp ClientConnect
 func ClientConnect_(reqPtr int64) int64
 

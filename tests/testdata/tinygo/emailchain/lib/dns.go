@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	dnsMox "github.com/loredanacirstea/mailverif/dns"
-	httpclient "github.com/loredanacirstea/wasmx-env-httpclient"
+	httpclient "github.com/loredanacirstea/wasmx-env-httpclient/lib"
 )
 
 type MX struct {

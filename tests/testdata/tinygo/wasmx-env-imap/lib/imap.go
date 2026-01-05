@@ -9,10 +9,6 @@ import (
 	utils "github.com/loredanacirstea/wasmx-env-utils"
 )
 
-//go:wasm-module imap
-//export wasmx_imap_i64_1
-func wasmx_imap_i64_1() {}
-
 //go:wasmimport imap Connect
 func Connect_(reqPtr int64) int64
 

@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"bufio"
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loredanacirstea/emailchain/imap"
+	"github.com/loredanacirstea/emailchain/lib/imap"
 	"github.com/loredanacirstea/mailverif/dkim"
 	"github.com/loredanacirstea/mailverif/utils"
 )

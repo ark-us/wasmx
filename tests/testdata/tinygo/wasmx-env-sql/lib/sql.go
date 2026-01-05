@@ -9,10 +9,6 @@ import (
 	utils "github.com/loredanacirstea/wasmx-env-utils"
 )
 
-//go:wasm-module sql
-//export wasmx_sql_i64_1
-func wasmx_sql_i64_1() {}
-
 // Host function imports
 //
 //go:wasmimport sql Connect

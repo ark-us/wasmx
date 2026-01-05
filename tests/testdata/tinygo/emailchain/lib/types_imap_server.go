@@ -1,8 +1,8 @@
-package main
+package lib
 
 import (
-	imap "github.com/loredanacirstea/emailchain/imap"
-	imapserver "github.com/loredanacirstea/emailchain/imap/imapserver"
+	imap "github.com/loredanacirstea/emailchain/lib/imap"
+	imapserver "github.com/loredanacirstea/emailchain/lib/imap/imapserver"
 )
 
 type ReentryCalldataServer struct {

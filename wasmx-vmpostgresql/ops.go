@@ -66,7 +66,7 @@ func Connect(_context interface{}, rnh memc.RuntimeHandler, params []interface{}
 		case <-closedChannel:
 			// when close signal is received from Close() API
 			// database is already closed, so we exit this goroutine
-			ctx.Ctx.Logger().Info(fmt.Sprintf("database connection closed: %s", connId))
+			ctx.Ctx.Logger().Info(fmt.Sprintf("postgresql database connection closed: %s", connId))
 			return nil
 		}
 	})

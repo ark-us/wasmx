@@ -253,8 +253,6 @@ func init() {
 	// enabled VM extensions for contracts
 	vmp2p.Setup()
 	vmmc.Setup()
-
-	// experimental WIP, do not enable in production:
 	vmcrosschain.Setup()
 	vmsql.Setup()
 	vmpostgresql.Setup()

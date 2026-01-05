@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"bufio"
@@ -17,12 +17,12 @@ import (
 	"github.com/loredanacirstea/mailverif/dns"
 	"github.com/loredanacirstea/mailverif/forward"
 	"github.com/loredanacirstea/mailverif/utils"
-	sql "github.com/loredanacirstea/wasmx-env-sql"
+	sql "github.com/loredanacirstea/wasmx-env-sql/lib"
 
-	"github.com/loredanacirstea/emailchain/imap"
+	"github.com/loredanacirstea/emailchain/lib/imap"
 
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
-	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -47,12 +47,23 @@ func StartServer(req *StartServerRequest) {
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
+
+	// Store the server password
+	if req.Password == "" {
+		wasmx.Revert([]byte("server password cannot be empty"))
+	}
+	StoreServerPassword(req.Password)
+
+	// Store the Kayros bot no-store setting
+	StoreKayrosBotNoStore(req.KayrosBotNoStore)
+
 	smtpCfg := requiredSmtpDefaults(req.Smtp)
 
 	// SMTP 25
 	// smtpCfg.Addr = fmt.Sprintf("%s:%s", smtpCfg.Domain, PortSmtpDirectAddr)
 	smtpCfg.Addr = fmt.Sprintf("%s:%s", "", PortSmtpDirectAddr)
 	smtpCfg.StartTLS = true
+	// prevents your server from being an "open relay" (can't forward spam)
 	smtpCfg.EnableAuth = false
 	resp := vmsmtp.ServerStart(&vmsmtp.ServerStartRequest{
 		ConnectionId: PortSmtpDirectAddr,
@@ -99,7 +110,6 @@ func StartServer(req *StartServerRequest) {
 		ServerConfig: req.Imap,
 	})
 	if resp2.Error != "" {
-		fmt.Println("---IMAP--", resp2.Error)
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientTls})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientStartTls})
@@ -113,7 +123,6 @@ func StartServer(req *StartServerRequest) {
 		ServerConfig: req.Imap,
 	})
 	if resp2.Error != "" {
-		fmt.Println("---IMAP--", resp2.Error)
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpDirectAddr})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientTls})
 		vmsmtp.ServerClose(&vmsmtp.ServerCloseRequest{ConnectionId: PortSmtpClientStartTls})
@@ -123,8 +132,6 @@ func StartServer(req *StartServerRequest) {
 }
 
 func CreateAccount(req *CreateAccountRequest) {
-	fmt.Println("--CreateAccount--", req.Username)
-
 	err := ConnectSql(ConnectionId)
 	if err != nil {
 		wasmx.Revert([]byte("CreateAccount: DB connection failed: " + err.Error()))
@@ -174,6 +181,7 @@ func CreateAccount(req *CreateAccountRequest) {
 }
 
 func IncomingEmail(req *IncomingEmailRequest) {
+	wasmx.LoggerInfo(MODULE_NAME, "incoming email", []string{})
 	if len(req.From) == 0 {
 		wasmx.Revert([]byte("incoming email: empty from"))
 	}
@@ -192,7 +200,7 @@ func IncomingEmail(req *IncomingEmailRequest) {
 				return
 			}
 			if len(owners) == 0 {
-				wasmx.Revert([]byte("invalid account"))
+				wasmx.Revert([]byte("invalid account: " + to))
 				return
 			}
 		}
@@ -213,21 +221,58 @@ func IncomingEmail(req *IncomingEmailRequest) {
 		// if this a forwarded email, we do a check and add a header with the result
 		timestamp := time.Unix(req.Timestamp, 0).UTC()
 		emailraw := ApplyForwardCheck(req.EmailRaw, timestamp)
+
+		// Check if Kayros bot no-store is enabled
+		kayrosBotNoStore := LoadKayrosBotNoStore()
+		isBotEmail := IsBotEmail(req.To)
+
+		// Store received emails (unless it's for Kayros bot and no-store is enabled)
 		// TODO get ipfrom from Received headers added by MTAs (Gmail, etc.)
-		for _, to := range req.To {
-			err = StoreEmail(to, req.From, emailraw, req.IpFrom, ConnectionId, FolderInbox)
+		if !isBotEmail || !kayrosBotNoStore {
+			for _, to := range req.To {
+				err = StoreEmail(to, req.From, emailraw, req.IpFrom, ConnectionId, FolderInbox)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+		}
+
+		// Check if email is for Kayros bot and handle it
+		if isBotEmail {
+			err := HandleKayrosBot(req)
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("Kayros bot error: %v\n", err)
 			}
 		}
 	} else {
+		// This is an email sent by an authenticated email client to our smtp server
+		// Validate authenticated user matches the sender
+		if req.AuthenticatedUser == "" {
+			wasmx.Revert([]byte("unauthorized: authentication required for sending emails"))
+			return
+		}
+		if req.AuthenticatedUser != req.From[0] {
+			wasmx.Revert([]byte("unauthorized: authenticated user (" + req.AuthenticatedUser + ") does not match sender (" + req.From[0] + ")"))
+			return
+		}
+
+		// Validate that the sender has an account on this server
+		owners, err := GetAccount(req.From[0])
+		if err != nil {
+			wasmx.Revert([]byte("HandleEmail: failed to check sender account: " + err.Error()))
+			return
+		}
+		if len(owners) == 0 {
+			wasmx.Revert([]byte("unauthorized: sender account not found: " + req.From[0]))
+			return
+		}
+
 		folder := FolderSent
 		opts := LoadDkimKey()
 		if opts == nil {
 			fmt.Println("no dkim keys")
 			folder = FolderDraft
 		} else {
-			// this is an email sent by an email client to our smtp server
 			errs := SendRawEmail(req.From[0], req.To, req.EmailRaw, *opts)
 			if err != nil {
 				fmt.Println(errs)

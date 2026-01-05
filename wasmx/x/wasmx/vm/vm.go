@@ -257,6 +257,7 @@ func ExecuteWasmInterpreted(
 	inBackground bool,
 	app types.Application,
 	newIVmFn memc.NewIVmFn,
+	dataDir string,
 ) (types.ContractResponse, error) {
 	var err error
 	var ethMsg types.WasmxExecutionMessage
@@ -287,6 +288,7 @@ func ExecuteWasmInterpreted(
 		RuntimeHandler:  rnh,
 		ContractInfo:    &contractInfo,
 		newIVmFn:        newIVmFn,
+		DataDir:         dataDir,
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 	for i := range dependencies {
@@ -371,6 +373,7 @@ func ExecuteWasm(
 	inBackground bool,
 	app types.Application,
 	newIVmFn memc.NewIVmFn,
+	dataDir string,
 ) (types.ContractResponse, error) {
 	var err error
 	var ethMsg types.WasmxExecutionMessage
@@ -401,6 +404,7 @@ func ExecuteWasm(
 		RuntimeHandler:  rnh,
 		ContractInfo:    &contractInfo,
 		newIVmFn:        newIVmFn,
+		DataDir:         dataDir,
 	}
 	context.Env.CurrentCall.CallData = ethMsg.Data
 

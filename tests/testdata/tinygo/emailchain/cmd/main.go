@@ -2,11 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"os"
 
-	_ "github.com/loredanacirstea/wasmx-env-httpclient"
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
-	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	lib "github.com/loredanacirstea/emailchain/lib"
+	_ "github.com/loredanacirstea/wasmx-env-httpclient/lib"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -16,22 +17,42 @@ func Wasmx_nondeterministic_1() {}
 
 //go:wasm-module wasmx
 //export memory_ptrlen_i64_1
-func Wemory_ptrlen_i64_1() {}
+func Memory_ptrlen_i64_1() {}
 
 //go:wasm-module wasmx
 //export wasmx_env_i64_2
 func Wasmx_env_i64_2() {}
 
-//go:wasm-module emailchain
-//export instantiate
-func Instantiate() {
-	InitializeTables(ConnectionId)
-}
+//go:wasm-module smtp
+//export wasmx_smtp_i64_1
+func Wasmx_smtp_i64_1() {}
+
+//go:wasm-module imap
+//export wasmx_imap_i64_1
+func Wasmx_imap_i64_1() {}
+
+//go:wasm-module httpclient
+//export wasmx_httpclient_i64_1
+func Wasmx_httpclient_i64_1() {}
+
+//go:wasm-module sql
+//export wasmx_sql_i64_1
+func Wasmx_sql_i64_1() {}
 
 func main() {
+	entrypoint := os.Getenv("ENTRY_POINT")
+	// these entrypoints are internal by default
+	switch entrypoint {
+	case "smtp_update":
+		SmtpUpdate()
+		return
+	case "instantiate":
+		lib.InitializeTables(lib.ConnectionId)
+		return
+	}
+
 	databz := wasmx.GetCallData()
-	// fmt.Println("---databz----!!!!!!", string(databz))
-	calld := &Calldata{}
+	calld := &lib.Calldata{}
 	err := json.Unmarshal(databz, calld)
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
@@ -59,37 +80,35 @@ func main() {
 		}
 		response, _ = json.Marshal(&resp)
 	} else if calld.SignDKIM != nil {
-		resp := SignDKIM(calld.SignDKIM)
+		resp := lib.SignDKIM(calld.SignDKIM)
 		response, _ = json.Marshal(&resp)
 	} else if calld.VerifyDKIM != nil {
-		resp := VerifyDKIM(calld.VerifyDKIM)
+		resp := lib.VerifyDKIM(calld.VerifyDKIM)
 		response, _ = json.Marshal(&resp)
 	} else if calld.VerifyARC != nil {
-		resp := VerifyARC(calld.VerifyARC)
+		resp := lib.VerifyARC(calld.VerifyARC)
 		response, _ = json.Marshal(&resp)
 	} else if calld.SignARC != nil {
-		resp := SignARC(calld.SignARC)
+		resp := lib.SignARC(calld.SignARC)
 		response, _ = json.Marshal(&resp)
 	} else if calld.ForwardEmail != nil {
-		resp := ForwardEmail(calld.ForwardEmail)
+		resp := lib.ForwardEmail(calld.ForwardEmail)
 		response, _ = json.Marshal(&resp)
 	} else if calld.CreateAccount != nil {
-		CreateAccount(calld.CreateAccount)
+		lib.CreateAccount(calld.CreateAccount)
 	} else if calld.SendEmail != nil {
-		resp := SendEmail(calld.SendEmail)
+		resp := lib.SendEmail(calld.SendEmail)
 		response, _ = json.Marshal(&resp)
 	} else if calld.BuildAndSend != nil {
-		resp := BuildAndSend(calld.BuildAndSend)
+		resp := lib.BuildAndSend(calld.BuildAndSend)
 		response, _ = json.Marshal(&resp)
 	} else if calld.StartServer != nil {
-		StartServer(calld.StartServer)
+		lib.StartServer(calld.StartServer)
 	} else if calld.IncomingEmail != nil {
-		IncomingEmail(calld.IncomingEmail)
+		lib.IncomingEmail(calld.IncomingEmail)
 	} else if calld.RoleChanged != nil {
-		// TODO
-		// utils.OnlyRole(MODULE_NAME, roles.ROLE_ROLES, "RoleChanged")
-		// roleChanged(calld.RoleChanged);
-		InitializeTables(ConnectionId)
+		wasmx.OnlyRole(lib.MODULE_NAME, wasmx.ROLE_ROLES, "RoleChanged")
+		lib.InitializeTables(lib.ConnectionId)
 	} else {
 		handled := ImapServerRequest(calld)
 		if handled {
@@ -104,18 +123,15 @@ func main() {
 	wasmx.SetFinishData(response)
 }
 
-//go:wasm-module emailchain
-//export smtp_update
 func SmtpUpdate() {
-	fmt.Println("---SmtpUpdate----!!!!!!")
 	databz := wasmx.GetCallData()
-	calld := &ReentryCalldata{}
+	calld := &lib.ReentryCalldata{}
 	err := json.Unmarshal(databz, calld)
 	if err != nil {
 		wasmx.Revert([]byte(err.Error()))
 	}
 	if calld.IncomingEmail != nil {
-		IncomingEmail(calld.IncomingEmail)
+		lib.IncomingEmail(calld.IncomingEmail)
 	}
 }
 
@@ -134,52 +150,52 @@ func prepareResponse(data []byte, ierr *vmimap.Error, err error) []byte {
 	return bz
 }
 
-func ImapServerRequest(calld *Calldata) bool {
+func ImapServerRequest(calld *lib.Calldata) bool {
 	// var res interface{}
 	var res []byte
 
 	switch {
 	case calld.Login != nil:
-		data, err := HandleLogin(calld.Login)
+		data, err := lib.HandleLogin(calld.Login)
 		res = prepareResponse(data, nil, err)
 	case calld.Logout != nil:
-		data, err := HandleLogout(calld.Logout)
+		data, err := lib.HandleLogout(calld.Logout)
 		res = prepareResponse(data, nil, err)
 	case calld.Create != nil:
-		data, ierr, err := HandleCreate(calld.Create)
+		data, ierr, err := lib.HandleCreate(calld.Create)
 		res = prepareResponse(data, ierr, err)
 	case calld.Delete != nil:
-		data, err := HandleDelete(calld.Delete)
+		data, err := lib.HandleDelete(calld.Delete)
 		res = prepareResponse(data, nil, err)
 	case calld.Rename != nil:
-		data, err := HandleRename(calld.Rename)
+		data, err := lib.HandleRename(calld.Rename)
 		res = prepareResponse(data, nil, err)
 	case calld.Select != nil:
-		data, err := HandleSelect(calld.Select)
+		data, err := lib.HandleSelect(calld.Select)
 		res = prepareResponse(data, nil, err)
 	case calld.List != nil:
-		data, err := HandleList(calld.List)
+		data, err := lib.HandleList(calld.List)
 		res = prepareResponse(data, nil, err)
 	case calld.Status != nil:
-		data, err := HandleStatus(calld.Status)
+		data, err := lib.HandleStatus(calld.Status)
 		res = prepareResponse(data, nil, err)
 	case calld.Append != nil:
-		data, err := HandleAppend(calld.Append)
+		data, err := lib.HandleAppend(calld.Append)
 		res = prepareResponse(data, nil, err)
 	case calld.Expunge != nil:
-		data, err := HandleExpunge(calld.Expunge)
+		data, err := lib.HandleExpunge(calld.Expunge)
 		res = prepareResponse(data, nil, err)
 	case calld.Search != nil:
-		data, err := HandleSearch(calld.Search)
+		data, err := lib.HandleSearch(calld.Search)
 		res = prepareResponse(data, nil, err)
 	case calld.Fetch != nil:
-		data, err := HandleFetch(calld.Fetch)
+		data, err := lib.HandleFetch(calld.Fetch)
 		res = prepareResponse(data, nil, err)
 	case calld.Store != nil:
-		data, err := HandleStore(calld.Store)
+		data, err := lib.HandleStore(calld.Store)
 		res = prepareResponse(data, nil, err)
 	case calld.Copy != nil:
-		data, err := HandleCopy(calld.Copy)
+		data, err := lib.HandleCopy(calld.Copy)
 		res = prepareResponse(data, nil, err)
 	default:
 		return false
@@ -188,14 +204,14 @@ func ImapServerRequest(calld *Calldata) bool {
 	return true
 }
 
-func SmtpServerRequest(calld *Calldata) bool {
+func SmtpServerRequest(calld *lib.Calldata) bool {
 	var res []byte
 	switch {
 	case calld.Login != nil:
-		data, err := HandleSmtpLogin(calld.Login)
+		data, err := lib.HandleSmtpLogin(calld.Login)
 		res = prepareResponse(data, nil, err)
 	case calld.Logout != nil:
-		data, err := HandleSmtpLogout(calld.Logout)
+		data, err := lib.HandleSmtpLogout(calld.Logout)
 		res = prepareResponse(data, nil, err)
 	default:
 		return false
