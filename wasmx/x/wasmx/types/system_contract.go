@@ -140,7 +140,12 @@ func httpserverRegistryInitMsg() []byte {
 func oauth2ServerInitMsg() []byte {
 	initGenesis := map[string]interface{}{
 		"init_genesis": map[string]interface{}{
-			"static_routes": []map[string]string{},
+			"static_routes": []map[string]string{
+				{
+					"route":       "/nomen",
+					"folder_path": "/Users/user/dev/blockchain/nomen/frontend/dist-nomen",
+				},
+			},
 		},
 	}
 	msg := WasmxExecutionMessage{Data: []byte{}}

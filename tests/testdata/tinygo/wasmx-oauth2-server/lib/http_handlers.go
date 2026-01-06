@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	auth "github.com/loredanacirstea/wasmx-auth/lib"
 	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
@@ -35,6 +36,8 @@ func HandleHttpRequestWrap(req wasmxhttp.HttpRequestIncoming) []byte {
 		return handleAuthorize(req)
 	case "/oauth/token":
 		return handleToken(req)
+	case "/oauth/userinfo":
+		return handleUserInfo(req)
 	case "/register":
 		return handleRegister(req)
 	case "/register_tx":
@@ -77,6 +80,8 @@ func handleWellKnown(req wasmxhttp.HttpRequestIncoming) []byte {
 		"issuer":                                base,
 		"authorization_endpoint":                base + "/oauth/authorize",
 		"token_endpoint":                        base + "/oauth/token",
+		// Expose userinfo for OIDC-style compatibility.
+		"userinfo_endpoint":                     base + "/oauth/userinfo",
 		"grant_types_supported":                 []string{"authorization_code", "refresh_token"},
 		"response_types_supported":              []string{"code"},
 		"token_endpoint_auth_methods_supported": []string{"client_secret_post"},
@@ -626,6 +631,8 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
         import { toBase64 } from 'https://cdn.jsdelivr.net/npm/@cosmjs/encoding@0.32.4/+esm';
 
 		console.log("module script");
+		const rpcEndpoint = 'https://wasmxtest.rpc.provable.dev'; // TODO: get from config
+		// const rpcEndpoint = 'http://localhost:26657';
 
         document.getElementById('blockchainOptions').style.display = 'block';
 		document.getElementById('pin').required = true;
@@ -722,6 +729,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
             );
             const [walletAccount] = await wallet.getAccounts();
             console.log('Wallet address:', walletAccount.address);
+			console.log('RPC endpoint:', rpcEndpoint);
 
             // Connect to Tendermint RPC to get account info and broadcast
             const tmClient = await WasmxJS.stargate.Comet38Client.connect(rpcEndpoint);
@@ -984,7 +992,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 
 								// Create, sign, and broadcast the register_user transaction
 								successDiv.textContent = 'Registering with identity contract...';
-								const rpcEndpoint = 'http://localhost:26657'; // TODO: get from config
+
 								const txHash = await createRegisterUserTransaction(
 									keyPair.privateKey,
 									keyPair.publicKey,
@@ -1681,6 +1689,82 @@ func handleToken(req wasmxhttp.HttpRequestIncoming) []byte {
 	default:
 		return badRequest("unsupported_grant_type")
 	}
+}
+
+func handleUserInfo(req wasmxhttp.HttpRequestIncoming) []byte {
+	if req.Method != "GET" && req.Method != "POST" {
+		return methodNotAllowed()
+	}
+
+	authHeader := strings.TrimSpace(req.Header.Get("Authorization"))
+	if authHeader == "" {
+		return unauthorized("missing authorization header")
+	}
+
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || strings.TrimSpace(parts[1]) == "" {
+		return unauthorized("invalid authorization header")
+	}
+
+	tokenStr := strings.TrimSpace(parts[1])
+	token := getAccessToken(tokenStr)
+	if token == nil {
+		return unauthorized("invalid access token")
+	}
+
+	if time.Now().Unix() > token.ExpiresAt {
+		return unauthorized("access token expired")
+	}
+
+	user := getUser(token.UserID)
+	if user == nil {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "404 Not Found",
+				StatusCode: 404,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"user not found"}`),
+			},
+		})
+	}
+
+	response := map[string]interface{}{
+		"user_id": user.UserID,
+		"email":   user.Email,
+	}
+	if user.Username != "" {
+		response["username"] = user.Username
+	}
+	if user.Address != "" {
+		response["address"] = user.Address
+	}
+	if user.IdentityUserID != "" {
+		response["identity_user_id"] = user.IdentityUserID
+	}
+
+	body, _ := json.Marshal(response)
+	return marshalHTTP(wasmxhttp.HttpResponseWrap{
+		Error: "",
+		Data: wasmxhttp.HttpResponse{
+			Status:     "200 OK",
+			StatusCode: 200,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Data:       body,
+		},
+	})
+}
+
+func unauthorized(msg string) []byte {
+	return marshalHTTP(wasmxhttp.HttpResponseWrap{
+		Error: "",
+		Data: wasmxhttp.HttpResponse{
+			Status:     "401 Unauthorized",
+			StatusCode: 401,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Data:       []byte(`{"error":"` + msg + `"}`),
+		},
+	})
 }
 
 func methodNotAllowed() []byte {
