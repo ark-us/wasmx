@@ -102,6 +102,13 @@ func main() {
 		res := lib.GetOAuthClient(*calldata.GetOAuthClient)
 		wasmx.Finish(res)
 		return
+	case calldata.InitGenesis != nil:
+		// TODO this needs a cli method for local operations
+		// wasmx.OnlyInternal(lib.MODULE_NAME, "InitGenesis")
+		res := lib.InitGenesis(*calldata.InitGenesis)
+		lib.OnRoleChanged()
+		wasmx.Finish(res)
+		return
 	case calldata.ListOAuthClients != nil:
 		res := lib.ListOAuthClients(*calldata.ListOAuthClients)
 		wasmx.Finish(res)

@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	sdkmath "cosmossdk.io/math"
@@ -83,6 +84,8 @@ func (suite *KeeperTestSuite) setupOAuth2Server() (clientID, clientSecret string
 
 	// Register OAuth client
 	oauth2Addr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_OAUTH2_SERVER))
+	appA.ExecuteContract(sender, oauth2Addr, oauth2ServerInitMsg(), nil, nil)
+
 	registerClientMsg := &RegisterOAuthClientCalldata{
 		RegisterOAuthClient: &RegisterOAuthClientRequest{
 			Name:        "Test Client",
@@ -597,6 +600,8 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 
 	// Register OAuth client
 	oauth2Addr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_OAUTH2_SERVER))
+	appA.ExecuteContract(sender, oauth2Addr, oauth2ServerInitMsg(), nil, nil)
+
 	registerClientMsg := &RegisterOAuthClientCalldata{
 		RegisterOAuthClient: &RegisterOAuthClientRequest{
 			Name:        "MCP Test Client",
@@ -1049,4 +1054,22 @@ type MCPJSONRPCResponse struct {
 type MCPRPCError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+}
+
+func oauth2ServerInitMsg() types.WasmxExecutionMessage {
+	supabaseJWT := os.Getenv("SUPABASE_JWT")
+	nomenFolder := os.Getenv("NOMEN_FILES")
+	initGenesis := map[string]interface{}{
+		"init_genesis": map[string]interface{}{
+			"supabase_jwt": supabaseJWT,
+			"static_routes": []map[string]string{
+				{
+					"route":       "/nomen",
+					"folder_path": nomenFolder,
+				},
+			},
+		},
+	}
+	data, _ := json.Marshal(initGenesis)
+	return types.WasmxExecutionMessage{Data: data}
 }
