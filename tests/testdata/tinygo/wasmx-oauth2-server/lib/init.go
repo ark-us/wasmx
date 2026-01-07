@@ -12,6 +12,10 @@ func InitGenesis(req InitGenesisRequest) []byte {
 	initDataBz, _ := json.Marshal(req)
 	wasmx.StorageStore([]byte(STORAGE_INIT_DATA), initDataBz)
 
+	if req.SupabaseJWT != "" {
+		wasmx.StorageStore([]byte(STORAGE_SUPABASE_JWT_SECRET), []byte(req.SupabaseJWT))
+	}
+
 	// Don't register clients or routes here - this is called during instantiate
 	// when the contract doesn't have roles yet. These will be done in OnRoleChanged.
 

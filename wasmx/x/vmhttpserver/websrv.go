@@ -97,6 +97,10 @@ func (k *WebsrvServer) serveStaticFile(w http.ResponseWriter, r *http.Request) b
 
 	// Find the best matching static route
 	for _, route := range routes {
+		if urlPath == strings.TrimSuffix(route, "/") && !strings.HasSuffix(urlPath, "/") {
+			http.Redirect(w, r, urlPath+"/", http.StatusFound)
+			return true
+		}
 		if strings.HasPrefix(urlPath, route) {
 			folderPath := k.cfg.StaticRoutes[route]
 

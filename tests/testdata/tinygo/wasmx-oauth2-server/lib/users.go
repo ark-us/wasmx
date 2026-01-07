@@ -18,12 +18,6 @@ func RegisterUser(req RegisterUserRequest) []byte {
 	if req.Email == "" {
 		return []byte(`{"error":"email is required"}`)
 	}
-	if req.Password == "" {
-		return []byte(`{"error":"password is required"}`)
-	}
-	if len(req.Password) < 8 {
-		return []byte(`{"error":"password must be at least 8 characters"}`)
-	}
 
 	// Check if email already exists
 	if getUserByEmail(req.Email) != nil {
@@ -35,7 +29,7 @@ func RegisterUser(req RegisterUserRequest) []byte {
 	userID := generateUserID(req.Email)
 
 	// Hash password
-	passwordHash := hashPassword(req.Password)
+	passwordHash := hashPassword(generateSessionID(userID))
 
 	// Register in identity contract if public key provided
 	var identityUserID string
@@ -126,6 +120,20 @@ func Login(req LoginRequest) []byte {
 		return []byte(`{"error":"invalid email or password"}`)
 	}
 
+	response, err := createSessionForUser(user)
+	if err != nil {
+		return []byte(`{"error":"failed to create session"}`)
+	}
+
+	data, _ := json.Marshal(response)
+	return data
+}
+
+func createSessionForUser(user *User) (LoginResponse, error) {
+	if user == nil {
+		return LoginResponse{}, fmt.Errorf("user is required")
+	}
+
 	// Generate session ID
 	sessionID := generateSessionID(user.UserID)
 
@@ -173,8 +181,7 @@ func Login(req LoginRequest) []byte {
 		BlockchainAddress: user.Address,
 	}
 
-	data, _ := json.Marshal(response)
-	return data
+	return response, nil
 }
 
 // Logout invalidates a session

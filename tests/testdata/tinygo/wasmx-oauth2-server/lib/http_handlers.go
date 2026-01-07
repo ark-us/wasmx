@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	jwt "github.com/golang-jwt/jwt/v5"
+
 	auth "github.com/loredanacirstea/wasmx-auth/lib"
 	wasmxcore "github.com/loredanacirstea/wasmx-env-core/lib"
 	wasmxhttp "github.com/loredanacirstea/wasmx-env-httpserver/lib"
@@ -598,10 +600,9 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
     </style>
 </head>
 <body>
-    <h2>Register</h2>
+    <h2>Register WasmX Keys</h2>
     <div id="registerFormContainer">
-        <input type="email" id="email" placeholder="Email" required />
-        <input type="password" id="password" placeholder="Password (min 8 characters)" required minlength="8" />
+    <div id="nomenStatus" class="info">Checking Nomen session...</div>
         <input type="text" id="username" placeholder="Username (optional)" />
 
         <div id="blockchainOptions">
@@ -617,7 +618,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
         <div id="error" class="error"></div>
         <div id="success" class="success"></div>
     </div>
-    <p>Already have an account? <a href="/login">Login here</a></p>
+    <p>Need to sign in? <a href="/nomen">Go to Nomen</a></p>
 
 	<script src="https://cdn.jsdelivr.net/gh/ark-us/mythosjs@1e26ca270ac577a2f39966e4df44459df5881f90/packages/wasmxjs-browser-bundle/dist/wasmxjs-bundle.umd.js"></script>
 
@@ -860,6 +861,43 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
         }
 
 		console.log("set registerButton event");
+        function getNomenSession() {
+            const keys = Object.keys(localStorage);
+            for (const key of keys) {
+                if (!key.startsWith('sb-') || !key.endsWith('-auth-token')) {
+                    continue;
+                }
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) continue;
+                    const parsed = JSON.parse(raw);
+                    const session = parsed?.currentSession ?? parsed;
+                    if (session?.user?.email) {
+                        return session;
+                    }
+                } catch (err) {
+                    console.log('Failed to parse Supabase session:', err);
+                }
+            }
+            return null;
+        }
+
+        function setNomenStatus() {
+            const status = document.getElementById('nomenStatus');
+            const session = getNomenSession();
+            if (!session || !session.user?.email) {
+                status.textContent = 'Not signed in. Please sign in at /nomen.';
+                return null;
+            }
+            status.textContent = 'Signed in as ' + session.user.email;
+            return session;
+        }
+
+        const initialSession = setNomenStatus();
+        if (!initialSession) {
+            document.getElementById('registerButton').disabled = true;
+        }
+
         document.getElementById('registerButton').addEventListener('click', async function(e) {
 			console.log("registerButton");
             e.preventDefault();
@@ -869,11 +907,16 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
             errorDiv.textContent = '';
             successDiv.textContent = '';
 
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const username = document.getElementById('username').value;
+            const session = setNomenStatus();
+            if (!session || !session.user?.email) {
+                errorDiv.textContent = 'Please sign in to Nomen first.';
+                return;
+            }
 
-            let requestData = { email, password, username };
+            const email = session.user.email;
+            const username = document.getElementById('username').value || session.user?.user_metadata?.username || session.user?.user_metadata?.name || '';
+
+            let requestData = { email, username };
 
 			const pin = document.getElementById('pin').value;
 			const pinConfirm = document.getElementById('pinConfirm').value;
@@ -1033,7 +1076,10 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
             try {
                 const response = await fetch('/register', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + session.access_token
+                    },
                     body: JSON.stringify(requestData)
                 });
 
@@ -1074,17 +1120,34 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 	var r RegisterUserRequest
 	contentType := req.Header.Get("Content-Type")
 	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
-		form, _ := url.ParseQuery(string(req.Data))
-		r.Email = form.Get("email")
-		r.Password = form.Get("password")
-		r.Username = form.Get("username")
-		r.PublicKey = form.Get("public_key")
-		r.Address = form.Get("address")
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "400 Bad Request",
+				StatusCode: 400,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"nomen session required"}`),
+			},
+		})
 	} else {
 		if err := json.Unmarshal(req.Data, &r); err != nil {
 			return badRequest("invalid json")
 		}
 	}
+
+	email, err := getNomenEmailFromRequest(req)
+	if err != nil {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "401 Unauthorized",
+				StatusCode: 401,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"invalid or missing nomen session"}`),
+			},
+		})
+	}
+	r.Email = email
 
 	resp := RegisterUser(r)
 
@@ -1137,228 +1200,89 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
 	redirectURL := q.Get("redirect")
 
 	if req.Method == "GET" {
-		// Return HTML login form with hidden redirect field and WasmX blockchain option
-		// Escape HTML to prevent XSS and format string issues
+		// Return HTML page that uses Nomen session or redirects to /nomen/auth.
 		escapedRedirect := strings.ReplaceAll(redirectURL, `"`, `&quot;`)
 		html := `<!DOCTYPE html>
 <html>
 <head>
     <title>Login</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; margin: 5px 0; }
+        body { font-family: Arial, sans-serif; max-width: 420px; margin: 50px auto; padding: 20px; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; margin: 10px 0; }
         button:hover { background: #0056b3; }
-        button.wasmx-btn { background: #28a745; }
-        button.wasmx-btn:hover { background: #218838; }
         .error { color: red; margin: 10px 0; }
-        .success { color: green; margin: 10px 0; }
-        .blockchain-section { margin-top: 20px; padding-top: 20px; border-top: 2px solid #ddd; display: none; }
-        .hidden { display: none; }
-        label { display: block; margin-top: 10px; }
+        .info { background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 10px 0; font-size: 14px; }
     </style>
 </head>
 <body>
     <h2>Login</h2>
     <div id="error" class="error"></div>
-    <div id="success" class="success"></div>
-
-    <form id="loginForm" method="POST" action="/login">
-        <input type="email" id="email" name="email" placeholder="Email" required />
-        <input type="password" id="password" name="password" placeholder="Password" required />
-        <input type="hidden" id="redirect" name="redirect" value="` + escapedRedirect + `" />
-        <button type="submit">Login with Password</button>
-    </form>
-
-    <div id="blockchainSection" class="blockchain-section">
-        <h3>WasmX Blockchain Login</h3>
-        <p>You have blockchain keys registered for this account.</p>
-        <label for="pin">Enter your 4-digit PIN:</label>
-        <input type="password" id="pin" pattern="[0-9]{4}" maxlength="4" placeholder="4-digit PIN" />
-        <button id="wasmxBtn" type="button" class="wasmx-btn">
-            Login with WasmX
-        </button>
+    <div class="info">
+        This uses your Nomen session. If you are not signed in, you will be redirected to /nomen/auth.
     </div>
-
-    <p style="margin-top: 20px; text-align: center;">
-        Don't have an account? <a href="/register">Register here</a>
-    </p>
+    <button id="nomenLoginBtn" type="button">Continue with Nomen</button>
 
     <script type="module">
-        import { sha256 } from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/sha256/+esm';
+        const redirect = "` + escapedRedirect + `";
+        const errorDiv = document.getElementById('error');
+        const loginBtn = document.getElementById('nomenLoginBtn');
 
-        // Check if user has blockchain keys when email is entered
-        function checkBlockchainKeys() {
-            const email = document.getElementById('email').value;
-            const blockchainSection = document.getElementById('blockchainSection');
-
-            if (email && localStorage.getItem('wasmx_encrypted_key_' + email)) {
-                blockchainSection.style.display = 'block';
-            } else {
-                blockchainSection.style.display = 'none';
+        function getNomenSession() {
+            const keys = Object.keys(localStorage);
+            for (const key of keys) {
+                if (!key.startsWith('sb-') || !key.endsWith('-auth-token')) {
+                    continue;
+                }
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) continue;
+                    const parsed = JSON.parse(raw);
+                    const session = parsed?.currentSession ?? parsed;
+                    if (session?.access_token && session?.user?.email) {
+                        return session;
+                    }
+                } catch (err) {
+                    console.log('Failed to parse Supabase session:', err);
+                }
             }
+            return null;
         }
 
-        // Derive decryption key from PIN using PBKDF2
-        async function deriveKeyFromPIN(pin) {
-            const enc = new TextEncoder();
-            const pinData = enc.encode(pin);
-            const salt = enc.encode('wasmx-identity-v1');
+        function redirectToNomenAuth() {
+            const target = '/login' + (redirect ? ('?redirect=' + encodeURIComponent(redirect)) : '');
+            window.location.href = '/nomen/auth?redirect=' + encodeURIComponent(target);
+        }
 
-            const keyMaterial = await crypto.subtle.importKey(
-                'raw',
-                pinData,
-                'PBKDF2',
-                false,
-                ['deriveBits', 'deriveKey']
-            );
-
-            return await crypto.subtle.deriveKey(
-                {
-                    name: 'PBKDF2',
-                    salt: salt,
-                    iterations: 100000,
-                    hash: 'SHA-256'
+        async function performLogin(session) {
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + session.access_token
                 },
-                keyMaterial,
-                { name: 'AES-GCM', length: 256 },
-                true,
-                ['encrypt', 'decrypt']
-            );
-        }
-
-        // Decrypt private key with PIN-derived key
-        async function decryptPrivateKey(encryptedHex, pin) {
-            const key = await deriveKeyFromPIN(pin);
-            const encryptedBytes = new Uint8Array(encryptedHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-            const iv = encryptedBytes.slice(0, 12);
-            const ciphertext = encryptedBytes.slice(12);
-
-            try {
-                const decrypted = await crypto.subtle.decrypt(
-                    { name: 'AES-GCM', iv: iv },
-                    key,
-                    ciphertext
-                );
-
-                const dec = new TextDecoder();
-                return dec.decode(decrypted);
-            } catch (err) {
-                throw new Error('Invalid PIN or corrupted key data');
+                body: JSON.stringify({})
+            });
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}));
+                errorDiv.textContent = body.error || 'Failed to login';
+                return;
+            }
+            if (redirect) {
+                window.location.href = redirect;
+            } else {
+                window.location.href = '/';
             }
         }
 
-        // Handle traditional login
-        async function handleTraditionalLogin(event) {
-            event.preventDefault();
-            const form = document.getElementById('loginForm');
-            const errorDiv = document.getElementById('error');
-            const successDiv = document.getElementById('success');
-
+        loginBtn.addEventListener('click', async function() {
             errorDiv.textContent = '';
-            successDiv.textContent = '';
-
-            const formData = new FormData(form);
-
-            try {
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams(formData)
-                });
-
-                if (response.redirected) {
-                    window.location.href = response.url;
-                } else if (response.ok) {
-                    const redirect = formData.get('redirect');
-                    if (redirect) {
-                        window.location.href = redirect;
-                    } else {
-                        successDiv.textContent = 'Login successful!';
-                        setTimeout(() => window.location.href = '/', 1000);
-                    }
-                } else {
-                    const data = await response.json();
-                    errorDiv.textContent = data.error || 'Login failed';
-                }
-            } catch (err) {
-                errorDiv.textContent = 'Network error: ' + err.message;
-            }
-        }
-
-        // Handle WasmX blockchain login
-        async function handleWasmXLogin(event) {
-            event.preventDefault();
-            const errorDiv = document.getElementById('error');
-            const successDiv = document.getElementById('success');
-
-            errorDiv.textContent = '';
-            successDiv.textContent = '';
-
-            const email = document.getElementById('email').value;
-            const pin = document.getElementById('pin').value;
-
-            if (!email || !pin) {
-                errorDiv.textContent = 'Email and PIN are required for WasmX login';
+            const session = getNomenSession();
+            if (!session) {
+                redirectToNomenAuth();
                 return;
             }
-
-            if (!/^[0-9]{4}$/.test(pin)) {
-                errorDiv.textContent = 'PIN must be exactly 4 digits';
-                return;
-            }
-
-            const encryptedKey = localStorage.getItem('wasmx_encrypted_key_' + email);
-            if (!encryptedKey) {
-                errorDiv.textContent = 'No blockchain keys found for this account';
-                return;
-            }
-
-            try {
-                successDiv.textContent = 'Decrypting private key...';
-                const privateKey = await decryptPrivateKey(encryptedKey, pin);
-
-                successDiv.textContent = 'Private key decrypted! Signing in...';
-                sessionStorage.setItem('wasmx_private_key', privateKey);
-
-                const formData = new URLSearchParams();
-                formData.append('email', email);
-                formData.append('password', document.getElementById('password').value);
-                formData.append('redirect', document.getElementById('redirect').value);
-                formData.append('use_blockchain', 'true');
-
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
-                });
-
-                if (response.redirected) {
-                    window.location.href = response.url;
-                } else if (response.ok) {
-                    const redirect = document.getElementById('redirect').value;
-                    if (redirect) {
-                        window.location.href = redirect;
-                    } else {
-                        successDiv.textContent = 'WasmX login successful!';
-                        setTimeout(() => window.location.href = '/', 1000);
-                    }
-                } else {
-                    const data = await response.json();
-                    errorDiv.textContent = data.error || 'Login failed';
-                }
-            } catch (err) {
-                errorDiv.textContent = err.message;
-            }
-        }
-
-        // Attach event listeners
-        document.getElementById('email').addEventListener('input', checkBlockchainKeys);
-        document.getElementById('loginForm').addEventListener('submit', handleTraditionalLogin);
-        document.getElementById('wasmxBtn').addEventListener('click', handleWasmXLogin);
-
-        // Check on page load if email field has value
-        checkBlockchainKeys();
+            await performLogin(session);
+        });
     </script>
 </body>
 </html>`
@@ -1377,57 +1301,56 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
 		return methodNotAllowed()
 	}
 
-	// Parse form data or JSON
-	var r LoginRequest
-	var formRedirect string
-	var useBlockchain bool
-	contentType := req.Header.Get("Content-Type")
-	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
-		form, _ := url.ParseQuery(string(req.Data))
-		r.Email = form.Get("email")
-		r.Password = form.Get("password")
-		formRedirect = form.Get("redirect")
-		useBlockchain = form.Get("use_blockchain") == "true"
-	} else {
-		if err := json.Unmarshal(req.Data, &r); err != nil {
-			return badRequest("invalid json")
-		}
-	}
-
-	// If using blockchain login, the private key was decrypted in the browser
-	// and stored in sessionStorage. The actual authentication still uses the
-	// password for now, but we can enhance this later to support pure blockchain auth.
-	if useBlockchain {
-		LoggerInfo("WasmX blockchain login requested", []string{"email", r.Email})
-	}
-
-	resp := Login(r)
-
-	// Parse response to check for errors and get session
-	var loginResp LoginResponse
-	json.Unmarshal(resp, &loginResp)
-
-	// If login failed, return error
-	if loginResp.SessionID == "" {
+	email, err := getNomenEmailFromRequest(req)
+	if err != nil {
 		return marshalHTTP(wasmxhttp.HttpResponseWrap{
 			Error: "",
 			Data: wasmxhttp.HttpResponse{
 				Status:     "401 Unauthorized",
 				StatusCode: 401,
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
-				Data:       resp,
+				Data:       []byte(`{"error":"invalid or missing nomen session","login_url":"/nomen/auth"}`),
 			},
 		})
 	}
 
+	user := getUserByEmail(email)
+	if user == nil {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "400 Bad Request",
+				StatusCode: 400,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"user not registered"}`),
+			},
+		})
+	}
+
+	loginResp, err := createSessionForUser(user)
+	if err != nil {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to create session"}`),
+			},
+		})
+	}
+
+	resp, _ := json.Marshal(loginResp)
+
+	// Parse response to check for errors and get session
 	// Set session cookie
 	cookie := fmt.Sprintf("session_id=%s; Path=/; HttpOnly; Max-Age=%d", loginResp.SessionID, SESSION_DURATION_SECONDS)
 
 	// If there's a redirect URL, redirect there (for OAuth flow)
-	if formRedirect != "" {
+	if redirectURL != "" {
 		headers := http.Header{
 			"Set-Cookie": []string{cookie},
-			"Location":   []string{formRedirect},
+			"Location":   []string{redirectURL},
 		}
 		return marshalHTTP(wasmxhttp.HttpResponseWrap{
 			Error: "",
@@ -1435,7 +1358,7 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
 				Status:      "302 Found",
 				StatusCode:  302,
 				Header:      headers,
-				RedirectUrl: formRedirect,
+				RedirectUrl: redirectURL,
 			},
 		})
 	}
@@ -1765,6 +1688,54 @@ func unauthorized(msg string) []byte {
 			Data:       []byte(`{"error":"` + msg + `"}`),
 		},
 	})
+}
+
+func getNomenEmailFromRequest(req wasmxhttp.HttpRequestIncoming) (string, error) {
+	authHeader := strings.TrimSpace(req.Header.Get("Authorization"))
+	if authHeader == "" {
+		return "", fmt.Errorf("missing authorization header")
+	}
+
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return "", fmt.Errorf("invalid authorization header")
+	}
+
+	tokenStr := strings.TrimSpace(parts[1])
+	if tokenStr == "" {
+		return "", fmt.Errorf("missing token")
+	}
+
+	secret := string(wasmx.StorageLoad([]byte(STORAGE_SUPABASE_JWT_SECRET)))
+	if secret == "" {
+		return "", fmt.Errorf("missing supabase jwt secret")
+	}
+
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method")
+		}
+		return []byte(secret), nil
+	})
+	if err != nil || !token.Valid {
+		return "", fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", fmt.Errorf("invalid claims")
+	}
+
+	emailRaw, ok := claims["email"]
+	if !ok {
+		return "", fmt.Errorf("email not found in token")
+	}
+
+	email, ok := emailRaw.(string)
+	if !ok || email == "" {
+		return "", fmt.Errorf("invalid email claim")
+	}
+	return email, nil
 }
 
 func methodNotAllowed() []byte {

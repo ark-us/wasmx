@@ -11,6 +11,7 @@ const MODULE_NAME = "wasmx-oauth2-server"
 const (
 	STORAGE_PARAMS               = "params"
 	STORAGE_INIT_DATA            = "init_data"      // InitGenesisRequest for RoleChanged
+	STORAGE_SUPABASE_JWT_SECRET  = "supabase_jwt"   // Supabase JWT secret for session verification
 	STORAGE_OAUTH_CLIENTS        = "oauth_clients"  // []string of client IDs
 	STORAGE_OAUTH_CLIENT_PREFIX  = "oauth_client:"  // oauth_client:{client_id} -> OAuthClient
 	STORAGE_USERS                = "users"          // []string of user IDs
@@ -116,11 +117,10 @@ type OAuthClient struct {
 // User Account Types
 
 type RegisterUserRequest struct {
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-	Username  string `json:"username,omitempty"`
-	PublicKey string `json:"public_key,omitempty"` // For WasmX blockchain registration
-	Address   string `json:"address,omitempty"`    // Blockchain address derived from public key
+	Email      string `json:"email"`
+	Username   string `json:"username,omitempty"`
+	PublicKey  string `json:"public_key,omitempty"` // For WasmX blockchain registration
+	Address    string `json:"address,omitempty"`    // Blockchain address derived from public key
 }
 
 type RegisterUserResponse struct {
@@ -277,4 +277,5 @@ type StaticRoute struct {
 type InitGenesisRequest struct {
 	InitialClients []RegisterOAuthClientRequest `json:"initial_clients,omitempty"`
 	StaticRoutes   []StaticRoute                `json:"static_routes,omitempty"`
+	SupabaseJWT    string                       `json:"supabase_jwt,omitempty"`
 }
