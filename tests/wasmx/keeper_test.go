@@ -15,12 +15,18 @@ import (
 
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	"github.com/loredanacirstea/wasmx/x/vmhttpclient"
+	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
 
 	// wasmedge "github.com/loredanacirstea/wasmx-wasmedge"
 	wazero "github.com/loredanacirstea/wasmx-wazero"
 
 	ut "github.com/loredanacirstea/mythos-tests/utils"
 )
+
+func init() {
+	vmhttpclient.Setup()
+	vmhttpserver.Setup()
+}
 
 var (
 	benchmarkMode bool

@@ -58,6 +58,8 @@ func main() {
 		result = lib.TransferFrom(calldata.TransferFrom)
 	case calldata.Approve != nil:
 		result = lib.Approve(calldata.Approve)
+	case calldata.ApproveFrom != nil:
+		result = lib.ApproveFrom(calldata.ApproveFrom)
 	case calldata.Allowance != nil:
 		result = lib.Allowance(calldata.Allowance)
 	case calldata.Mint != nil:

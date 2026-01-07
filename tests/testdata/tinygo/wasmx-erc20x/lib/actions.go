@@ -158,6 +158,28 @@ func Approve(req *MsgApprove) []byte {
 	return []byte("{}")
 }
 
+// ApproveFrom allows admins (like identity contract) to set allowance on behalf of owner
+func ApproveFrom(req *MsgApproveFrom) []byte {
+	caller := wasmx.GetCaller()
+	admins := GetAdmins()
+	authorized := wasmx.IsAuthorized(caller, admins)
+
+	if !authorized {
+		Revert("caller not admin for approveFrom: " + string(caller))
+	}
+
+	LoggerDebug("approveFrom", []string{
+		"owner", string(req.Owner),
+		"spender", string(req.Spender),
+		"value", req.Value.String(),
+		"caller", string(caller),
+	})
+
+	SetAllowance(string(req.Owner), string(req.Spender), req.Value)
+	LogApproval(req.Owner, req.Spender, req.Value)
+	return []byte("{}")
+}
+
 // Allowance returns the allowance for an owner/spender pair
 func Allowance(req *MsgAllowance) []byte {
 	value := GetAllowance(string(req.Owner), string(req.Spender))

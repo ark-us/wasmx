@@ -4,8 +4,114 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sdkmath "cosmossdk.io/math"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
+
+// QueryAddressByDenom is the bank query type
+type QueryAddressByDenom struct {
+	Denom string `json:"denom"`
+}
+
+// QueryAddressByDenomResponse is the bank response type
+type QueryAddressByDenomResponse struct {
+	Address string `json:"address"`
+}
+
+// MsgApproveFrom is the ERC20 approve from type
+type MsgApproveFrom struct {
+	Owner   string      `json:"owner"`
+	Spender string      `json:"spender"`
+	Value   sdkmath.Int `json:"value"`
+}
+
+// getERC20AddressByDenom queries the bank contract for the ERC20 contract address for a denom
+func getERC20AddressByDenom(denom string) string {
+	bankAddr := wasmx.GetAddressByRole(wasmx.ROLE_BANK)
+	if bankAddr == "" {
+		LoggerError("Bank contract not found", nil)
+		return ""
+	}
+
+	query := map[string]interface{}{
+		"GetAddressByDenom": QueryAddressByDenom{Denom: denom},
+	}
+	queryBz, _ := json.Marshal(query)
+
+	ok, respBz := wasmx.CallSimple(bankAddr, queryBz, true, MODULE_NAME)
+	if !ok {
+		LoggerError("Failed to query bank for denom address", []string{"denom", denom})
+		return ""
+	}
+
+	var resp QueryAddressByDenomResponse
+	if err := json.Unmarshal(respBz, &resp); err != nil {
+		LoggerError("Failed to parse bank response", []string{"error", err.Error()})
+		return ""
+	}
+
+	return resp.Address
+}
+
+// setERC20Allowance calls the ERC20 contract to set allowance from owner to spender
+func setERC20Allowance(erc20Addr, owner, spender string, amount sdkmath.Int) bool {
+	msg := map[string]interface{}{
+		"approveFrom": MsgApproveFrom{
+			Owner:   owner,
+			Spender: spender,
+			Value:   amount,
+		},
+	}
+	msgBz, _ := json.Marshal(msg)
+
+	ok, _ := wasmx.CallSimple(wasmx.Bech32String(erc20Addr), msgBz, false, MODULE_NAME)
+	if !ok {
+		LoggerError("Failed to set ERC20 allowance", []string{
+			"erc20", erc20Addr,
+			"owner", owner,
+			"spender", spender,
+			"amount", amount.String(),
+		})
+		return false
+	}
+
+	LoggerInfo("ERC20 allowance set", []string{
+		"erc20", erc20Addr,
+		"owner", owner,
+		"spender", spender,
+		"amount", amount.String(),
+	})
+	return true
+}
+
+// setAllowancesForAddress sets ERC20 allowances from primary address to the new address
+func setAllowancesForAddress(primaryAddress, newAddress string, allowances []wasmx.Coin) {
+	for _, coin := range allowances {
+		if coin.Amount.IsZero() || coin.Amount.IsNegative() {
+			continue
+		}
+
+		erc20Addr := getERC20AddressByDenom(coin.Denom)
+		if erc20Addr == "" {
+			LoggerError("ERC20 contract not found for denom", []string{"denom", coin.Denom})
+			continue
+		}
+
+		setERC20Allowance(erc20Addr, primaryAddress, newAddress, coin.Amount)
+	}
+}
+
+// revokeAllowancesForAddress revokes ERC20 allowances from primary address to the removed address
+func revokeAllowancesForAddress(primaryAddress, removedAddress string, allowances []wasmx.Coin) {
+	for _, coin := range allowances {
+		erc20Addr := getERC20AddressByDenom(coin.Denom)
+		if erc20Addr == "" {
+			continue
+		}
+
+		setERC20Allowance(erc20Addr, primaryAddress, removedAddress, sdkmath.ZeroInt())
+	}
+}
 
 // InitGenesis initializes the contract with genesis state
 func InitGenesis(msg *MsgInitGenesis) []byte {
@@ -140,7 +246,7 @@ func AddAddress(msg *MsgAddAddress) []byte {
 		return MarshalJSON(map[string]string{"error": "sender not authorized for this user"})
 	}
 
-	return addAddressToUser(msg.UserID, msg.Address, msg.PublicKey, msg.ServiceDomain, msg.Permissions, msg.ExpiresAt)
+	return addAddressToUser(msg.UserID, msg.Address, msg.PublicKey, msg.ServiceDomain, msg.Permissions, msg.ExpiresAt, msg.DefaultAllowances)
 }
 
 // AddAddressInternal adds a new address to an existing user (internal call from trusted contracts)
@@ -151,11 +257,11 @@ func AddAddressInternal(msg *MsgAddAddressInternal) []byte {
 	// Only allow internal calls from trusted contracts
 	wasmx.OnlyInternal(MODULE_NAME, "AddAddressInternal")
 
-	return addAddressToUser(msg.UserID, msg.Address, msg.PublicKey, msg.ServiceDomain, msg.Permissions, msg.ExpiresAt)
+	return addAddressToUser(msg.UserID, msg.Address, msg.PublicKey, msg.ServiceDomain, msg.Permissions, msg.ExpiresAt, msg.DefaultAllowances)
 }
 
 // addAddressToUser is the internal implementation for adding an address to a user
-func addAddressToUser(userID, address string, publicKey []byte, serviceDomain string, permissions []Permission, expiresAt int64) []byte {
+func addAddressToUser(userID, address string, publicKey []byte, serviceDomain string, permissions []Permission, expiresAt int64, defaultAllowances []wasmx.Coin) []byte {
 	// Load user
 	user, err := LoadUser(userID)
 	if err != nil || user == nil {
@@ -188,12 +294,13 @@ func addAddressToUser(userID, address string, publicKey []byte, serviceDomain st
 
 	// Create address info
 	addrInfo := &AddressInfo{
-		Address:       address,
-		PublicKey:     publicKey,
-		ServiceDomain: serviceDomain,
-		Permissions:   permissions,
-		ExpiresAt:     expiresAt,
-		CreatedAt:     GetBlockTime(),
+		Address:           address,
+		PublicKey:         publicKey,
+		ServiceDomain:     serviceDomain,
+		Permissions:       permissions,
+		ExpiresAt:         expiresAt,
+		CreatedAt:         GetBlockTime(),
+		DefaultAllowances: defaultAllowances,
 	}
 
 	// Save address info
@@ -204,6 +311,11 @@ func addAddressToUser(userID, address string, publicKey []byte, serviceDomain st
 
 	// Save address to user ID mapping
 	SaveUserIDByAddress(address, userID)
+
+	// Set ERC20 allowances from primary address to new address
+	if len(defaultAllowances) > 0 {
+		setAllowancesForAddress(user.PrimaryAddress, address, defaultAllowances)
+	}
 
 	LoggerInfo("Address added", []string{"user_id", userID, "address", address})
 
@@ -239,6 +351,14 @@ func RemoveAddress(msg *MsgRemoveAddress) []byte {
 	if len(user.Addresses) == 1 {
 		LoggerError("Cannot remove last address", []string{"user_id", msg.UserID})
 		return MarshalJSON(map[string]string{"error": "cannot remove last address from user"})
+	}
+
+	// Load address info to get allowances before removing
+	addrInfo, _ := LoadAddressInfo(msg.UserID, msg.Address)
+
+	// Revoke ERC20 allowances from primary address to removed address
+	if addrInfo != nil && len(addrInfo.DefaultAllowances) > 0 {
+		revokeAllowancesForAddress(user.PrimaryAddress, msg.Address, addrInfo.DefaultAllowances)
 	}
 
 	// Remove address from user's list

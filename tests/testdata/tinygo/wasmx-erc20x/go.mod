@@ -1,4 +1,4 @@
-module github.com/loredanacirstea/wasmx/tests/testdata/tinygo/wasmx-erc20
+module github.com/loredanacirstea/wasmx/tests/testdata/tinygo/wasmx-erc20x
 
 go 1.24
 
@@ -8,7 +8,11 @@ replace github.com/loredanacirstea/wasmx-env => ../wasmx-env
 
 replace github.com/loredanacirstea/wasmx-env-utils => ../wasmx-env-utils
 
+replace github.com/loredanacirstea/wasmx/tests/testdata/tinygo/wasmx-erc20 => ../wasmx-erc20
+
 require github.com/loredanacirstea/wasmx-env v0.0.0
+
+require github.com/loredanacirstea/wasmx/tests/testdata/tinygo/wasmx-erc20 v0.0.0
 
 require (
 	cosmossdk.io/math v1.3.0

@@ -94,6 +94,17 @@ type MsgApproveResponse struct {
 	Success bool `json:"success"`
 }
 
+// MsgApproveFrom allows admins (like identity contract) to set allowance on behalf of owner
+type MsgApproveFrom struct {
+	Owner   wasmx.Bech32String `json:"owner"`
+	Spender wasmx.Bech32String `json:"spender"`
+	Value   sdkmath.Int        `json:"value"`
+}
+
+type MsgApproveFromResponse struct {
+	Success bool `json:"success"`
+}
+
 type MsgAllowance struct {
 	Owner   wasmx.Bech32String `json:"owner"`
 	Spender wasmx.Bech32String `json:"spender"`
@@ -115,15 +126,16 @@ type MsgBurn struct {
 
 // CallData structure for routing
 type CallData struct {
-	Name        *MsgName        `json:"name,omitempty"`
-	Symbol      *MsgSymbol      `json:"symbol,omitempty"`
-	Decimals    *MsgDecimals    `json:"decimals,omitempty"`
-	TotalSupply *MsgTotalSupply `json:"totalSupply,omitempty"`
-	BalanceOf   *MsgBalanceOf   `json:"balanceOf,omitempty"`
-	Transfer    *MsgTransfer    `json:"transfer,omitempty"`
+	Name         *MsgName         `json:"name,omitempty"`
+	Symbol       *MsgSymbol       `json:"symbol,omitempty"`
+	Decimals     *MsgDecimals     `json:"decimals,omitempty"`
+	TotalSupply  *MsgTotalSupply  `json:"totalSupply,omitempty"`
+	BalanceOf    *MsgBalanceOf    `json:"balanceOf,omitempty"`
+	Transfer     *MsgTransfer     `json:"transfer,omitempty"`
 	TransferFrom *MsgTransferFrom `json:"transferFrom,omitempty"`
-	Approve     *MsgApprove     `json:"approve,omitempty"`
-	Allowance   *MsgAllowance   `json:"allowance,omitempty"`
-	Mint        *MsgMint        `json:"mint,omitempty"`
-	Burn        *MsgBurn        `json:"burn,omitempty"`
+	Approve      *MsgApprove      `json:"approve,omitempty"`
+	ApproveFrom  *MsgApproveFrom  `json:"approveFrom,omitempty"`
+	Allowance    *MsgAllowance    `json:"allowance,omitempty"`
+	Mint         *MsgMint         `json:"mint,omitempty"`
+	Burn         *MsgBurn         `json:"burn,omitempty"`
 }

@@ -3,6 +3,7 @@ package lib
 import (
 	"encoding/json"
 
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	utils "github.com/loredanacirstea/wasmx/tests/testdata/tinygo/wasmx-utils"
 )
 
@@ -27,12 +28,13 @@ type UserIdentity struct {
 
 // AddressInfo contains detailed information about an address associated with a user
 type AddressInfo struct {
-	Address       string       `json:"address"`
-	PublicKey     []byte       `json:"public_key"`     // Public key bytes for this address
-	ServiceDomain string       `json:"service_domain"` // Empty for regular addresses, domain for ephemeral keys
-	Permissions   []Permission `json:"permissions"`    // Permissions granted to this address
-	ExpiresAt     int64        `json:"expires_at"`     // 0 for non-expiring addresses
-	CreatedAt     int64        `json:"created_at"`
+	Address           string       `json:"address"`
+	PublicKey         []byte       `json:"public_key"`                   // Public key bytes for this address
+	ServiceDomain     string       `json:"service_domain"`               // Empty for regular addresses, domain for ephemeral keys
+	Permissions       []Permission `json:"permissions"`                  // Permissions granted to this address
+	ExpiresAt         int64        `json:"expires_at"`                   // 0 for non-expiring addresses
+	CreatedAt         int64        `json:"created_at"`
+	DefaultAllowances []wasmx.Coin `json:"default_allowances,omitempty"` // ERC20 allowances from primary address
 }
 
 // Permission represents a specific permission granted to an address
@@ -58,12 +60,13 @@ type MsgRegisterUserResponse struct {
 
 // MsgAddAddress adds a new address to an existing user
 type MsgAddAddress struct {
-	UserID        string       `json:"user_id"`
-	Address       string       `json:"address"`
-	PublicKey     []byte       `json:"public_key"`
-	ServiceDomain string       `json:"service_domain,omitempty"`
-	Permissions   []Permission `json:"permissions,omitempty"`
-	ExpiresAt     int64        `json:"expires_at,omitempty"`
+	UserID            string       `json:"user_id"`
+	Address           string       `json:"address"`
+	PublicKey         []byte       `json:"public_key"`
+	ServiceDomain     string       `json:"service_domain,omitempty"`
+	Permissions       []Permission `json:"permissions,omitempty"`
+	ExpiresAt         int64        `json:"expires_at,omitempty"`
+	DefaultAllowances []wasmx.Coin `json:"default_allowances,omitempty"` // ERC20 allowances from primary address
 }
 
 type MsgAddAddressResponse struct {
@@ -72,12 +75,13 @@ type MsgAddAddressResponse struct {
 
 // MsgAddAddressInternal adds a new address to an existing user (internal call from trusted contracts)
 type MsgAddAddressInternal struct {
-	UserID        string       `json:"user_id"`
-	Address       string       `json:"address"`
-	PublicKey     []byte       `json:"public_key"`
-	ServiceDomain string       `json:"service_domain,omitempty"`
-	Permissions   []Permission `json:"permissions,omitempty"`
-	ExpiresAt     int64        `json:"expires_at,omitempty"`
+	UserID            string       `json:"user_id"`
+	Address           string       `json:"address"`
+	PublicKey         []byte       `json:"public_key"`
+	ServiceDomain     string       `json:"service_domain,omitempty"`
+	Permissions       []Permission `json:"permissions,omitempty"`
+	ExpiresAt         int64        `json:"expires_at,omitempty"`
+	DefaultAllowances []wasmx.Coin `json:"default_allowances,omitempty"` // ERC20 allowances from primary address
 }
 
 type MsgAddAddressInternalResponse struct {

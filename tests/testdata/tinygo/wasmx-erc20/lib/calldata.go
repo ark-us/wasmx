@@ -34,6 +34,8 @@ func GetCallDataWrap() []byte {
 		result = TransferFrom(callData.TransferFrom)
 	} else if callData.Approve != nil {
 		result = Approve(callData.Approve)
+	} else if callData.ApproveFrom != nil {
+		result = ApproveFrom(callData.ApproveFrom)
 	} else if callData.Allowance != nil {
 		result = Allowance(callData.Allowance)
 	} else if callData.Mint != nil {

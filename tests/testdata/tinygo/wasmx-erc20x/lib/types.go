@@ -3,6 +3,7 @@ package lib
 import (
 	sdkmath "cosmossdk.io/math"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
+	erc20 "github.com/loredanacirstea/wasmx/tests/testdata/tinygo/wasmx-erc20/lib"
 )
 
 const MODULE_NAME = "erc20x"
@@ -105,6 +106,10 @@ type MsgApproveResponse struct {
 	Success bool `json:"success"`
 }
 
+// MsgApproveFrom imported from erc20
+type MsgApproveFrom = erc20.MsgApproveFrom
+type MsgApproveFromResponse = erc20.MsgApproveFromResponse
+
 type MsgAllowance struct {
 	Owner   wasmx.Bech32String `json:"owner"`
 	Spender wasmx.Bech32String `json:"spender"`
@@ -126,16 +131,17 @@ type MsgBurn struct {
 
 // CallData structure for routing
 type CallData struct {
-	Name             *MsgName             `json:"name,omitempty"`
-	Symbol           *MsgSymbol           `json:"symbol,omitempty"`
-	Decimals         *MsgDecimals         `json:"decimals,omitempty"`
-	TotalSupply      *MsgTotalSupply      `json:"totalSupply,omitempty"`
-	BalanceOf        *MsgBalanceOf        `json:"balanceOf,omitempty"`
-	SignedBalanceOf  *MsgSignedBalanceOf  `json:"signedBalanceOf,omitempty"`
-	Transfer         *MsgTransfer         `json:"transfer,omitempty"`
-	TransferFrom     *MsgTransferFrom     `json:"transferFrom,omitempty"`
-	Approve          *MsgApprove          `json:"approve,omitempty"`
-	Allowance        *MsgAllowance        `json:"allowance,omitempty"`
-	Mint             *MsgMint             `json:"mint,omitempty"`
-	Burn             *MsgBurn             `json:"burn,omitempty"`
+	Name            *MsgName            `json:"name,omitempty"`
+	Symbol          *MsgSymbol          `json:"symbol,omitempty"`
+	Decimals        *MsgDecimals        `json:"decimals,omitempty"`
+	TotalSupply     *MsgTotalSupply     `json:"totalSupply,omitempty"`
+	BalanceOf       *MsgBalanceOf       `json:"balanceOf,omitempty"`
+	SignedBalanceOf *MsgSignedBalanceOf `json:"signedBalanceOf,omitempty"`
+	Transfer        *MsgTransfer        `json:"transfer,omitempty"`
+	TransferFrom    *MsgTransferFrom    `json:"transferFrom,omitempty"`
+	Approve         *MsgApprove         `json:"approve,omitempty"`
+	ApproveFrom     *MsgApproveFrom     `json:"approveFrom,omitempty"`
+	Allowance       *MsgAllowance       `json:"allowance,omitempty"`
+	Mint            *MsgMint            `json:"mint,omitempty"`
+	Burn            *MsgBurn            `json:"burn,omitempty"`
 }
