@@ -156,12 +156,21 @@ func InitGenesis(msg *MsgInitGenesis) []byte {
 }
 
 // RegisterUser registers a new user with an initial address
+// Self-registration only: the transaction sender must be the address being registered
 func RegisterUser(msg *MsgRegisterUser) []byte {
 	fmt.Println("=== IDENTITY: RegisterUser called ===")
 	fmt.Println("Address:", msg.Address)
 	fmt.Println("PublicKey:", msg.PublicKey)
 	fmt.Println("==================================888==")
 	LoggerInfo("RegisterUser called", []string{"address", msg.Address})
+
+	// Verify self-registration: sender must be the address being registered
+	sender := wasmx.GetCaller()
+	if string(sender) != msg.Address {
+		fmt.Println("Self-registration required: sender", string(sender), "!= address", msg.Address)
+		LoggerError("Self-registration required", []string{"sender", string(sender), "address", msg.Address})
+		return MarshalJSON(map[string]string{"error": "self-registration required: transaction sender must be the address being registered"})
+	}
 
 	fmt.Println("Step 1: Check existing user---")
 	// Check if address is already associated with a user

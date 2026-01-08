@@ -40,6 +40,7 @@ type MsgGenerateEphemeralKey struct {
 type MsgGenerateEphemeralKeyResponse struct {
 	PublicKey  []byte `json:"public_key"`
 	PrivateKey []byte `json:"private_key"` // Only returned on generation, for browser storage
+	Address    string `json:"address"`     // Derived bech32 address
 	Success    bool   `json:"success"`
 }
 

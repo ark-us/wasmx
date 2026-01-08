@@ -1270,7 +1270,7 @@ func handleLogin(req wasmxhttp.HttpRequestIncoming) []byte {
             if (redirect) {
                 window.location.href = redirect;
             } else {
-                window.location.href = '/';
+                window.location.href = '/nomen';
             }
         }
 

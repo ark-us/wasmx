@@ -134,20 +134,16 @@ func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
 
 	fmt.Println("Ephemeral address derived", []string{"address", address})
 
-	// Register address with wasmx-identity
-	if err := registerAddressWithIdentity(msg.UserID, address, publicKey, msg.ServiceDomain, msg.ExpiresAt); err != nil {
-		LoggerError("Failed to register address with identity", []string{"error", err.Error()})
-		// Don't fail the whole operation, just log the error
-		// The ephemeral key is still usable, just not linked to identity
-	}
-
-	// Fund the ephemeral account
+	// Fund the ephemeral account first (before registration)
+	// The account needs to exist and have funds to pay for gas
 	initAccountResp := InitAccount(&MsgInitAccount{Address: address})
 	fmt.Println("InitAccount response", []string{"response", string(initAccountResp)})
 
+	// Return key info - user must separately trigger identity registration after funding is confirmed
 	return MarshalJSON(MsgGenerateEphemeralKeyResponse{
 		PublicKey:  publicKey,
 		PrivateKey: privateKey, // Return plaintext for browser storage
+		Address:    address,    // Derived bech32 address
 		Success:    true,
 	})
 }
@@ -356,80 +352,67 @@ func QueryValidateAndGetKey(msg *MsgQueryValidateAndGetKey) []byte {
 	})
 }
 
-// registerAddressWithIdentity registers the ephemeral address with the wasmx-identity contract
-func registerAddressWithIdentity(userID, address string, publicKey []byte, serviceDomain string, expiresAt int64) error {
+// broadcastIdentityRegistration prepares and broadcasts a register_user transaction to wasmx-identity
+// This uses the ephemeral key to sign the transaction (self-registration).
+// For EXISTING users, this will fail because wasmx-identity requires self-registration.
+// Existing users must sign add_address transactions themselves from their existing address.
+func broadcastIdentityRegistration(address string, publicKey []byte, privateKey []byte, serviceDomain string, expiresAt int64) error {
 	// Get wasmx-identity contract address
 	identityAddr := wasmx.GetAddressByRole(wasmx.ROLE_ACCOUNT_IDENTITY)
 	if identityAddr == "" {
 		return errors.New("identity contract not found")
 	}
 
-	fmt.Println("registerAddressWithIdentity", []string{"identity_addr", string(identityAddr), "user_id", userID, "address", address})
+	fmt.Println("broadcastIdentityRegistration", []string{"identity_addr", string(identityAddr), "address", address})
 
-	// First, check if user exists by querying identity
-	queryMsg := map[string]interface{}{
-		"query_user_by_id": map[string]string{
-			"user_id": userID,
-		},
-	}
-	queryBz, _ := json.Marshal(queryMsg)
-
-	ok, respData := wasmx.CallSimple(identityAddr, queryBz, true, MODULE_NAME)
-	fmt.Println("Query user by ID response", []string{"ok", fmt.Sprintf("%v", ok), "response", string(respData)})
-
-	// Check if user exists
-	var queryResp struct {
-		User  interface{} `json:"user"`
-		Error string      `json:"error"`
-	}
-	json.Unmarshal(respData, &queryResp)
-
-	if queryResp.Error != "" && queryResp.Error == "user not found" {
-		// User doesn't exist, create with RegisterUser
-		fmt.Println("User not found, registering new user", []string{"user_id", userID})
-		registerMsg := map[string]interface{}{
-			"register_user": map[string]interface{}{
-				"address":        address,
-				"public_key":     publicKey,
-				"service_domain": serviceDomain,
-				"expires_at":     expiresAt,
-			},
-		}
-		registerBz, _ := json.Marshal(registerMsg)
-
-		ok, respData = wasmx.CallSimple(identityAddr, registerBz, false, MODULE_NAME)
-		fmt.Println("RegisterUser response", []string{"ok", fmt.Sprintf("%v", ok), "response", string(respData)})
-
-		if !ok {
-			return errors.New("failed to register user: " + string(respData))
-		}
-
-		// Note: RegisterUser generates its own userID, but we're using the OAuth2 userID
-		// This means we need to track the mapping separately or modify identity contract
-		// For now, we'll proceed with the identity contract's generated userID
-		return nil
-	}
-
-	// User exists, add address using AddAddressInternal
-	fmt.Println("User exists, adding address internally", []string{"user_id", userID})
-	addMsg := map[string]interface{}{
-		"add_address_internal": map[string]interface{}{
-			"user_id":        userID,
+	// Prepare register_user message (self-registration)
+	registerMsg := map[string]interface{}{
+		"register_user": map[string]interface{}{
 			"address":        address,
 			"public_key":     publicKey,
 			"service_domain": serviceDomain,
 			"expires_at":     expiresAt,
 		},
 	}
-	addBz, _ := json.Marshal(addMsg)
-
-	ok, respData = wasmx.CallSimple(identityAddr, addBz, false, MODULE_NAME)
-	fmt.Println("AddAddressInternal response", []string{"ok", fmt.Sprintf("%v", ok), "response", string(respData)})
-
-	if !ok {
-		return errors.New("failed to add address: " + string(respData))
+	msgBz, err := json.Marshal(registerMsg)
+	if err != nil {
+		return errors.New("failed to marshal register message: " + err.Error())
 	}
 
+	// Load gas price
+	gasPrice := LoadGasPrice()
+	if gasPrice == nil {
+		gasPrice = &wasmx.Coin{Denom: "amyt", Amount: math.NewInt(10)}
+	}
+
+	// Prepare transaction: execute wasmx-identity.register_user
+	// The ephemeral key signs this - it's self-registration (sender == address being registered)
+	txBytes, err := wasmxcore.PrepareTx(
+		string(identityAddr), // target contract
+		msgBz,                // message data
+		nil,                  // no coins to send
+		nil,                  // no memo
+		5000000,              // gas limit
+		*gasPrice,            // gas price
+		privateKey,           // sign with ephemeral key (self-registration)
+	)
+	if err != nil {
+		return errors.New("failed to prepare registration tx: " + err.Error())
+	}
+
+	fmt.Println("broadcastIdentityRegistration: transaction prepared", []string{"tx_bytes_len", fmt.Sprintf("%d", len(txBytes))})
+
+	// Broadcast transaction asynchronously
+	broadcastResp, err := wasmxcore.BroadcastTxAsync(txBytes)
+	if err != nil {
+		return errors.New("failed to broadcast registration tx: " + err.Error())
+	}
+
+	if broadcastResp.Error != "" {
+		return errors.New("registration broadcast error: " + broadcastResp.Error)
+	}
+
+	fmt.Println("broadcastIdentityRegistration: tx broadcasted", []string{"tx_hash", hex.EncodeToString(broadcastResp.TxHash)})
 	return nil
 }
 

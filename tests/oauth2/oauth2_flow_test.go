@@ -13,8 +13,15 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/client/tx"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/simulation"
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	jwt "github.com/golang-jwt/jwt/v5"
 
+	mcodec "github.com/loredanacirstea/wasmx/codec"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
@@ -48,7 +55,6 @@ type ExchangeCodeForTokenResponseOAuth2 struct {
 const (
 	testServerAddr = "http://localhost:8080"
 	testEmail      = "test@example.com"
-	testPassword   = "testpassword123"
 	testUsername   = "testuser"
 )
 
@@ -56,6 +62,7 @@ const (
 func (suite *KeeperTestSuite) setupOAuth2Server() (clientID, clientSecret string) {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
+	ensureTestSupabaseJWT()
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -149,6 +156,7 @@ func (suite *KeeperTestSuite) setupOAuth2Server() (clientID, clientSecret string
 // TestOAuth2Flow tests the complete OAuth2 registration, login, and logout flow
 func (suite *KeeperTestSuite) TestOAuth2Flow() {
 	clientID, clientSecret := suite.setupOAuth2Server()
+	supabaseJWT := ensureTestSupabaseJWT()
 
 	client := &http.Client{
 		Timeout: 10 * time.Second,
@@ -166,17 +174,14 @@ func (suite *KeeperTestSuite) TestOAuth2Flow() {
 
 	// Test 1.1: Register a new user via POST /register
 	registerData := map[string]string{
-		"email":    testEmail,
-		"password": testPassword,
 		"username": testUsername,
 	}
 	registerBody, _ := json.Marshal(registerData)
-
-	resp, err := client.Post(
-		testServerAddr+"/register",
-		"application/json",
-		bytes.NewBuffer(registerBody),
-	)
+	registerReq, err := http.NewRequest("POST", testServerAddr+"/register", bytes.NewBuffer(registerBody))
+	suite.Require().NoError(err)
+	registerReq.Header.Set("Content-Type", "application/json")
+	registerReq.Header.Set("Authorization", "Bearer "+createSupabaseJWT(testEmail, supabaseJWT))
+	resp, err := client.Do(registerReq)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
 
@@ -194,11 +199,11 @@ func (suite *KeeperTestSuite) TestOAuth2Flow() {
 	suite.T().Logf("User registered successfully: UserID=%s", registerResp.UserID)
 
 	// Test 1.2: Attempt to register with the same email (should fail)
-	resp2, err := client.Post(
-		testServerAddr+"/register",
-		"application/json",
-		bytes.NewBuffer(registerBody),
-	)
+	registerReq2, err := http.NewRequest("POST", testServerAddr+"/register", bytes.NewBuffer(registerBody))
+	suite.Require().NoError(err)
+	registerReq2.Header.Set("Content-Type", "application/json")
+	registerReq2.Header.Set("Authorization", "Bearer "+createSupabaseJWT(testEmail, supabaseJWT))
+	resp2, err := client.Do(registerReq2)
 	suite.Require().NoError(err)
 	body2, _ := io.ReadAll(resp2.Body)
 	resp2.Body.Close()
@@ -207,40 +212,14 @@ func (suite *KeeperTestSuite) TestOAuth2Flow() {
 	suite.Require().Equal(http.StatusBadRequest, resp2.StatusCode, "Duplicate registration should return 400")
 	suite.Require().Contains(string(body2), "email already registered", "Duplicate registration should return error message")
 
-	// Test 1.3: Register with invalid data (missing email)
-	invalidData := map[string]string{
-		"password": testPassword,
-	}
-	invalidBody, _ := json.Marshal(invalidData)
-
-	resp3, err := client.Post(
-		testServerAddr+"/register",
-		"application/json",
-		bytes.NewBuffer(invalidBody),
-	)
+	// Test 1.3: Register without auth header (should fail)
+	invalidBody, _ := json.Marshal(map[string]string{})
+	resp3, err := client.Post(testServerAddr+"/register", "application/json", bytes.NewBuffer(invalidBody))
 	suite.Require().NoError(err)
 	body3, _ := io.ReadAll(resp3.Body)
 	resp3.Body.Close()
 	suite.T().Logf("Registration without email response: status=%d body=%s", resp3.StatusCode, string(body3))
-	suite.Require().Equal(http.StatusBadRequest, resp3.StatusCode, "Registration without email should return 400")
-
-	// Test 1.4: Register with short password
-	shortPwdData := map[string]string{
-		"email":    "another@example.com",
-		"password": "short",
-	}
-	shortPwdBody, _ := json.Marshal(shortPwdData)
-
-	resp4, err := client.Post(
-		testServerAddr+"/register",
-		"application/json",
-		bytes.NewBuffer(shortPwdBody),
-	)
-	suite.Require().NoError(err)
-	body4, _ := io.ReadAll(resp4.Body)
-	resp4.Body.Close()
-	suite.T().Logf("Registration with short password response: status=%d body=%s", resp4.StatusCode, string(body4))
-	suite.Require().Equal(http.StatusBadRequest, resp4.StatusCode, "Registration with short password should return 400")
+	suite.Require().Equal(http.StatusUnauthorized, resp3.StatusCode, "Registration without auth should return 401")
 
 	suite.T().Log("Registration tests passed!")
 
@@ -249,13 +228,12 @@ func (suite *KeeperTestSuite) TestOAuth2Flow() {
 	// ========================================
 	suite.T().Log("--- Part 2: User Login ---")
 
-	// Test 2.1: Login with valid credentials
-	loginData := url.Values{
-		"email":    {testEmail},
-		"password": {testPassword},
-	}
-
-	resp, err = client.PostForm(testServerAddr+"/login", loginData)
+	// Test 2.1: Login with valid session (Supabase JWT)
+	loginReq, err := http.NewRequest("POST", testServerAddr+"/login", bytes.NewBuffer([]byte(`{}`)))
+	suite.Require().NoError(err)
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginReq.Header.Set("Authorization", "Bearer "+createSupabaseJWT(testEmail, supabaseJWT))
+	resp, err = client.Do(loginReq)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
 
@@ -284,27 +262,21 @@ func (suite *KeeperTestSuite) TestOAuth2Flow() {
 	suite.Require().NotNil(sessionCookie, "Session cookie should be set")
 	suite.Require().Equal(sessionID, sessionCookie.Value, "Cookie session ID should match response")
 
-	// Test 2.2: Login with invalid password
-	invalidLoginData := url.Values{
-		"email":    {testEmail},
-		"password": {"wrongpassword"},
-	}
-
-	resp, err = client.PostForm(testServerAddr+"/login", invalidLoginData)
+	// Test 2.2: Login without auth header
+	resp, err = client.Post(testServerAddr+"/login", "application/json", bytes.NewBuffer([]byte(`{}`)))
 	suite.Require().NoError(err)
 	resp.Body.Close()
-	suite.Require().Equal(http.StatusUnauthorized, resp.StatusCode, "Login with wrong password should fail")
+	suite.Require().Equal(http.StatusUnauthorized, resp.StatusCode, "Login without auth should fail")
 
-	// Test 2.3: Login with non-existent email
-	nonExistentLoginData := url.Values{
-		"email":    {"nonexistent@example.com"},
-		"password": {testPassword},
-	}
-
-	resp, err = client.PostForm(testServerAddr+"/login", nonExistentLoginData)
+	// Test 2.3: Login with non-existent email (valid JWT, unknown user)
+	unknownLoginReq, err := http.NewRequest("POST", testServerAddr+"/login", bytes.NewBuffer([]byte(`{}`)))
+	suite.Require().NoError(err)
+	unknownLoginReq.Header.Set("Content-Type", "application/json")
+	unknownLoginReq.Header.Set("Authorization", "Bearer "+createSupabaseJWT("nonexistent@example.com", supabaseJWT))
+	resp, err = client.Do(unknownLoginReq)
 	suite.Require().NoError(err)
 	resp.Body.Close()
-	suite.Require().Equal(http.StatusUnauthorized, resp.StatusCode, "Login with non-existent email should fail")
+	suite.Require().Equal(http.StatusBadRequest, resp.StatusCode, "Login with non-existent email should fail")
 
 	suite.T().Log("Login tests passed!")
 
@@ -554,6 +526,7 @@ func min(a, b int) int {
 func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	sender := suite.GetRandomAccount()
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(500000000)
+	supabaseJWT := ensureTestSupabaseJWT()
 
 	appA := s.AppContext()
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(sender.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
@@ -699,23 +672,62 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 		},
 	}
 
-	// Register a new user
+	// Register a new user (simulate browser key-pair flow)
 	mcpTestEmail := "mcpuser@example.com"
-	mcpTestPassword := "mcptestpassword123"
+	privKey := secp256k1.GenPrivKey()
+	pubKey := privKey.PubKey()
+	pubKeyBytes := pubKey.Bytes()
+	address := appA.BytesToAccAddressPrefixed(sdk.AccAddress(pubKey.Address()))
+
+	// Call register_init via HTTP - this triggers oauth2-server -> oauth2-keys -> BroadcastTxAsync
+	initReqBody, _ := json.Marshal(map[string]string{
+		"address": address.String(),
+	})
+	initResp, err := client.Post(testServerAddr+"/auth/register_init", "application/json", bytes.NewBuffer(initReqBody))
+	suite.Require().NoError(err)
+	initRespBody, _ := io.ReadAll(initResp.Body)
+	initResp.Body.Close()
+	suite.T().Logf("register_init response: status=%d body=%s", initResp.StatusCode, string(initRespBody))
+	suite.Require().Equal(http.StatusOK, initResp.StatusCode, "register_init should succeed: %s", string(initRespBody))
+
+	// Wait for the async goroutine to execute - give it time and poll
+	suite.T().Log("Waiting for async BroadcastTxAsync goroutine to execute...")
+	var acc mcodec.AccountI
+	for i := 0; i < 30; i++ {
+		acc, _ = appA.App.AccountKeeper.GetAccountPrefixed(appA.Context(), address)
+		if acc != nil {
+			suite.T().Logf("Account created on iteration %d", i)
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	suite.Require().NotNil(acc, "account should be created after register_init")
+
+	txBytes := buildIdentityRegisterTx(suite, &appA, privKey, address.String(), pubKeyBytes)
+	registerTxReq, _ := json.Marshal(map[string]string{
+		"signed_tx": base64.StdEncoding.EncodeToString(txBytes),
+		"address":   address.String(),
+	})
+	registerTxResp, err := client.Post(testServerAddr+"/register_tx", "application/json", bytes.NewBuffer(registerTxReq))
+	suite.Require().NoError(err)
+	registerTxBody, _ := io.ReadAll(registerTxResp.Body)
+	registerTxResp.Body.Close()
+	suite.Require().Equal(http.StatusOK, registerTxResp.StatusCode, "register_tx should succeed: %s", string(registerTxBody))
+
+	time.Sleep(2 * time.Second)
 
 	registerData := map[string]string{
-		"email":    mcpTestEmail,
-		"password": mcpTestPassword,
-		"username": "mcpuser",
+		"username":   "mcpuser",
+		"public_key": base64.StdEncoding.EncodeToString(pubKeyBytes),
+		"address":    address.String(),
 	}
 	registerBody, _ := json.Marshal(registerData)
 
-	resp, err := client.Post(
-		testServerAddr+"/register",
-		"application/json",
-		bytes.NewBuffer(registerBody),
-	)
+	registerReq, err := http.NewRequest("POST", testServerAddr+"/register", bytes.NewBuffer(registerBody))
 	suite.Require().NoError(err)
+	registerReq.Header.Set("Content-Type", "application/json")
+	registerReq.Header.Set("Authorization", "Bearer "+createSupabaseJWT(mcpTestEmail, supabaseJWT))
+	resp, err := client.Do(registerReq)
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	suite.Require().Equal(http.StatusOK, resp.StatusCode, "Registration should succeed: %s", string(body))
@@ -724,16 +736,19 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	err = json.Unmarshal(body, &registerResp)
 	suite.Require().NoError(err)
 	suite.T().Logf("User registered: UserID=%s", registerResp.UserID)
+	suite.Require().NotEmpty(registerResp.IdentityUserID, "Identity user ID should be set")
 
-	// Login to get session
-	loginData := url.Values{
-		"email":    {mcpTestEmail},
-		"password": {mcpTestPassword},
-	}
+	identityUserID := queryIdentityUserID(suite, &appA, sender, address.String())
+	suite.Require().NotEmpty(identityUserID, "Identity contract should have user for address")
+	suite.Require().Equal(registerResp.IdentityUserID, identityUserID, "Identity user id should match identity contract")
 
 	time.Sleep(time.Second * 5)
 
-	resp, err = client.PostForm(testServerAddr+"/login", loginData)
+	loginReq, err := http.NewRequest("POST", testServerAddr+"/login", bytes.NewBuffer([]byte(`{}`)))
+	suite.Require().NoError(err)
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginReq.Header.Set("Authorization", "Bearer "+createSupabaseJWT(mcpTestEmail, supabaseJWT))
+	resp, err = client.Do(loginReq)
 	suite.Require().NoError(err)
 	body, _ = io.ReadAll(resp.Body)
 	resp.Body.Close()
@@ -1072,4 +1087,133 @@ func oauth2ServerInitMsg() types.WasmxExecutionMessage {
 	}
 	data, _ := json.Marshal(initGenesis)
 	return types.WasmxExecutionMessage{Data: data}
+}
+
+func ensureTestSupabaseJWT() string {
+	secret := os.Getenv("SUPABASE_JWT")
+	if secret == "" {
+		secret = "test_supabase_jwt_secret"
+		_ = os.Setenv("SUPABASE_JWT", secret)
+	}
+	return secret
+}
+
+func createSupabaseJWT(email, secret string) string {
+	claims := jwt.MapClaims{
+		"email": email,
+		"exp":   time.Now().Add(time.Hour).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte(secret))
+	if err != nil {
+		panic("failed to sign supabase jwt: " + err.Error())
+	}
+	return signed
+}
+
+func buildIdentityRegisterTx(
+	suite *KeeperTestSuite,
+	appA *ut.AppContext,
+	privKey *secp256k1.PrivKey,
+	address string,
+	pubKeyBytes []byte,
+) []byte {
+	identityAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ACCOUNT_IDENTITY))
+	baseDenom := appA.Chain.Config.BaseDenom
+	gasLimit := uint64(30000000)
+	gasPrice := sdkmath.NewInt(100)
+
+	registerUserMsg := map[string]interface{}{
+		"register_user": map[string]interface{}{
+			"address":        address,
+			"public_key":     base64.StdEncoding.EncodeToString(pubKeyBytes),
+			"service_domain": "",
+			"permissions":    []string{},
+			"expires_at":     0,
+		},
+	}
+	innerMsgBytes, err := json.Marshal(registerUserMsg)
+	suite.Require().NoError(err)
+	wrappedMsg := map[string]string{
+		"data": base64.StdEncoding.EncodeToString(innerMsgBytes),
+	}
+	msgBytes, err := json.Marshal(wrappedMsg)
+	suite.Require().NoError(err)
+
+	executeMsg := &types.MsgExecuteContract{
+		Sender:       address,
+		Contract:     identityAddr.String(),
+		Msg:          msgBytes,
+		Funds:        sdk.NewCoins(),
+		Dependencies: []string{},
+	}
+
+	txConfig := appA.App.TxConfig()
+	txBuilder := txConfig.NewTxBuilder()
+	txBuilder.SetGasLimit(gasLimit)
+	feeAmount := gasPrice.MulRaw(int64(gasLimit))
+	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin(baseDenom, feeAmount)))
+	err = txBuilder.SetMsgs(executeMsg)
+	suite.Require().NoError(err)
+
+	accAddrBz, err := appA.AddressCodec().StringToBytes(address)
+	suite.Require().NoError(err)
+	accAddrPrefixed := appA.BytesToAccAddressPrefixed(accAddrBz)
+	acc, err := appA.App.AccountKeeper.GetAccountPrefixed(appA.Context(), accAddrPrefixed)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(acc)
+
+	sigV2 := signing.SignatureV2{
+		PubKey: privKey.PubKey(),
+		Data: &signing.SingleSignatureData{
+			SignMode:  signing.SignMode(txConfig.SignModeHandler().DefaultMode()),
+			Signature: nil,
+		},
+		Sequence: acc.GetSequence(),
+	}
+	err = txBuilder.SetSignatures(sigV2)
+	suite.Require().NoError(err)
+
+	signerData := authsigning.SignerData{
+		ChainID:       appA.Context().ChainID(),
+		AccountNumber: acc.GetAccountNumber(),
+		Sequence:      acc.GetSequence(),
+		PubKey:        privKey.PubKey(),
+		Address:       acc.GetAddressPrefixed().String(),
+	}
+	sigV2, err = tx.SignWithPrivKey(
+		appA.Context().Context(),
+		signing.SignMode(txConfig.SignModeHandler().DefaultMode()),
+		signerData,
+		txBuilder,
+		privKey,
+		txConfig,
+		acc.GetSequence(),
+	)
+	suite.Require().NoError(err)
+	err = txBuilder.SetSignatures(sigV2)
+	suite.Require().NoError(err)
+
+	txBytes, err := txConfig.TxEncoder()(txBuilder.GetTx())
+	suite.Require().NoError(err)
+	suite.Require().NotEmpty(txBytes)
+	return txBytes
+}
+
+func queryIdentityUserID(suite *KeeperTestSuite, appA *ut.AppContext, sender simulation.Account, address string) string {
+	identityAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ACCOUNT_IDENTITY))
+	queryMsg := map[string]interface{}{
+		"query_user_by_address": map[string]interface{}{
+			"address": address,
+		},
+	}
+	queryMsgBytes, err := json.Marshal(queryMsg)
+	suite.Require().NoError(err)
+	resp := appA.QueryContract(sender, identityAddr, queryMsgBytes, nil, nil)
+	var out struct {
+		UserID string `json:"user_id"`
+	}
+	err = json.Unmarshal(resp, &out)
+	suite.Require().NoError(err)
+	return out.UserID
 }

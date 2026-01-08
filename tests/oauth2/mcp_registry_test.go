@@ -520,7 +520,9 @@ type RegisterUserRequest struct {
 }
 
 type RegisterUserResponse struct {
-	UserID   string `json:"user_id"`
-	Email    string `json:"email"`
-	Username string `json:"username,omitempty"`
+	UserID            string `json:"user_id"`
+	Email             string `json:"email"`
+	Username          string `json:"username,omitempty"`
+	IdentityUserID    string `json:"identity_user_id,omitempty"`
+	BlockchainAddress string `json:"blockchain_address,omitempty"`
 }
