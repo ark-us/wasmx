@@ -27,6 +27,7 @@ import (
 	cmtconfig "github.com/cometbft/cometbft/config"
 	cometbftenc "github.com/cometbft/cometbft/crypto/encoding"
 	"github.com/cometbft/cometbft/libs/bytes"
+	cmtmath "github.com/cometbft/cometbft/libs/math"
 	cmtquery "github.com/cometbft/cometbft/libs/pubsub/query"
 	"github.com/cometbft/cometbft/libs/pubsub/query/syntax"
 	cometp2p "github.com/cometbft/cometbft/p2p"
@@ -478,12 +479,110 @@ func (c *ABCIClient) BlockByHash(ctx context.Context, hash []byte) (*rpctypes.Re
 }
 
 func (c *ABCIClient) BlockResults(ctx context.Context, height *int64) (*rpctypes.ResultBlockResults, error) {
-	// getHeight
-	return nil, fmt.Errorf("ABCIClient.BlockResults not implemented")
+	entry, blockHeight, err := c.GetBlockEntry(ctx, height)
+	if err != nil {
+		return nil, err
+	}
+
+	var blockResultData abci.ResponseFinalizeBlock
+	err = json.Unmarshal(entry.Result, &blockResultData)
+	if err != nil {
+		return nil, errorsmod.Wrapf(err, "ABCIClient.BlockResults failed to decode ResponseFinalizeBlock")
+	}
+
+	return &rpctypes.ResultBlockResults{
+		Height:                blockHeight,
+		TxsResults:            blockResultData.TxResults,
+		FinalizeBlockEvents:   blockResultData.Events,
+		ValidatorUpdates:      blockResultData.ValidatorUpdates,
+		ConsensusParamUpdates: blockResultData.ConsensusParamUpdates,
+		AppHash:               blockResultData.AppHash,
+	}, nil
 }
 
 func (c *ABCIClient) BlockchainInfo(ctx context.Context, minHeight, maxHeight int64) (*rpctypes.ResultBlockchainInfo, error) {
-	return nil, fmt.Errorf("ABCIClient.BlockchainInfo not implemented")
+	const limit int64 = 20
+	latestHeight, err := c.LatestBlockHeight(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if latestHeight == 0 {
+		return &rpctypes.ResultBlockchainInfo{
+			LastHeight: latestHeight,
+			BlockMetas: []*cmttypes.BlockMeta{},
+		}, nil
+	}
+
+	minHeight, maxHeight, err = filterMinMax(1, latestHeight, minHeight, maxHeight, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	blockMetas := make([]*cmttypes.BlockMeta, 0, maxHeight-minHeight+1)
+	for height := maxHeight; height >= minHeight; height-- {
+		entry, _, err := c.GetBlockEntryByHeight(ctx, height)
+		if err != nil {
+			return nil, err
+		}
+
+		var bmeta types.RequestProcessProposalWithMetaInfo
+		err = c.nk.Codec().UnmarshalJSON(entry.Data, &bmeta)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.BlockchainInfo failed to decode RequestProcessProposalWithMetaInfo")
+		}
+		if bmeta.Request == nil || len(bmeta.Request.Hash) == 0 {
+			continue
+		}
+
+		var header cmttypes.Header
+		err = json.Unmarshal(entry.Header, &header)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.BlockchainInfo failed to decode Header")
+		}
+
+		var lastCommit cmttypes.Commit
+		err = json.Unmarshal(entry.LastCommit, &lastCommit)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.BlockchainInfo failed to decode Commit")
+		}
+
+		var evidence cmttypes.EvidenceData
+		err = json.Unmarshal(entry.Evidence, &evidence)
+		if err != nil {
+			return nil, errorsmod.Wrapf(err, "ABCIClient.BlockchainInfo failed to decode EvidenceData")
+		}
+
+		txs := make([]cmttypes.Tx, len(bmeta.Request.Txs))
+		for i, tx := range bmeta.Request.Txs {
+			txs[i] = cmttypes.Tx(tx)
+		}
+		block := cmttypes.MakeBlock(bmeta.Request.Height, txs, &lastCommit, evidence.Evidence)
+		block.ChainID = c.bapp.ChainID()
+		block.AppHash = header.AppHash
+		block.ConsensusHash = header.ConsensusHash
+		block.Header = header
+		block.LastBlockID = header.LastBlockID
+		block.LastResultsHash = header.LastResultsHash
+		block.Time = header.Time
+		block.ProposerAddress = header.ProposerAddress
+
+		blockID := cmttypes.BlockID{
+			Hash:          bmeta.Request.Hash,
+			PartSetHeader: cmttypes.PartSetHeader{Total: 1, Hash: bmeta.Request.Hash},
+		}
+
+		blockMetas = append(blockMetas, &cmttypes.BlockMeta{
+			BlockID:   blockID,
+			BlockSize: block.Size(),
+			Header:    header,
+			NumTxs:    len(txs),
+		})
+	}
+
+	return &rpctypes.ResultBlockchainInfo{
+		LastHeight: latestHeight,
+		BlockMetas: blockMetas,
+	}, nil
 }
 
 func (c *ABCIClient) Commit(ctx context.Context, height *int64) (*rpctypes.ResultCommit, error) {
@@ -902,4 +1001,23 @@ func getHeight(latestHeight int64, heightPtr *int64) (int64, error) {
 		return height, nil
 	}
 	return latestHeight, nil
+}
+
+func filterMinMax(base, height, min, max, limit int64) (int64, int64, error) {
+	if min < 0 || max < 0 {
+		return min, max, fmt.Errorf("heights must be non-negative")
+	}
+	if min == 0 {
+		min = 1
+	}
+	if max == 0 {
+		max = height
+	}
+	max = cmtmath.MinInt64(height, max)
+	min = cmtmath.MaxInt64(base, min)
+	min = cmtmath.MaxInt64(min, max-limit+1)
+	if min > max {
+		return min, max, fmt.Errorf("min height %d can't be greater than max height %d", min, max)
+	}
+	return min, max, nil
 }
