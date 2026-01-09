@@ -1,0 +1,527 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-mcp-search",
+  "description": "JSON Schema for wasmx-mcp-search TinyGo contract",
+  "type": "object",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "execute_tool": {
+          "$ref": "#/definitions/ExecuteToolRequest"
+        }
+      },
+      "required": [
+        "execute_tool"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "init_genesis": {
+          "$ref": "#/definitions/InitGenesisRequest"
+        }
+      },
+      "required": [
+        "init_genesis"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        }
+      },
+      "required": [
+        "RoleChanged"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "HttpRequestHandler": {
+          "$ref": "#/definitions/HttpRequestIncoming"
+        }
+      },
+      "required": [
+        "HttpRequestHandler"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "populate": {
+          "$ref": "#/definitions/PopulateRequest"
+        }
+      },
+      "required": [
+        "populate"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "generate_embeddings": {
+          "$ref": "#/definitions/GenerateEmbeddingsRequest"
+        }
+      },
+      "required": [
+        "generate_embeddings"
+      ]
+    }
+  ],
+  "definitions": {
+    "ContentItem": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "DatabaseConfig": {
+      "type": "object",
+      "properties": {
+        "connection_string": {
+          "type": "string"
+        },
+        "database_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "connection_string",
+        "database_name"
+      ]
+    },
+    "ExecuteToolRequest": {
+      "type": "object",
+      "properties": {
+        "arguments": {
+          "type": "object"
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_name",
+        "arguments"
+      ]
+    },
+    "ExecuteToolResponse": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ContentItem"
+          }
+        },
+        "isError": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    },
+    "GenerateEmbeddingsItem": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "GenerateEmbeddingsRequest": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GenerateEmbeddingsItem"
+          }
+        }
+      }
+    },
+    "GenerateEmbeddingsResponse": {
+      "type": "object",
+      "properties": {
+        "error_message": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PopulateItem"
+          }
+        },
+        "items_stored": {
+          "type": "integer"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success",
+        "items",
+        "items_stored"
+      ]
+    },
+    "HttpRequestIncoming": {
+      "type": "object",
+      "properties": {
+        "content_length": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "header": {
+          "type": "object"
+        },
+        "method": {
+          "type": "string"
+        },
+        "remote_address": {
+          "type": "string"
+        },
+        "request_uri": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "url",
+        "header",
+        "content_length",
+        "data",
+        "remote_address",
+        "request_uri"
+      ]
+    },
+    "HttpResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "header": {
+          "type": "object"
+        },
+        "status": {
+          "type": "string"
+        },
+        "status_code": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status_code",
+        "status",
+        "header",
+        "data"
+      ]
+    },
+    "HttpResponseWrap": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/HttpResponse"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "data"
+      ]
+    },
+    "InitGenesisRequest": {
+      "type": "object",
+      "properties": {
+        "environment_vars": {
+          "type": "object"
+        },
+        "route_prefix": {
+          "type": "string"
+        },
+        "search_config": {
+          "$ref": "#/definitions/SearchConfig"
+        },
+        "tool_descriptions": {
+          "$ref": "#/definitions/ToolDescriptions"
+        }
+      },
+      "required": [
+        "route_prefix",
+        "search_config",
+        "tool_descriptions"
+      ]
+    },
+    "JSONRPCRequest": {
+      "type": "object",
+      "properties": {
+        "id": {},
+        "jsonrpc": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {}
+      },
+      "required": [
+        "jsonrpc",
+        "id",
+        "method"
+      ]
+    },
+    "JSONRPCResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/RPCError"
+        },
+        "id": {},
+        "jsonrpc": {
+          "type": "string"
+        },
+        "result": {}
+      },
+      "required": [
+        "jsonrpc",
+        "id"
+      ]
+    },
+    "PopulateItem": {
+      "type": "object",
+      "properties": {
+        "embedding": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value",
+        "embedding"
+      ]
+    },
+    "PopulateRequest": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PopulateItem"
+          }
+        }
+      },
+      "required": [
+        "items"
+      ]
+    },
+    "PopulateResponse": {
+      "type": "object",
+      "properties": {
+        "error_message": {
+          "type": "string"
+        },
+        "items_stored": {
+          "type": "integer"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success",
+        "items_stored"
+      ]
+    },
+    "RPCError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ]
+    },
+    "SearchConfig": {
+      "type": "object",
+      "properties": {
+        "database": {
+          "$ref": "#/definitions/DatabaseConfig"
+        },
+        "default_limit": {
+          "type": "integer"
+        },
+        "embedding_dimension": {
+          "type": "integer"
+        },
+        "embedding_metric": {
+          "type": "string"
+        },
+        "tables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TableConfig"
+          }
+        }
+      },
+      "required": [
+        "database",
+        "tables",
+        "embedding_dimension",
+        "embedding_metric",
+        "default_limit"
+      ]
+    },
+    "SearchKnowledgeDescription": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "query_description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "description",
+        "query_description"
+      ]
+    },
+    "SearchResult": {
+      "type": "object",
+      "properties": {
+        "cache_text": {
+          "type": "string"
+        },
+        "distance": {
+          "type": "number"
+        },
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "id",
+        "cache_text",
+        "distance"
+      ]
+    },
+    "StoreEmbeddingDescription": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "description"
+      ]
+    },
+    "TableConfig": {
+      "type": "object",
+      "properties": {
+        "cache_text_column": {
+          "type": "string"
+        },
+        "embedding_column": {
+          "type": "string"
+        },
+        "id_column": {
+          "type": "string"
+        },
+        "table_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table_name",
+        "embedding_column",
+        "id_column",
+        "cache_text_column"
+      ]
+    },
+    "ToolDescriptions": {
+      "type": "object",
+      "properties": {
+        "search_knowledge": {
+          "$ref": "#/definitions/SearchKnowledgeDescription"
+        },
+        "store_embedding": {
+          "$ref": "#/definitions/StoreEmbeddingDescription"
+        },
+        "vector_search": {
+          "$ref": "#/definitions/VectorSearchDescription"
+        }
+      },
+      "required": [
+        "search_knowledge"
+      ]
+    },
+    "VectorSearchDescription": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "description"
+      ]
+    }
+  }
+}

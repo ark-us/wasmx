@@ -1,0 +1,7 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-ondemand-single-lib",
+  "description": "JSON Schema for wasmx-ondemand-single-lib TinyGo contract",
+  "type": "object",
+  "definitions": {}
+}

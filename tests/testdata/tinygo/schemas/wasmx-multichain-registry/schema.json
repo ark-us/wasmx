@@ -1,0 +1,605 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-multichain-registry",
+  "description": "JSON Schema for wasmx-multichain-registry TinyGo contract",
+  "type": "object",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "RegisterSubChain": {
+          "$ref": "#/definitions/RegisterSubChainRequest"
+        }
+      },
+      "required": [
+        "RegisterSubChain"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "RegisterDefaultSubChain": {
+          "$ref": "#/definitions/RegisterDefaultSubChainRequest"
+        }
+      },
+      "required": [
+        "RegisterDefaultSubChain"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "RemoveSubChain": {
+          "$ref": "#/definitions/RemoveSubChainRequest"
+        }
+      },
+      "required": [
+        "RemoveSubChain"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "RegisterSubChainValidator": {
+          "$ref": "#/definitions/RegisterSubChainValidatorRequest"
+        }
+      },
+      "required": [
+        "RegisterSubChainValidator"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "InitSubChain": {
+          "$ref": "#/definitions/InitSubChainRequest"
+        }
+      },
+      "required": [
+        "InitSubChain"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetCurrentLevel": {
+          "$ref": "#/definitions/QueryGetCurrentLevelRequest"
+        }
+      },
+      "required": [
+        "GetCurrentLevel"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetSubChains": {
+          "$ref": "#/definitions/QueryGetSubChainsRequest"
+        }
+      },
+      "required": [
+        "GetSubChains"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetSubChainsByIds": {
+          "$ref": "#/definitions/QueryGetSubChainsByIdsRequest"
+        }
+      },
+      "required": [
+        "GetSubChainsByIds"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetSubChainIds": {
+          "$ref": "#/definitions/QueryGetSubChainIdsRequest"
+        }
+      },
+      "required": [
+        "GetSubChainIds"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetSubChainById": {
+          "$ref": "#/definitions/QueryGetSubChainRequest"
+        }
+      },
+      "required": [
+        "GetSubChainById"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetSubChainConfigById": {
+          "$ref": "#/definitions/QueryGetSubChainRequest"
+        }
+      },
+      "required": [
+        "GetSubChainConfigById"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetSubChainConfigByIds": {
+          "$ref": "#/definitions/QuerySubChainConfigByIdsRequest"
+        }
+      },
+      "required": [
+        "GetSubChainConfigByIds"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetSubChainIdsByLevel": {
+          "$ref": "#/definitions/QueryGetSubChainIdsByLevelRequest"
+        }
+      },
+      "required": [
+        "GetSubChainIdsByLevel"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetSubChainIdsByValidator": {
+          "$ref": "#/definitions/QueryGetSubChainIdsByValidatorRequest"
+        }
+      },
+      "required": [
+        "GetSubChainIdsByValidator"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetValidatorsByChainId": {
+          "$ref": "#/definitions/QueryGetValidatorsByChainIdRequest"
+        }
+      },
+      "required": [
+        "GetValidatorsByChainId"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetValidatorAddressesByChainId": {
+          "$ref": "#/definitions/QueryValidatorAddressesByChainIdRequest"
+        }
+      },
+      "required": [
+        "GetValidatorAddressesByChainId"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "ConvertAddressByChainId": {
+          "$ref": "#/definitions/QueryConvertAddressByChainIdRequest"
+        }
+      },
+      "required": [
+        "ConvertAddressByChainId"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "CrossChainTx": {
+          "type": "string",
+          "x-go-type": "xchain.MsgCrossChainCallRequest"
+        }
+      },
+      "required": [
+        "CrossChainTx"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "CrossChainQuery": {
+          "type": "string",
+          "x-go-type": "xchain.MsgCrossChainCallRequest"
+        }
+      },
+      "required": [
+        "CrossChainQuery"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "CrossChainQueryNonDeterministic": {
+          "type": "string",
+          "x-go-type": "xchain.MsgCrossChainCallRequest"
+        }
+      },
+      "required": [
+        "CrossChainQueryNonDeterministic"
+      ]
+    }
+  ],
+  "definitions": {
+    "CosmosmodGenesisState": {
+      "type": "object",
+      "properties": {
+        "auth": {
+          "type": "string",
+          "x-go-type": "authlib.GenesisState"
+        },
+        "bank": {
+          "type": "string",
+          "x-go-type": "banklib.GenesisState"
+        },
+        "distribution": {
+          "type": "string",
+          "x-go-type": "distributionlib.GenesisState"
+        },
+        "gov": {
+          "type": "string",
+          "x-go-type": "govmod.GenesisState"
+        },
+        "slashing": {
+          "type": "string",
+          "x-go-type": "slashinglib.GenesisState"
+        },
+        "staking": {
+          "type": "string",
+          "x-go-type": "stakinglib.GenesisState"
+        }
+      },
+      "required": [
+        "staking",
+        "bank",
+        "gov",
+        "auth",
+        "slashing",
+        "distribution"
+      ]
+    },
+    "InitSubChainRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "chainId"
+      ]
+    },
+    "MsgInitialize": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "$ref": "#/definitions/Params"
+        }
+      },
+      "required": [
+        "params"
+      ]
+    },
+    "Params": {
+      "type": "object",
+      "properties": {
+        "derc20CodeId": {
+          "type": "integer"
+        },
+        "enable_eid_check": {
+          "type": "boolean"
+        },
+        "erc20CodeId": {
+          "type": "integer"
+        },
+        "level_initial_balance": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        },
+        "min_validators_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "min_validators_count",
+        "enable_eid_check",
+        "erc20CodeId",
+        "derc20CodeId",
+        "level_initial_balance"
+      ]
+    },
+    "QueryConvertAddressByChainIdRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "chainId": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "chainId",
+        "prefix",
+        "address",
+        "type"
+      ]
+    },
+    "QueryGetCurrentLevelRequest": {
+      "type": "object"
+    },
+    "QueryGetCurrentLevelResponse": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "level"
+      ]
+    },
+    "QueryGetSubChainIdsByLevelRequest": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "level"
+      ]
+    },
+    "QueryGetSubChainIdsByValidatorRequest": {
+      "type": "object",
+      "properties": {
+        "validator_address": {
+          "type": "string",
+          "format": "bech32"
+        }
+      },
+      "required": [
+        "validator_address"
+      ]
+    },
+    "QueryGetSubChainIdsRequest": {
+      "type": "object"
+    },
+    "QueryGetSubChainRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "chainId"
+      ]
+    },
+    "QueryGetSubChainsByIdsRequest": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "ids"
+      ]
+    },
+    "QueryGetSubChainsRequest": {
+      "type": "object"
+    },
+    "QueryGetValidatorsByChainIdRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "chainId"
+      ]
+    },
+    "QuerySubChainConfigByIdsRequest": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "ids"
+      ]
+    },
+    "QueryValidatorAddressesByChainIdRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "chainId"
+      ]
+    },
+    "RegisterDefaultSubChainRequest": {
+      "type": "object",
+      "properties": {
+        "base_denom_unit": {
+          "type": "integer"
+        },
+        "chain_base_name": {
+          "type": "string"
+        },
+        "denom_unit": {
+          "type": "string"
+        },
+        "gen_txs": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "initial_balance": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        },
+        "level_index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "denom_unit",
+        "base_denom_unit",
+        "chain_base_name",
+        "level_index",
+        "initial_balance",
+        "gen_txs"
+      ]
+    },
+    "RegisterSubChainRequest": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "x-go-type": "mc.InitSubChainDeterministicRequest"
+        },
+        "genTxs": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "initial_balance": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        }
+      },
+      "required": [
+        "data",
+        "genTxs",
+        "initial_balance"
+      ]
+    },
+    "RegisterSubChainValidatorRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "string"
+        },
+        "genTx": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "chainId",
+        "genTx"
+      ]
+    },
+    "RemoveSubChainRequest": {
+      "type": "object",
+      "properties": {
+        "chainId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "chainId"
+      ]
+    },
+    "SubChainData": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "x-go-type": "mc.InitSubChainDeterministicRequest"
+        },
+        "genTxs": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "initial_balance": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        },
+        "initialized": {
+          "type": "boolean"
+        },
+        "level": {
+          "type": "integer"
+        },
+        "wasmxContractState": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "data",
+        "genTxs",
+        "wasmxContractState",
+        "initial_balance",
+        "initialized",
+        "level"
+      ]
+    },
+    "ValidatorInfo": {
+      "type": "object",
+      "properties": {
+        "operator_pubkey": {
+          "type": "string",
+          "x-go-type": "wasmx.PublicKey"
+        },
+        "p2p_address": {
+          "type": "string"
+        },
+        "validator": {
+          "type": "string",
+          "x-go-type": "stakinglib.Validator"
+        }
+      },
+      "required": [
+        "validator",
+        "p2p_address"
+      ]
+    }
+  }
+}

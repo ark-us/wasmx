@@ -1,0 +1,1277 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "emailchain",
+  "description": "JSON Schema for emailchain TinyGo contract",
+  "type": "object",
+  "definitions": {
+    "AppendRequest": {
+      "type": "object",
+      "properties": {
+        "email_raw": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "mailbox": {
+          "type": "string"
+        },
+        "options": {
+          "type": "string",
+          "x-go-type": "imap.AppendOptions"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "mailbox",
+        "email_raw"
+      ]
+    },
+    "BuildAndSendMailRequest": {
+      "type": "object",
+      "properties": {
+        "bcc": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "cc": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "date": {
+          "type": "string",
+          "x-go-type": "time.Time"
+        },
+        "from": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "cc",
+        "bcc",
+        "subject",
+        "body",
+        "date"
+      ]
+    },
+    "Calldata": {
+      "type": "object",
+      "properties": {
+        "BuildAndSend": {
+          "$ref": "#/definitions/BuildAndSendMailRequest"
+        },
+        "Close": {
+          "$ref": "#/definitions/CloseRequest"
+        },
+        "Connect": {
+          "$ref": "#/definitions/ConnectRequest"
+        },
+        "CreateAccount": {
+          "$ref": "#/definitions/CreateAccountRequest"
+        },
+        "ForwardEmail": {
+          "$ref": "#/definitions/ForwardEmailRequest"
+        },
+        "IncomingEmail": {
+          "$ref": "#/definitions/IncomingEmailRequest"
+        },
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        },
+        "SendEmail": {
+          "$ref": "#/definitions/SendMailRequest"
+        },
+        "SignARC": {
+          "$ref": "#/definitions/SignARCRequest"
+        },
+        "SignDKIM": {
+          "$ref": "#/definitions/SignDKIMRequest"
+        },
+        "StartServer": {
+          "$ref": "#/definitions/StartServerRequest"
+        },
+        "VerifyARC": {
+          "$ref": "#/definitions/VerifyDKIMRequest"
+        },
+        "VerifyDKIM": {
+          "$ref": "#/definitions/VerifyDKIMRequest"
+        }
+      }
+    },
+    "CloseRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "ConnectRequest": {
+      "type": "object",
+      "properties": {
+        "SmtpRequest": {
+          "type": "string",
+          "x-go-type": "vmsmtp.SmtpConnectionRequest"
+        },
+        "id": {
+          "type": "string"
+        },
+        "imap_server_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "imap_server_url",
+        "SmtpRequest"
+      ]
+    },
+    "CopyRequest": {
+      "type": "object",
+      "properties": {
+        "dest": {
+          "type": "string"
+        },
+        "mailbox": {
+          "type": "string"
+        },
+        "seq_set": {
+          "type": "string",
+          "x-go-type": "imap.SeqSet"
+        },
+        "uid_set": {
+          "type": "string",
+          "x-go-type": "imap.UIDSet"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "mailbox",
+        "uid_set",
+        "seq_set",
+        "dest"
+      ]
+    },
+    "CreateAccountRequest": {
+      "type": "object",
+      "properties": {
+        "password": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "password"
+      ]
+    },
+    "CreateRequest": {
+      "type": "object",
+      "properties": {
+        "mailbox": {
+          "type": "string"
+        },
+        "options": {
+          "type": "string",
+          "x-go-type": "imap.CreateOptions"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "mailbox"
+      ]
+    },
+    "DNSResolver": {
+      "type": "object",
+      "properties": {
+        "DoHURL": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "DoHURL"
+      ]
+    },
+    "DNSResponse": {
+      "type": "object",
+      "properties": {
+        "Answer": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-go-type": "unknown"
+          }
+        },
+        "Status": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "Status",
+        "Answer"
+      ]
+    },
+    "DeleteRequest": {
+      "type": "object",
+      "properties": {
+        "mailbox": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "mailbox"
+      ]
+    },
+    "Email": {
+      "type": "object",
+      "properties": {
+        "bh": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "envelope": {
+          "type": "string",
+          "x-go-type": "vmimap.Envelope"
+        },
+        "flags": {
+          "type": "string"
+        },
+        "folder": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "string"
+        },
+        "internal_date": {
+          "type": "string",
+          "x-go-type": "time.Time"
+        },
+        "ipfrom": {
+          "type": "string"
+        },
+        "message_id": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "raw_email": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "seq_num": {
+          "type": "integer"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "owner",
+        "folder",
+        "uid",
+        "seq_num",
+        "message_id",
+        "subject",
+        "internal_date",
+        "flags",
+        "raw_email",
+        "size",
+        "headers",
+        "body",
+        "bh",
+        "envelope",
+        "ipfrom"
+      ]
+    },
+    "EmailRead": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "EmailWrite": {
+      "type": "object",
+      "properties": {
+        "bh": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "envelope": {
+          "type": "string"
+        },
+        "flags": {
+          "type": "string"
+        },
+        "folder": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "string"
+        },
+        "internal_date": {
+          "type": "integer"
+        },
+        "ipfrom": {
+          "type": "string"
+        },
+        "message_id": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "raw_email": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "seq_num": {
+          "type": "integer"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "owner",
+        "folder",
+        "uid",
+        "seq_num",
+        "message_id",
+        "subject",
+        "internal_date",
+        "flags",
+        "raw_email",
+        "size",
+        "headers",
+        "body",
+        "bh",
+        "envelope",
+        "ipfrom"
+      ]
+    },
+    "ExpungeRequest": {
+      "type": "object",
+      "properties": {
+        "uids": {
+          "type": "string",
+          "x-go-type": "imap.UIDSet"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username"
+      ]
+    },
+    "FetchRequest": {
+      "type": "object",
+      "properties": {
+        "mailbox": {
+          "type": "string"
+        },
+        "options": {
+          "type": "string",
+          "x-go-type": "imap.FetchOptions"
+        },
+        "seq_set": {
+          "type": "string",
+          "x-go-type": "imap.SeqSet"
+        },
+        "uid_set": {
+          "type": "string",
+          "x-go-type": "imap.UIDSet"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "mailbox",
+        "uid_set",
+        "seq_set"
+      ]
+    },
+    "FolderState": {
+      "type": "object",
+      "properties": {
+        "folder": {
+          "type": "string"
+        },
+        "last_uid": {
+          "type": "integer"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "uid_validity": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "owner",
+        "folder",
+        "last_uid",
+        "uid_validity"
+      ]
+    },
+    "ForwardEmailRequest": {
+      "type": "object",
+      "properties": {
+        "additional_subject": {
+          "type": "string"
+        },
+        "bcc": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-go-type": "vmimap.Address"
+          }
+        },
+        "cc": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-go-type": "vmimap.Address"
+          }
+        },
+        "connection_id": {
+          "type": "string"
+        },
+        "folder": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string",
+          "x-go-type": "vmimap.Address"
+        },
+        "message_id": {
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/definitions/SignOptions"
+        },
+        "send_email": {
+          "type": "boolean"
+        },
+        "timestamp": {
+          "type": "string",
+          "x-go-type": "time.Time"
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-go-type": "vmimap.Address"
+          }
+        },
+        "uid": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "connection_id",
+        "folder",
+        "uid",
+        "message_id",
+        "additional_subject",
+        "from",
+        "to",
+        "cc",
+        "bcc",
+        "options",
+        "timestamp",
+        "send_email"
+      ]
+    },
+    "ForwardEmailResponse": {
+      "type": "object",
+      "properties": {
+        "email_raw": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "email_raw"
+      ]
+    },
+    "IncomingEmailRequest": {
+      "type": "object",
+      "properties": {
+        "ConnectionId": {
+          "type": "string"
+        },
+        "authenticated_user": {
+          "type": "string"
+        },
+        "email_raw": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "from": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ipfrom": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "integer"
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "ConnectionId",
+        "ipfrom",
+        "from",
+        "to",
+        "email_raw",
+        "timestamp",
+        "authenticated_user"
+      ]
+    },
+    "KayrosProof": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "kayros": {}
+      },
+      "required": [
+        "data",
+        "kayros"
+      ]
+    },
+    "KayrosRequest": {
+      "type": "object",
+      "properties": {
+        "data_item": {
+          "type": "string"
+        },
+        "data_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_item",
+        "data_type"
+      ]
+    },
+    "KayrosResponse": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    },
+    "ListRequest": {
+      "type": "object",
+      "properties": {
+        "options": {
+          "type": "string",
+          "x-go-type": "imap.ListOptions"
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "patterns"
+      ]
+    },
+    "LoginRequest": {
+      "type": "object",
+      "properties": {
+        "password": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "password"
+      ]
+    },
+    "LogoutRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username"
+      ]
+    },
+    "MX": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "pref": {
+          "type": "string",
+          "x-go-type": "uint16"
+        }
+      },
+      "required": [
+        "host",
+        "pref"
+      ]
+    },
+    "OwnerRead": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "address"
+      ]
+    },
+    "Range": {
+      "type": "object",
+      "properties": {
+        "Start": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "Start"
+      ]
+    },
+    "ReentryCalldata": {
+      "type": "object",
+      "properties": {
+        "IncomingEmail": {
+          "$ref": "#/definitions/IncomingEmailRequest"
+        }
+      }
+    },
+    "ReentryCalldataServer": {
+      "type": "object",
+      "properties": {
+        "Append": {
+          "$ref": "#/definitions/AppendRequest"
+        },
+        "Copy": {
+          "$ref": "#/definitions/CopyRequest"
+        },
+        "Create": {
+          "$ref": "#/definitions/CreateRequest"
+        },
+        "Delete": {
+          "$ref": "#/definitions/DeleteRequest"
+        },
+        "Expunge": {
+          "$ref": "#/definitions/ExpungeRequest"
+        },
+        "Fetch": {
+          "$ref": "#/definitions/FetchRequest"
+        },
+        "List": {
+          "$ref": "#/definitions/ListRequest"
+        },
+        "Login": {
+          "$ref": "#/definitions/LoginRequest"
+        },
+        "Logout": {
+          "$ref": "#/definitions/LogoutRequest"
+        },
+        "Rename": {
+          "$ref": "#/definitions/RenameRequest"
+        },
+        "Search": {
+          "$ref": "#/definitions/SearchRequest"
+        },
+        "Select": {
+          "$ref": "#/definitions/SelectRequest"
+        },
+        "Status": {
+          "$ref": "#/definitions/StatusRequest"
+        },
+        "Store": {
+          "$ref": "#/definitions/StoreRequest"
+        }
+      }
+    },
+    "RenameRequest": {
+      "type": "object",
+      "properties": {
+        "mailbox": {
+          "type": "string"
+        },
+        "new_name": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "mailbox",
+        "new_name"
+      ]
+    },
+    "SearchRequest": {
+      "type": "object",
+      "properties": {
+        "criteria": {
+          "type": "string",
+          "x-go-type": "imap.SearchCriteria"
+        },
+        "kind": {
+          "type": "string",
+          "x-go-type": "imapserver.NumKind"
+        },
+        "mailbox": {
+          "type": "string"
+        },
+        "options": {
+          "type": "string",
+          "x-go-type": "imap.SearchOptions"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "mailbox",
+        "kind"
+      ]
+    },
+    "SelectRequest": {
+      "type": "object",
+      "properties": {
+        "mailbox": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "mailbox"
+      ]
+    },
+    "SendMailRequest": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "x-go-type": "time.Time"
+        },
+        "email_raw": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "from": {
+          "type": "string",
+          "x-go-type": "imap.Address"
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-go-type": "imap.Address"
+          }
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "email_raw",
+        "date"
+      ]
+    },
+    "SeqNumResponse": {
+      "type": "object",
+      "properties": {
+        "next_seq_num": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "next_seq_num"
+      ]
+    },
+    "SignARCRequest": {
+      "type": "object",
+      "properties": {
+        "email_raw": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        },
+        "mailServerDomain": {
+          "type": "string"
+        },
+        "mailfrom": {
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/definitions/SignOptions"
+        },
+        "timestamp": {
+          "type": "string",
+          "x-go-type": "time.Time"
+        }
+      },
+      "required": [
+        "mailfrom",
+        "ip",
+        "mailServerDomain",
+        "email_raw",
+        "options",
+        "timestamp"
+      ]
+    },
+    "SignARCResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "header": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "header"
+      ]
+    },
+    "SignDKIMRequest": {
+      "type": "object",
+      "properties": {
+        "email_raw": {
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/definitions/SignOptions"
+        },
+        "timestamp": {
+          "type": "string",
+          "x-go-type": "time.Time"
+        }
+      },
+      "required": [
+        "email_raw",
+        "options",
+        "timestamp"
+      ]
+    },
+    "SignDKIMResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "header": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "header"
+      ]
+    },
+    "SignOptions": {
+      "type": "object",
+      "properties": {
+        "body_relaxed": {
+          "type": "boolean"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "expiration": {
+          "type": "string",
+          "x-go-type": "time.Time"
+        },
+        "hash": {
+          "type": "integer"
+        },
+        "header_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "header_relaxed": {
+          "type": "boolean"
+        },
+        "identifier": {
+          "type": "string"
+        },
+        "private_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "private_key_type": {
+          "type": "string"
+        },
+        "selector": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "domain",
+        "selector",
+        "identifier",
+        "private_key_type",
+        "private_key",
+        "hash",
+        "header_relaxed",
+        "body_relaxed",
+        "header_keys",
+        "expiration"
+      ]
+    },
+    "Signature": {
+      "type": "object",
+      "properties": {
+        "algorithmId": {
+          "type": "string"
+        },
+        "arcCv": {
+          "type": "string"
+        },
+        "arcInstance": {
+          "type": "integer"
+        },
+        "bodyHash": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "copiedHeaders": {
+          "type": "object"
+        },
+        "dkim": {
+          "type": "string"
+        },
+        "dmarc": {
+          "type": "string"
+        },
+        "exp": {
+          "type": "string",
+          "x-go-type": "time.Time"
+        },
+        "hash": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "header": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "length": {
+          "type": "integer"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "relaxedBody": {
+          "type": "boolean"
+        },
+        "relaxedHeader": {
+          "type": "boolean"
+        },
+        "selector": {
+          "type": "string"
+        },
+        "signerDomain": {
+          "type": "string"
+        },
+        "spf": {
+          "type": "string"
+        },
+        "ts": {
+          "type": "string",
+          "x-go-type": "time.Time"
+        },
+        "userId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "header",
+        "raw",
+        "algorithmId",
+        "hash",
+        "bodyHash",
+        "relaxedHeader",
+        "relaxedBody",
+        "signerDomain",
+        "headers",
+        "userId",
+        "arcInstance",
+        "length",
+        "selector",
+        "ts",
+        "exp",
+        "arcCv",
+        "spf",
+        "dmarc",
+        "dkim"
+      ]
+    },
+    "StartServerRequest": {
+      "type": "object",
+      "properties": {
+        "imap": {
+          "type": "string",
+          "x-go-type": "vmimap.ServerConfig"
+        },
+        "kayrosbot_no_store": {
+          "type": "boolean"
+        },
+        "options": {
+          "$ref": "#/definitions/SignOptions"
+        },
+        "password": {
+          "type": "string"
+        },
+        "smtp": {
+          "type": "string",
+          "x-go-type": "vmsmtp.ServerConfig"
+        }
+      },
+      "required": [
+        "options",
+        "smtp",
+        "imap",
+        "password",
+        "kayrosbot_no_store"
+      ]
+    },
+    "StatusRequest": {
+      "type": "object",
+      "properties": {
+        "mailbox": {
+          "type": "string"
+        },
+        "options": {
+          "type": "string",
+          "x-go-type": "imap.StatusOptions"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "mailbox"
+      ]
+    },
+    "StoreRequest": {
+      "type": "object",
+      "properties": {
+        "flags": {
+          "type": "string",
+          "x-go-type": "imap.StoreFlags"
+        },
+        "mailbox": {
+          "type": "string"
+        },
+        "options": {
+          "type": "string",
+          "x-go-type": "imap.StoreOptions"
+        },
+        "seq_set": {
+          "type": "string",
+          "x-go-type": "imap.SeqSet"
+        },
+        "uid_set": {
+          "type": "string",
+          "x-go-type": "imap.UIDSet"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "mailbox",
+        "uid_set",
+        "seq_set"
+      ]
+    },
+    "UidResponse": {
+      "type": "object",
+      "properties": {
+        "last_uid": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "last_uid"
+      ]
+    },
+    "VerifyARCResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "response": {
+          "type": "string",
+          "x-go-type": "arc.ArcResult"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    "VerifyDKIMRequest": {
+      "type": "object",
+      "properties": {
+        "email_raw": {
+          "type": "string"
+        },
+        "public_key": {
+          "type": "string",
+          "x-go-type": "dkim.Record"
+        },
+        "timestamp": {
+          "type": "string",
+          "x-go-type": "time.Time"
+        }
+      },
+      "required": [
+        "email_raw",
+        "timestamp"
+      ]
+    },
+    "VerifyDKIMResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "response": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-go-type": "dkim.Result"
+          }
+        }
+      },
+      "required": [
+        "error",
+        "response"
+      ]
+    }
+  }
+}

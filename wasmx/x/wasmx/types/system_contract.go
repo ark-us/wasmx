@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
+	tinygo "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 )
 
@@ -1099,6 +1100,7 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 	if err != nil {
 		panic(err)
 	}
+	precompiles = FillJsonSchemas(precompiles)
 	return precompiles
 }
 
@@ -1201,6 +1203,7 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 	if err != nil {
 		panic(err)
 	}
+	precompiles = FillJsonSchemas(precompiles)
 	return precompiles
 }
 
@@ -1308,6 +1311,18 @@ func ValidateNonZeroAddress(address string) error {
 		)
 	}
 	return ValidateAddress(address)
+}
+
+// FillJsonSchemas populates the Metadata.JsonSchema field for each SystemContract
+// based on the contract label. This uses the tinygo.Schemas map.
+func FillJsonSchemas(precompiles []SystemContract) []SystemContract {
+	for i := range precompiles {
+		schema := tinygo.GetSchema(precompiles[i].Label)
+		if schema != "" {
+			precompiles[i].Metadata.JsonSchema = schema
+		}
+	}
+	return precompiles
 }
 
 func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string) ([]SystemContract, error) {

@@ -1,0 +1,718 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-fsm",
+  "description": "JSON Schema for wasmx-fsm TinyGo contract",
+  "type": "object",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "setup": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "setup"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "instantiate": {
+          "$ref": "#/definitions/CallDataInstantiate"
+        }
+      },
+      "required": [
+        "instantiate"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "getCurrentState": {
+          "$ref": "#/definitions/CallDataGetCurrentState"
+        }
+      },
+      "required": [
+        "getCurrentState"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "getContextValue": {
+          "$ref": "#/definitions/CallDataGetContextValue"
+        }
+      },
+      "required": [
+        "getContextValue"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "run": {
+          "$ref": "#/definitions/CallDataRun"
+        }
+      },
+      "required": [
+        "run"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "execute": {
+          "$ref": "#/definitions/CallDataExecuteAction"
+        }
+      },
+      "required": [
+        "execute"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "StartNode": {
+          "type": "string",
+          "x-go-type": "wasmx.HookCalld"
+        }
+      },
+      "required": [
+        "StartNode"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "SetupNode": {
+          "type": "string",
+          "x-go-type": "wasmx.HookCalld"
+        }
+      },
+      "required": [
+        "SetupNode"
+      ]
+    }
+  ],
+  "definitions": {
+    "ActionObject": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "$ref": "#/definitions/EventObject"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionParam"
+          }
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "params"
+      ]
+    },
+    "ActionParam": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "AssignActionObject": {
+      "type": "object",
+      "properties": {
+        "assignment": {
+          "type": "object"
+        },
+        "event": {
+          "$ref": "#/definitions/EventObject"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionParam"
+          }
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "params"
+      ]
+    },
+    "CallDataExecute": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/definitions/ActionObject"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "CallDataExecuteAction": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/definitions/ActionObject"
+        }
+      },
+      "required": [
+        "action"
+      ]
+    },
+    "CallDataGetContext": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    },
+    "CallDataGetContextValue": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    },
+    "CallDataGetCurrentState": {
+      "type": "object"
+    },
+    "CallDataInstantiate": {
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ContextParam"
+          }
+        },
+        "initialState": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "initialState",
+        "context"
+      ]
+    },
+    "CallDataRun": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "$ref": "#/definitions/EventObject"
+        }
+      },
+      "required": [
+        "event"
+      ]
+    },
+    "CallDataSetup": {
+      "type": "object",
+      "properties": {
+        "contractAddress": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "contractAddress"
+      ]
+    },
+    "CallDataSetupNode": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "ContextParam": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "ContextParamRaw": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "value": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "EventObject": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionParam"
+          }
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "params"
+      ]
+    },
+    "ExternalActionCallData": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "$ref": "#/definitions/EventObject"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionParam"
+          }
+        }
+      },
+      "required": [
+        "method",
+        "params",
+        "event"
+      ]
+    },
+    "GrpcResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "error"
+      ]
+    },
+    "GuardObject": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionParam"
+          }
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "params"
+      ]
+    },
+    "HandledActions": {
+      "type": "object",
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionObject"
+          }
+        },
+        "assigned": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "actions",
+        "assigned"
+      ]
+    },
+    "InstantiateMsg": {
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ContextParam"
+          }
+        },
+        "initialState": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "initialState",
+        "context"
+      ]
+    },
+    "InterpreterCallData": {
+      "type": "object",
+      "properties": {
+        "calldata": {
+          "$ref": "#/definitions/CallData"
+        },
+        "config": {
+          "$ref": "#/definitions/MachineExternal"
+        }
+      },
+      "required": [
+        "config",
+        "calldata"
+      ]
+    },
+    "MachineExternal": {
+      "type": "object",
+      "properties": {
+        "ctx": {
+          "type": "object"
+        },
+        "id": {
+          "type": "string"
+        },
+        "library": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StateInfoClassExternal"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "library",
+        "states",
+        "ctx"
+      ]
+    },
+    "NetworkNode": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        },
+        "port": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "host",
+        "port",
+        "ip"
+      ]
+    },
+    "P2PMessage": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "roomId": {
+          "type": "string"
+        },
+        "sender": {
+          "$ref": "#/definitions/NetworkNode"
+        },
+        "timestamp": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "roomId",
+        "message",
+        "timestamp",
+        "sender"
+      ]
+    },
+    "QueryContractInstanceResponse": {
+      "type": "object",
+      "properties": {
+        "code_info": {
+          "type": "string",
+          "x-go-type": "wasmx.CodeInfo"
+        },
+        "contract_info": {
+          "type": "string",
+          "x-go-type": "wasmx.ContractInfo"
+        }
+      }
+    },
+    "RaiseAction": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "$ref": "#/definitions/EventObject"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionParam"
+          }
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "params",
+        "event"
+      ]
+    },
+    "ServiceExternal": {
+      "type": "object",
+      "properties": {
+        "machine": {
+          "$ref": "#/definitions/MachineExternal"
+        },
+        "status": {
+          "type": "string",
+          "x-go-type": "InterpreterStatus"
+        }
+      },
+      "required": [
+        "machine",
+        "status"
+      ]
+    },
+    "State": {
+      "type": "object",
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionObject"
+          }
+        },
+        "changed": {
+          "type": "boolean"
+        },
+        "previousValue": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "actions",
+        "changed",
+        "previousValue"
+      ]
+    },
+    "StateClassExternal": {
+      "type": "object",
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionObject"
+          }
+        },
+        "changed": {
+          "type": "boolean"
+        },
+        "previousValue": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "actions",
+        "changed",
+        "previousValue"
+      ]
+    },
+    "StateInfoClassExternal": {
+      "type": "object",
+      "properties": {
+        "after": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TransitionExternal"
+          }
+        },
+        "always": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TransitionExternal"
+          }
+        },
+        "entry": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionObject"
+          }
+        },
+        "exit": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionObject"
+          }
+        },
+        "initial": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TransitionExternal"
+          }
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StateInfoClassExternal"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "always",
+        "after",
+        "on",
+        "exit",
+        "entry",
+        "initial",
+        "states"
+      ]
+    },
+    "TimerArgs": {
+      "type": "object",
+      "properties": {
+        "delay": {
+          "type": "string"
+        },
+        "intervalId": {
+          "type": "integer"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "delay",
+        "state",
+        "intervalId"
+      ]
+    },
+    "Transition": {
+      "type": "object",
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionObject"
+          }
+        },
+        "guard": {
+          "$ref": "#/definitions/ActionObject"
+        },
+        "meta": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ActionParam"
+          }
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "actions"
+      ]
+    },
+    "TransitionExternal": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Transition"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "transitions"
+      ]
+    }
+  }
+}

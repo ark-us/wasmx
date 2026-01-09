@@ -2,6 +2,7 @@
 
 TINYGO_DIR := ./tests/testdata/tinygo
 PRECOMPILE_DIR := ./wasmx/x/wasmx/vm/precompiles
+JSONSCHEMA_TOOL := ./tools/jsonschema/jsonschema
 
 # Mapping of tinygo modules to precompile wasm filenames
 # Format: module_path:output_filename
@@ -22,15 +23,20 @@ TINYGO_TARGETS := \
 	wasmx-oauth2-keys:70.wasmx_oauth2_keys_0.0.1.wasm \
 	wasmx-erc20x:71.erc20xjson_go_0.0.1.wasm
 
-# wasmx-gov:35.gov_0.0.1.wasm \
-# wasmx-gov-continuous:37.gov_cont_0.0.1.wasm \
-# wasmx-multichain-registry:4a.multichain_registry_0.0.1.wasm \
-# wasmx-staking:30.staking_0.0.1.wasm \
+# Extended TinyGo modules for schema generation
+TINYGO_TARGETS_EXTENDED := \
+	$(TINYGO_TARGETS) \
+	wasmx-gov:35.gov_0.0.1.wasm \
+	wasmx-gov-continuous:37.gov_cont_0.0.1.wasm \
+	wasmx-lobby:4d.lobby_json_0.0.1.wasm \
+	wasmx-mcp-search:62.mcp_search_0.0.1.wasm \
+	wasmx-multichain-registry:4a.multichain_registry_0.0.1.wasm \
+	wasmx-slashing:45.slashing_0.0.1.wasm \
+	wasmx-staking:30.staking_0.0.1.wasm
+
 # wasmx-bank:31.bank_0.0.1.wasm \
 # wasmx-auth:38.auth_0.0.1.wasm \
-# wasmx-slashing:45.slashing_0.0.1.wasm \
 # wasmx-distribution:46.distribution_0.0.1.wasm \
-# wasmx-lobby:4d.lobby_json_0.0.1.wasm \
 
 .PHONY: tinygo-tidy tinygo
 
@@ -86,4 +92,46 @@ $(TINYGO_MODULES):
 	(cd "$(TINYGO_DIR)/$$mod" && env GOWORK=off go mod tidy); \
 	echo "Building $$mod -> $(PRECOMPILE_DIR)/$$out"; \
 	(cd "$(TINYGO_DIR)/$$mod" && env GOWORK=off tinygo build -o "$(abspath $(PRECOMPILE_DIR))/$$out" -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd); \
-	echo "Built $(PRECOMPILE_DIR)/$$out"
+	echo "Built $(PRECOMPILE_DIR)/$$out"; \
+	echo "Generating JSON schema for $$mod..."; \
+	$(JSONSCHEMA_TOOL) -module "$(TINYGO_DIR)/$$mod"
+
+# ============================================================================
+# JSON Schema Generation
+# ============================================================================
+
+.PHONY: jsonschema-tool jsonschema jsonschema-%
+
+# Build the JSON schema generator tool
+jsonschema-tool:
+	@echo "Building JSON schema generator tool..."
+	@env GOWORK=off go build -C ./tools/jsonschema -o $(abspath $(JSONSCHEMA_TOOL)) .
+	@echo "Built $(JSONSCHEMA_TOOL)"
+
+# Generate JSON schema for all TinyGo modules
+# Usage: make jsonschema
+jsonschema: jsonschema-tool
+	@set -e; \
+	echo "Generating JSON schemas for all TinyGo modules..."; \
+	for pair in $(TINYGO_TARGETS_EXTENDED); do \
+		mod="$${pair%%:*}"; \
+		if [ -d "$(TINYGO_DIR)/$$mod/lib" ] || [ -d "$(TINYGO_DIR)/$$mod/gov" ]; then \
+			echo "-> $$mod"; \
+			mkdir -p "$(TINYGO_DIR)/schemas"; \
+			$(JSONSCHEMA_TOOL) -module "$(TINYGO_DIR)/$$mod" -output "$(TINYGO_DIR)/schemas/$${mod}_schema.json"; \
+		else \
+			echo "skipping $$mod (no lib/ or gov/ directory)"; \
+		fi; \
+	done
+
+# Generate JSON schema for a specific module
+# Usage: make jsonschema-wasmx-erc20
+jsonschema-%: jsonschema-tool
+	@mod="$*"; \
+	if [ ! -d "$(TINYGO_DIR)/$$mod" ]; then \
+		echo "Error: Module $$mod not found in $(TINYGO_DIR)"; \
+		exit 1; \
+	fi; \
+	echo "Generating JSON schema for $$mod..."; \
+	mkdir -p "$(TINYGO_DIR)/schemas"; \
+	$(JSONSCHEMA_TOOL) -module "$(TINYGO_DIR)/$$mod" -output "$(TINYGO_DIR)/schemas/$${mod}_schema.json"

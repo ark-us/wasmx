@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-raftp2p-lib",
+  "description": "JSON Schema for wasmx-raftp2p-lib TinyGo contract",
+  "type": "object",
+  "definitions": {
+    "NodeInfoResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "node_info": {
+          "type": "string",
+          "x-go-type": "p2p.NodeInfo"
+        }
+      },
+      "required": [
+        "error"
+      ]
+    },
+    "StateSyncRequest": {
+      "type": "object",
+      "properties": {
+        "peer_address": {
+          "type": "string"
+        },
+        "start_index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_index",
+        "peer_address"
+      ]
+    },
+    "StateSyncResponse": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-go-type": "raftlib.LogEntryAggregate"
+          }
+        },
+        "last_batch_index": {
+          "type": "integer"
+        },
+        "last_log_index": {
+          "type": "integer"
+        },
+        "peer_address": {
+          "type": "string"
+        },
+        "start_batch_index": {
+          "type": "integer"
+        },
+        "termId": {
+          "type": "integer"
+        },
+        "trusted_log_hash": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "trusted_log_index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_batch_index",
+        "last_batch_index",
+        "last_log_index",
+        "trusted_log_index",
+        "trusted_log_hash",
+        "termId",
+        "peer_address",
+        "entries"
+      ]
+    }
+  }
+}

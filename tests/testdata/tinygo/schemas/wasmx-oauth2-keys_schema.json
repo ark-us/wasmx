@@ -1,0 +1,606 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-oauth2-keys",
+  "description": "JSON Schema for wasmx-oauth2-keys TinyGo contract",
+  "type": "object",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "generate_ephemeral_key": {
+          "$ref": "#/definitions/MsgGenerateEphemeralKey"
+        }
+      },
+      "required": [
+        "generate_ephemeral_key"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "register_external_key": {
+          "$ref": "#/definitions/MsgRegisterExternalKey"
+        }
+      },
+      "required": [
+        "register_external_key"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "sign_transaction": {
+          "$ref": "#/definitions/MsgSignTransaction"
+        }
+      },
+      "required": [
+        "sign_transaction"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "revoke_key": {
+          "$ref": "#/definitions/MsgRevokeKey"
+        }
+      },
+      "required": [
+        "revoke_key"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "delete_expired_keys": {
+          "$ref": "#/definitions/MsgDeleteExpiredKeys"
+        }
+      },
+      "required": [
+        "delete_expired_keys"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "init_account": {
+          "$ref": "#/definitions/MsgInitAccount"
+        }
+      },
+      "required": [
+        "init_account"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "sign_and_broadcast_tx": {
+          "$ref": "#/definitions/MsgSignAndBroadcastTx"
+        }
+      },
+      "required": [
+        "sign_and_broadcast_tx"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_get_public_key": {
+          "$ref": "#/definitions/MsgQueryGetPublicKey"
+        }
+      },
+      "required": [
+        "query_get_public_key"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_get_key_info": {
+          "$ref": "#/definitions/MsgQueryGetKeyInfo"
+        }
+      },
+      "required": [
+        "query_get_key_info"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_validate_and_get_key": {
+          "$ref": "#/definitions/MsgQueryValidateAndGetKey"
+        }
+      },
+      "required": [
+        "query_validate_and_get_key"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "init_genesis": {
+          "$ref": "#/definitions/MsgInitGenesis"
+        }
+      },
+      "required": [
+        "init_genesis"
+      ]
+    }
+  ],
+  "definitions": {
+    "EphemeralKeyPair": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "integer"
+        },
+        "expires_at": {
+          "type": "integer"
+        },
+        "oauth_token": {
+          "type": "string"
+        },
+        "private_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "service_domain": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "public_key",
+        "private_key",
+        "user_id",
+        "service_domain",
+        "created_at",
+        "expires_at",
+        "oauth_token"
+      ]
+    },
+    "MsgDeleteExpiredKeys": {
+      "type": "object"
+    },
+    "MsgDeleteExpiredKeysResponse": {
+      "type": "object",
+      "properties": {
+        "deleted_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "deleted_count"
+      ]
+    },
+    "MsgGenerateEphemeralKey": {
+      "type": "object",
+      "properties": {
+        "expires_at": {
+          "type": "integer"
+        },
+        "oauth_token": {
+          "type": "string"
+        },
+        "service_domain": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "oauth_token",
+        "user_id",
+        "service_domain",
+        "expires_at"
+      ]
+    },
+    "MsgGenerateEphemeralKeyResponse": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "private_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "public_key",
+        "private_key",
+        "address",
+        "success"
+      ]
+    },
+    "MsgInitAccount": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address"
+      ]
+    },
+    "MsgInitAccountResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "tx_hash": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "success",
+        "tx_hash"
+      ]
+    },
+    "MsgInitGenesis": {
+      "type": "object",
+      "properties": {
+        "funder_priv_key": {
+          "type": "string"
+        },
+        "gas_price": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "string",
+              "format": "bigint",
+              "x-go-type": "bigint"
+            },
+            "denom": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "denom",
+            "amount"
+          ]
+        },
+        "init_account_amt": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "string",
+              "format": "bigint",
+              "x-go-type": "bigint"
+            },
+            "denom": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "denom",
+            "amount"
+          ]
+        },
+        "route_prefix": {
+          "type": "string"
+        },
+        "server_secret": {
+          "type": "string"
+        }
+      }
+    },
+    "MsgQueryGetKeyInfo": {
+      "type": "object",
+      "properties": {
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "public_key"
+      ]
+    },
+    "MsgQueryGetPublicKey": {
+      "type": "object",
+      "properties": {
+        "oauth_token": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "oauth_token"
+      ]
+    },
+    "MsgQueryValidateAndGetKey": {
+      "type": "object",
+      "properties": {
+        "oauth_token": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "oauth_token"
+      ]
+    },
+    "MsgRegisterExternalKey": {
+      "type": "object",
+      "properties": {
+        "expires_at": {
+          "type": "integer"
+        },
+        "oauth_token": {
+          "type": "string"
+        },
+        "private_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "service_domain": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "oauth_token",
+        "user_id",
+        "public_key",
+        "private_key",
+        "service_domain",
+        "expires_at"
+      ]
+    },
+    "MsgRegisterExternalKeyResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgRevokeKey": {
+      "type": "object",
+      "properties": {
+        "oauth_token": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "oauth_token"
+      ]
+    },
+    "MsgRevokeKeyResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgSignAndBroadcastTx": {
+      "type": "object",
+      "properties": {
+        "calldata": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "gas_limit": {
+          "type": "integer"
+        },
+        "gas_price": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "string",
+              "format": "bigint",
+              "x-go-type": "bigint"
+            },
+            "denom": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "denom",
+            "amount"
+          ]
+        },
+        "oauth_token": {
+          "type": "string"
+        },
+        "target_contract": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "oauth_token",
+        "target_contract",
+        "calldata",
+        "gas_limit",
+        "gas_price"
+      ]
+    },
+    "MsgSignAndBroadcastTxResponse": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "tx_hash": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "success",
+        "tx_hash",
+        "address"
+      ]
+    },
+    "MsgSignTransaction": {
+      "type": "object",
+      "properties": {
+        "oauth_token": {
+          "type": "string"
+        },
+        "transaction_data": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "oauth_token",
+        "transaction_data"
+      ]
+    },
+    "MsgSignTransactionResponse": {
+      "type": "object",
+      "properties": {
+        "signature": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "signature",
+        "success"
+      ]
+    },
+    "QueryGetKeyInfoResponse": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "integer"
+        },
+        "expires_at": {
+          "type": "integer"
+        },
+        "service_domain": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "service_domain",
+        "expires_at",
+        "created_at"
+      ]
+    },
+    "QueryGetPublicKeyResponse": {
+      "type": "object",
+      "properties": {
+        "expires_at": {
+          "type": "integer"
+        },
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "public_key",
+        "user_id",
+        "expires_at"
+      ]
+    },
+    "QueryValidateAndGetKeyResponse": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "private_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "reason": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "valid",
+        "public_key",
+        "private_key",
+        "address"
+      ]
+    }
+  }
+}

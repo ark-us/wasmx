@@ -1,0 +1,457 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-httpserver-registry",
+  "description": "JSON Schema for wasmx-httpserver-registry TinyGo contract",
+  "type": "object",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "connect_database": {
+          "$ref": "#/definitions/ConnectDatabaseRequest"
+        }
+      },
+      "required": [
+        "connect_database"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "set_route": {
+          "$ref": "#/definitions/SetRouteRequest"
+        }
+      },
+      "required": [
+        "set_route"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "set_routes": {
+          "$ref": "#/definitions/SetRoutesRequest"
+        }
+      },
+      "required": [
+        "set_routes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "remove_route": {
+          "$ref": "#/definitions/RemoveRouteRequest"
+        }
+      },
+      "required": [
+        "remove_route"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "get_route": {
+          "$ref": "#/definitions/GetRouteRequest"
+        }
+      },
+      "required": [
+        "get_route"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "get_routes": {
+          "$ref": "#/definitions/GetRoutesRequest"
+        }
+      },
+      "required": [
+        "get_routes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "set_static_route": {
+          "$ref": "#/definitions/SetStaticRouteRequest"
+        }
+      },
+      "required": [
+        "set_static_route"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "remove_static_route": {
+          "$ref": "#/definitions/RemoveStaticRouteRequest"
+        }
+      },
+      "required": [
+        "remove_static_route"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "get_static_routes": {
+          "$ref": "#/definitions/GetStaticRoutesRequest"
+        }
+      },
+      "required": [
+        "get_static_routes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "start_web_server": {
+          "$ref": "#/definitions/StartWebServerRequest"
+        }
+      },
+      "required": [
+        "start_web_server"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "close_server": {
+          "$ref": "#/definitions/CloseServerRequest"
+        }
+      },
+      "required": [
+        "close_server"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        }
+      },
+      "required": [
+        "RoleChanged"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "init_genesis": {
+          "$ref": "#/definitions/InitGenesisRequest"
+        }
+      },
+      "required": [
+        "init_genesis"
+      ]
+    }
+  ],
+  "definitions": {
+    "CloseServerRequest": {
+      "type": "object"
+    },
+    "CloseServerResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "ConnectDatabaseRequest": {
+      "type": "object",
+      "properties": {
+        "connection": {
+          "type": "string"
+        },
+        "db_name": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "connection",
+        "db_name",
+        "id"
+      ]
+    },
+    "ConnectDatabaseResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "GetRouteRequest": {
+      "type": "object",
+      "properties": {
+        "route": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "route"
+      ]
+    },
+    "GetRouteResponse": {
+      "type": "object",
+      "properties": {
+        "contract_address": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        },
+        "use_oauth2": {
+          "type": "boolean"
+        },
+        "use_transaction": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "use_oauth2",
+        "use_transaction"
+      ]
+    },
+    "GetRoutesRequest": {
+      "type": "object"
+    },
+    "GetRoutesResponse": {
+      "type": "object",
+      "properties": {
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RouteRecord"
+          }
+        }
+      },
+      "required": [
+        "routes"
+      ]
+    },
+    "GetStaticRoutesRequest": {
+      "type": "object"
+    },
+    "GetStaticRoutesResponse": {
+      "type": "object",
+      "properties": {
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StaticRouteRecord"
+          }
+        }
+      },
+      "required": [
+        "routes"
+      ]
+    },
+    "InitGenesisRequest": {
+      "type": "object",
+      "properties": {
+        "gas_price": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "string",
+              "format": "bigint",
+              "x-go-type": "bigint"
+            },
+            "denom": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "denom",
+            "amount"
+          ]
+        }
+      }
+    },
+    "InitGenesisResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "RemoveRouteRequest": {
+      "type": "object",
+      "properties": {
+        "route": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "route"
+      ]
+    },
+    "RemoveStaticRouteRequest": {
+      "type": "object",
+      "properties": {
+        "route": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "route"
+      ]
+    },
+    "RemoveStaticRouteResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "RouteRecord": {
+      "type": "object",
+      "properties": {
+        "contract_address": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        },
+        "use_oauth2": {
+          "type": "boolean"
+        },
+        "use_transaction": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "route",
+        "contract_address",
+        "use_oauth2",
+        "use_transaction"
+      ]
+    },
+    "SetRouteRequest": {
+      "type": "object",
+      "properties": {
+        "contract_address": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        },
+        "use_oauth2": {
+          "type": "boolean"
+        },
+        "use_transaction": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "route",
+        "contract_address",
+        "use_oauth2",
+        "use_transaction"
+      ]
+    },
+    "SetRoutesRequest": {
+      "type": "object",
+      "properties": {
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SetRouteRequest"
+          }
+        }
+      },
+      "required": [
+        "routes"
+      ]
+    },
+    "SetStaticRouteRequest": {
+      "type": "object",
+      "properties": {
+        "folder_path": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "route",
+        "folder_path"
+      ]
+    },
+    "SetStaticRouteResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "StartWebServerRequest": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "string",
+          "x-go-type": "wasmxhttp.WebsrvConfig"
+        }
+      },
+      "required": [
+        "config"
+      ]
+    },
+    "StartWebServerResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "StaticRouteRecord": {
+      "type": "object",
+      "properties": {
+        "folder_path": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "route",
+        "folder_path"
+      ]
+    },
+    "serverConfig": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "string",
+          "x-go-type": "wasmxhttp.WebsrvConfig"
+        }
+      },
+      "required": [
+        "config"
+      ]
+    }
+  }
+}
