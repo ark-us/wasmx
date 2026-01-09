@@ -49,7 +49,7 @@ type CodeMetadata struct {
 	Author     string             `json:"author"`
 	Site       string             `json:"site"`
 	Abi        RawContractMessage `json:"abi"`
-	JsonSchema string             `json:"json_schema"`
+	JsonSchema RawContractMessage `json:"json_schema"`
 	Origin     *CodeOrigin        `json:"origin"`
 }
 

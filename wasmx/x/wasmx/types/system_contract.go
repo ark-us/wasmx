@@ -1319,7 +1319,7 @@ func FillJsonSchemas(precompiles []SystemContract) []SystemContract {
 	for i := range precompiles {
 		schema := tinygo.GetSchema(precompiles[i].Label)
 		if schema != "" {
-			precompiles[i].Metadata.JsonSchema = schema
+			precompiles[i].Metadata.JsonSchema = []byte(schema)
 		}
 	}
 	return precompiles

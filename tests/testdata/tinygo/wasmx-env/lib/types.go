@@ -376,7 +376,7 @@ type CodeMetadata struct {
 	Author     string      `json:"author"`
 	Site       string      `json:"site"`
 	Abi        []byte      `json:"abi"`
-	JsonSchema string      `json:"json_schema"`
+	JsonSchema []byte      `json:"json_schema"`
 	Origin     *CodeOrigin `json:"origin"`
 }
 
