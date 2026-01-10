@@ -3,57 +3,179 @@
   "title": "wasmx-gov",
   "description": "JSON Schema for wasmx-gov TinyGo contract",
   "type": "object",
-  "definitions": {
-    "Calldata": {
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "InitGenesis": {
+          "$ref": "#/definitions/GenesisState"
+        }
+      },
+      "required": [
+        "InitGenesis"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "SubmitProposal": {
+          "$ref": "#/definitions/MsgSubmitProposal"
+        }
+      },
+      "required": [
+        "SubmitProposal"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "Vote": {
+          "$ref": "#/definitions/MsgVote"
+        }
+      },
+      "required": [
+        "Vote"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "VoteWeighted": {
+          "$ref": "#/definitions/MsgVoteWeighted"
+        }
+      },
+      "required": [
+        "VoteWeighted"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "Deposit": {
+          "$ref": "#/definitions/MsgDeposit"
+        }
+      },
+      "required": [
+        "Deposit"
+      ]
+    },
+    {
       "type": "object",
       "properties": {
         "BeginBlock": {
           "$ref": "#/definitions/MsgEmpty"
-        },
-        "Deposit": {
-          "$ref": "#/definitions/MsgDeposit"
-        },
+        }
+      },
+      "required": [
+        "BeginBlock"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
         "EndBlock": {
           "$ref": "#/definitions/MsgEndBlock"
-        },
-        "GetDeposit": {
-          "$ref": "#/definitions/QueryDepositRequest"
-        },
-        "GetDeposits": {
-          "$ref": "#/definitions/QueryDepositsRequest"
-        },
-        "GetParams": {
-          "$ref": "#/definitions/QueryParamsRequest"
-        },
+        }
+      },
+      "required": [
+        "EndBlock"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
         "GetProposal": {
           "$ref": "#/definitions/QueryProposalRequest"
-        },
+        }
+      },
+      "required": [
+        "GetProposal"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
         "GetProposals": {
           "$ref": "#/definitions/QueryProposalsRequest"
-        },
-        "GetTallyResult": {
-          "$ref": "#/definitions/QueryTallyResultRequest"
-        },
+        }
+      },
+      "required": [
+        "GetProposals"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
         "GetVote": {
           "$ref": "#/definitions/QueryVoteRequest"
-        },
+        }
+      },
+      "required": [
+        "GetVote"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
         "GetVotes": {
           "$ref": "#/definitions/QueryVotesRequest"
-        },
-        "InitGenesis": {
-          "$ref": "#/definitions/GenesisState"
-        },
-        "SubmitProposal": {
-          "$ref": "#/definitions/MsgSubmitProposal"
-        },
-        "Vote": {
-          "$ref": "#/definitions/MsgVote"
-        },
-        "VoteWeighted": {
-          "$ref": "#/definitions/MsgVoteWeighted"
         }
-      }
+      },
+      "required": [
+        "GetVotes"
+      ]
     },
+    {
+      "type": "object",
+      "properties": {
+        "GetParams": {
+          "$ref": "#/definitions/QueryParamsRequest"
+        }
+      },
+      "required": [
+        "GetParams"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetDeposit": {
+          "$ref": "#/definitions/QueryDepositRequest"
+        }
+      },
+      "required": [
+        "GetDeposit"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetDeposits": {
+          "$ref": "#/definitions/QueryDepositsRequest"
+        }
+      },
+      "required": [
+        "GetDeposits"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetTallyResult": {
+          "$ref": "#/definitions/QueryTallyResultRequest"
+        }
+      },
+      "required": [
+        "GetTallyResult"
+      ]
+    }
+  ],
+  "definitions": {
     "Deposit": {
       "type": "object",
       "properties": {
@@ -845,6 +967,56 @@
         "option",
         "weight"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "BeginBlock": {
+          "$ref": "#/definitions/MsgEmpty"
+        },
+        "Deposit": {
+          "$ref": "#/definitions/MsgDeposit"
+        },
+        "EndBlock": {
+          "$ref": "#/definitions/MsgEndBlock"
+        },
+        "GetDeposit": {
+          "$ref": "#/definitions/QueryDepositRequest"
+        },
+        "GetDeposits": {
+          "$ref": "#/definitions/QueryDepositsRequest"
+        },
+        "GetParams": {
+          "$ref": "#/definitions/QueryParamsRequest"
+        },
+        "GetProposal": {
+          "$ref": "#/definitions/QueryProposalRequest"
+        },
+        "GetProposals": {
+          "$ref": "#/definitions/QueryProposalsRequest"
+        },
+        "GetTallyResult": {
+          "$ref": "#/definitions/QueryTallyResultRequest"
+        },
+        "GetVote": {
+          "$ref": "#/definitions/QueryVoteRequest"
+        },
+        "GetVotes": {
+          "$ref": "#/definitions/QueryVotesRequest"
+        },
+        "InitGenesis": {
+          "$ref": "#/definitions/GenesisState"
+        },
+        "SubmitProposal": {
+          "$ref": "#/definitions/MsgSubmitProposal"
+        },
+        "Vote": {
+          "$ref": "#/definitions/MsgVote"
+        },
+        "VoteWeighted": {
+          "$ref": "#/definitions/MsgVoteWeighted"
+        }
+      }
     }
   }
 }

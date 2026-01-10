@@ -3,6 +3,11 @@
   "title": "wasmx-multichain-registry",
   "description": "JSON Schema for wasmx-multichain-registry TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -600,6 +605,74 @@
         "validator",
         "p2p_address"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "ConvertAddressByChainId": {
+          "$ref": "#/definitions/QueryConvertAddressByChainIdRequest"
+        },
+        "CrossChainQuery": {
+          "type": "string",
+          "x-go-type": "xchain.MsgCrossChainCallRequest"
+        },
+        "CrossChainQueryNonDeterministic": {
+          "type": "string",
+          "x-go-type": "xchain.MsgCrossChainCallRequest"
+        },
+        "CrossChainTx": {
+          "type": "string",
+          "x-go-type": "xchain.MsgCrossChainCallRequest"
+        },
+        "GetCurrentLevel": {
+          "$ref": "#/definitions/QueryGetCurrentLevelRequest"
+        },
+        "GetSubChainById": {
+          "$ref": "#/definitions/QueryGetSubChainRequest"
+        },
+        "GetSubChainConfigById": {
+          "$ref": "#/definitions/QueryGetSubChainRequest"
+        },
+        "GetSubChainConfigByIds": {
+          "$ref": "#/definitions/QuerySubChainConfigByIdsRequest"
+        },
+        "GetSubChainIds": {
+          "$ref": "#/definitions/QueryGetSubChainIdsRequest"
+        },
+        "GetSubChainIdsByLevel": {
+          "$ref": "#/definitions/QueryGetSubChainIdsByLevelRequest"
+        },
+        "GetSubChainIdsByValidator": {
+          "$ref": "#/definitions/QueryGetSubChainIdsByValidatorRequest"
+        },
+        "GetSubChains": {
+          "$ref": "#/definitions/QueryGetSubChainsRequest"
+        },
+        "GetSubChainsByIds": {
+          "$ref": "#/definitions/QueryGetSubChainsByIdsRequest"
+        },
+        "GetValidatorAddressesByChainId": {
+          "$ref": "#/definitions/QueryValidatorAddressesByChainIdRequest"
+        },
+        "GetValidatorsByChainId": {
+          "$ref": "#/definitions/QueryGetValidatorsByChainIdRequest"
+        },
+        "InitSubChain": {
+          "$ref": "#/definitions/InitSubChainRequest"
+        },
+        "RegisterDefaultSubChain": {
+          "$ref": "#/definitions/RegisterDefaultSubChainRequest"
+        },
+        "RegisterSubChain": {
+          "$ref": "#/definitions/RegisterSubChainRequest"
+        },
+        "RegisterSubChainValidator": {
+          "$ref": "#/definitions/RegisterSubChainValidatorRequest"
+        },
+        "RemoveSubChain": {
+          "$ref": "#/definitions/RemoveSubChainRequest"
+        }
+      }
     }
   }
 }

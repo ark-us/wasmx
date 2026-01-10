@@ -3,6 +3,157 @@
   "title": "emailchain",
   "description": "JSON Schema for emailchain TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "Connect": {
+          "$ref": "#/definitions/ConnectRequest"
+        }
+      },
+      "required": [
+        "Connect"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "Close": {
+          "$ref": "#/definitions/CloseRequest"
+        }
+      },
+      "required": [
+        "Close"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "CreateAccount": {
+          "$ref": "#/definitions/CreateAccountRequest"
+        }
+      },
+      "required": [
+        "CreateAccount"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "SendEmail": {
+          "$ref": "#/definitions/SendMailRequest"
+        }
+      },
+      "required": [
+        "SendEmail"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "BuildAndSend": {
+          "$ref": "#/definitions/BuildAndSendMailRequest"
+        }
+      },
+      "required": [
+        "BuildAndSend"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "VerifyDKIM": {
+          "$ref": "#/definitions/VerifyDKIMRequest"
+        }
+      },
+      "required": [
+        "VerifyDKIM"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "VerifyARC": {
+          "$ref": "#/definitions/VerifyDKIMRequest"
+        }
+      },
+      "required": [
+        "VerifyARC"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "SignDKIM": {
+          "$ref": "#/definitions/SignDKIMRequest"
+        }
+      },
+      "required": [
+        "SignDKIM"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "SignARC": {
+          "$ref": "#/definitions/SignARCRequest"
+        }
+      },
+      "required": [
+        "SignARC"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "ForwardEmail": {
+          "$ref": "#/definitions/ForwardEmailRequest"
+        }
+      },
+      "required": [
+        "ForwardEmail"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "StartServer": {
+          "$ref": "#/definitions/StartServerRequest"
+        }
+      },
+      "required": [
+        "StartServer"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "IncomingEmail": {
+          "$ref": "#/definitions/IncomingEmailRequest"
+        }
+      },
+      "required": [
+        "IncomingEmail"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        }
+      },
+      "required": [
+        "RoleChanged"
+      ]
+    }
+  ],
   "definitions": {
     "AppendRequest": {
       "type": "object",
@@ -77,51 +228,6 @@
         "body",
         "date"
       ]
-    },
-    "Calldata": {
-      "type": "object",
-      "properties": {
-        "BuildAndSend": {
-          "$ref": "#/definitions/BuildAndSendMailRequest"
-        },
-        "Close": {
-          "$ref": "#/definitions/CloseRequest"
-        },
-        "Connect": {
-          "$ref": "#/definitions/ConnectRequest"
-        },
-        "CreateAccount": {
-          "$ref": "#/definitions/CreateAccountRequest"
-        },
-        "ForwardEmail": {
-          "$ref": "#/definitions/ForwardEmailRequest"
-        },
-        "IncomingEmail": {
-          "$ref": "#/definitions/IncomingEmailRequest"
-        },
-        "RoleChanged": {
-          "type": "string",
-          "x-go-type": "wasmx.RolesChangedHook"
-        },
-        "SendEmail": {
-          "$ref": "#/definitions/SendMailRequest"
-        },
-        "SignARC": {
-          "$ref": "#/definitions/SignARCRequest"
-        },
-        "SignDKIM": {
-          "$ref": "#/definitions/SignDKIMRequest"
-        },
-        "StartServer": {
-          "$ref": "#/definitions/StartServerRequest"
-        },
-        "VerifyARC": {
-          "$ref": "#/definitions/VerifyDKIMRequest"
-        },
-        "VerifyDKIM": {
-          "$ref": "#/definitions/VerifyDKIMRequest"
-        }
-      }
     },
     "CloseRequest": {
       "type": "object",
@@ -1272,6 +1378,51 @@
         "error",
         "response"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "BuildAndSend": {
+          "$ref": "#/definitions/BuildAndSendMailRequest"
+        },
+        "Close": {
+          "$ref": "#/definitions/CloseRequest"
+        },
+        "Connect": {
+          "$ref": "#/definitions/ConnectRequest"
+        },
+        "CreateAccount": {
+          "$ref": "#/definitions/CreateAccountRequest"
+        },
+        "ForwardEmail": {
+          "$ref": "#/definitions/ForwardEmailRequest"
+        },
+        "IncomingEmail": {
+          "$ref": "#/definitions/IncomingEmailRequest"
+        },
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        },
+        "SendEmail": {
+          "$ref": "#/definitions/SendMailRequest"
+        },
+        "SignARC": {
+          "$ref": "#/definitions/SignARCRequest"
+        },
+        "SignDKIM": {
+          "$ref": "#/definitions/SignDKIMRequest"
+        },
+        "StartServer": {
+          "$ref": "#/definitions/StartServerRequest"
+        },
+        "VerifyARC": {
+          "$ref": "#/definitions/VerifyDKIMRequest"
+        },
+        "VerifyDKIM": {
+          "$ref": "#/definitions/VerifyDKIMRequest"
+        }
+      }
     }
   }
 }

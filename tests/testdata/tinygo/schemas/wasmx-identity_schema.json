@@ -3,6 +3,11 @@
   "title": "wasmx-identity",
   "description": "JSON Schema for wasmx-identity TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -662,6 +667,44 @@
         "created_at",
         "updated_at"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "add_address": {
+          "$ref": "#/definitions/MsgAddAddress"
+        },
+        "add_address_internal": {
+          "$ref": "#/definitions/MsgAddAddressInternal"
+        },
+        "init_genesis": {
+          "$ref": "#/definitions/MsgInitGenesis"
+        },
+        "query_address_info": {
+          "$ref": "#/definitions/MsgQueryAddressInfo"
+        },
+        "query_user_by_address": {
+          "$ref": "#/definitions/MsgQueryUserByAddress"
+        },
+        "query_user_by_id": {
+          "$ref": "#/definitions/MsgQueryUserByID"
+        },
+        "query_validate_permission": {
+          "$ref": "#/definitions/MsgQueryValidatePermission"
+        },
+        "register_user": {
+          "$ref": "#/definitions/MsgRegisterUser"
+        },
+        "remove_address": {
+          "$ref": "#/definitions/MsgRemoveAddress"
+        },
+        "set_primary_address": {
+          "$ref": "#/definitions/MsgSetPrimaryAddress"
+        },
+        "update_permissions": {
+          "$ref": "#/definitions/MsgUpdatePermissions"
+        }
+      }
     }
   }
 }

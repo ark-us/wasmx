@@ -3,6 +3,14 @@
   "title": "wasmx-erc20x",
   "description": "JSON Schema for wasmx-erc20x TinyGo contract",
   "type": "object",
+  "properties": {
+    "instantiate": {
+      "$ref": "#/definitions/instantiate"
+    },
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -150,49 +158,6 @@
     }
   ],
   "definitions": {
-    "CallDataInstantiate": {
-      "type": "object",
-      "properties": {
-        "admins": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "bech32"
-          }
-        },
-        "base_denom": {
-          "type": "string"
-        },
-        "decimals": {
-          "type": "integer"
-        },
-        "minters": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "bech32"
-          }
-        },
-        "name": {
-          "type": "string"
-        },
-        "negative_balance_threshold": {
-          "type": "string"
-        },
-        "symbol": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "admins",
-        "minters",
-        "name",
-        "symbol",
-        "decimals",
-        "base_denom",
-        "negative_balance_threshold"
-      ]
-    },
     "InstantiateMsg": {
       "type": "object",
       "properties": {
@@ -532,6 +497,94 @@
         "decimals",
         "negative_balance_threshold"
       ]
+    },
+    "instantiate": {
+      "type": "object",
+      "properties": {
+        "admins": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "bech32"
+          }
+        },
+        "base_denom": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer"
+        },
+        "minters": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "bech32"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "negative_balance_threshold": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "admins",
+        "minters",
+        "name",
+        "symbol",
+        "decimals",
+        "base_denom",
+        "negative_balance_threshold"
+      ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "allowance": {
+          "$ref": "#/definitions/MsgAllowance"
+        },
+        "approve": {
+          "$ref": "#/definitions/MsgApprove"
+        },
+        "approveFrom": {
+          "type": "string",
+          "x-go-type": "MsgApproveFrom"
+        },
+        "balanceOf": {
+          "$ref": "#/definitions/MsgBalanceOf"
+        },
+        "burn": {
+          "$ref": "#/definitions/MsgBurn"
+        },
+        "decimals": {
+          "$ref": "#/definitions/MsgDecimals"
+        },
+        "mint": {
+          "$ref": "#/definitions/MsgMint"
+        },
+        "name": {
+          "$ref": "#/definitions/MsgName"
+        },
+        "signedBalanceOf": {
+          "$ref": "#/definitions/MsgSignedBalanceOf"
+        },
+        "symbol": {
+          "$ref": "#/definitions/MsgSymbol"
+        },
+        "totalSupply": {
+          "$ref": "#/definitions/MsgTotalSupply"
+        },
+        "transfer": {
+          "$ref": "#/definitions/MsgTransfer"
+        },
+        "transferFrom": {
+          "$ref": "#/definitions/MsgTransferFrom"
+        }
+      }
     }
   }
 }

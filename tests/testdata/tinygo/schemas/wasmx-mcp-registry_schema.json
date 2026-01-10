@@ -3,6 +3,11 @@
   "title": "wasmx-mcp-registry",
   "description": "JSON Schema for wasmx-mcp-registry TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -490,6 +495,42 @@
         "contract_address",
         "tools_json"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "HttpRequestHandler": {
+          "$ref": "#/definitions/HttpRequestIncoming"
+        },
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        },
+        "deregister_mcp_contract": {
+          "$ref": "#/definitions/DeregisterMCPContractRequest"
+        },
+        "get_all_tools": {
+          "$ref": "#/definitions/GetAllToolsRequest"
+        },
+        "get_contract_info": {
+          "$ref": "#/definitions/GetContractInfoRequest"
+        },
+        "get_registered_contracts": {
+          "$ref": "#/definitions/GetRegisteredContractsRequest"
+        },
+        "init_genesis": {
+          "$ref": "#/definitions/InitGenesisRequest"
+        },
+        "register_http_routes": {
+          "$ref": "#/definitions/RegisterHttpRoutesRequest"
+        },
+        "register_mcp_contract": {
+          "$ref": "#/definitions/RegisterMCPContractRequest"
+        },
+        "update_mcp_tools": {
+          "$ref": "#/definitions/UpdateMCPToolsRequest"
+        }
+      }
     }
   }
 }

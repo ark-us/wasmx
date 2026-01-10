@@ -3,6 +3,11 @@
   "title": "wasmx-slashing",
   "description": "JSON Schema for wasmx-slashing TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -302,6 +307,17 @@
         "tombstoned",
         "missed_blocks_counter"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "GetParams": {
+          "$ref": "#/definitions/MsgGetParams"
+        },
+        "InitGenesis": {
+          "$ref": "#/definitions/MsgInitGenesis"
+        }
+      }
     }
   }
 }

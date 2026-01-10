@@ -3,6 +3,11 @@
   "title": "wasmx-oauth2-server",
   "description": "JSON Schema for wasmx-oauth2-server TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -898,6 +903,64 @@
       "required": [
         "valid"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "HttpRequestHandler": {
+          "type": "string",
+          "x-go-type": "wasmxhttp.HttpRequestIncoming"
+        },
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        },
+        "create_authorization_code": {
+          "$ref": "#/definitions/CreateAuthorizationCodeRequest"
+        },
+        "exchange_code_for_token": {
+          "$ref": "#/definitions/ExchangeCodeForTokenRequest"
+        },
+        "get_current_user": {
+          "$ref": "#/definitions/GetCurrentUserRequest"
+        },
+        "get_oauth_client": {
+          "$ref": "#/definitions/GetOAuthClientRequest"
+        },
+        "init_genesis": {
+          "$ref": "#/definitions/InitGenesisRequest"
+        },
+        "list_oauth_clients": {
+          "$ref": "#/definitions/ListOAuthClientsRequest"
+        },
+        "login": {
+          "$ref": "#/definitions/LoginRequest"
+        },
+        "logout": {
+          "$ref": "#/definitions/LogoutRequest"
+        },
+        "refresh_access_token": {
+          "$ref": "#/definitions/RefreshAccessTokenRequest"
+        },
+        "register_oauth_client": {
+          "$ref": "#/definitions/RegisterOAuthClientRequest"
+        },
+        "register_user": {
+          "$ref": "#/definitions/RegisterUserRequest"
+        },
+        "revoke_oauth_client": {
+          "$ref": "#/definitions/RevokeOAuthClientRequest"
+        },
+        "update_oauth_client": {
+          "$ref": "#/definitions/UpdateOAuthClientRequest"
+        },
+        "validate_access_token": {
+          "$ref": "#/definitions/ValidateAccessTokenRequest"
+        },
+        "validate_session": {
+          "$ref": "#/definitions/ValidateSessionRequest"
+        }
+      }
     }
   }
 }

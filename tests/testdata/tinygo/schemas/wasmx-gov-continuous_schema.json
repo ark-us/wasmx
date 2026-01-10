@@ -3,6 +3,11 @@
   "title": "wasmx-gov-continuous",
   "description": "JSON Schema for wasmx-gov-continuous TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -1035,6 +1040,74 @@
         "option",
         "weight"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "AddProposalOption": {
+          "$ref": "#/definitions/MsgAddProposalOption"
+        },
+        "BeginBlock": {
+          "$ref": "#/definitions/MsgEmpty"
+        },
+        "Deposit": {
+          "$ref": "#/definitions/MsgDeposit"
+        },
+        "DepositVote": {
+          "$ref": "#/definitions/DepositVote"
+        },
+        "EndBlock": {
+          "$ref": "#/definitions/MsgEndBlock"
+        },
+        "GetDeposit": {
+          "$ref": "#/definitions/QueryDepositRequest"
+        },
+        "GetDeposits": {
+          "$ref": "#/definitions/QueryDepositsRequest"
+        },
+        "GetNextWinnerThreshold": {
+          "$ref": "#/definitions/QueryNextWinnerThreshold"
+        },
+        "GetParams": {
+          "$ref": "#/definitions/QueryParamsRequest"
+        },
+        "GetProposal": {
+          "$ref": "#/definitions/QueryProposalRequest"
+        },
+        "GetProposalExtended": {
+          "$ref": "#/definitions/QueryProposalRequest"
+        },
+        "GetProposals": {
+          "$ref": "#/definitions/QueryProposalsRequest"
+        },
+        "GetProposalsExtended": {
+          "$ref": "#/definitions/QueryProposalsRequest"
+        },
+        "GetTallyResult": {
+          "$ref": "#/definitions/QueryTallyResultRequest"
+        },
+        "GetVote": {
+          "$ref": "#/definitions/QueryVoteRequest"
+        },
+        "GetVotes": {
+          "$ref": "#/definitions/QueryVotesRequest"
+        },
+        "InitGenesis": {
+          "$ref": "#/definitions/MsgInitGenesis"
+        },
+        "SubmitProposal": {
+          "$ref": "#/definitions/MsgSubmitProposal"
+        },
+        "SubmitProposalExtended": {
+          "$ref": "#/definitions/MsgSubmitProposalExtended"
+        },
+        "Vote": {
+          "$ref": "#/definitions/MsgVote"
+        },
+        "VoteWeighted": {
+          "$ref": "#/definitions/MsgVoteWeighted"
+        }
+      }
     }
   }
 }

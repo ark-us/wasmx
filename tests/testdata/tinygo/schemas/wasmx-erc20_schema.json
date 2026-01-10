@@ -3,6 +3,14 @@
   "title": "wasmx-erc20",
   "description": "JSON Schema for wasmx-erc20 TinyGo contract",
   "type": "object",
+  "properties": {
+    "instantiate": {
+      "$ref": "#/definitions/instantiate"
+    },
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -138,45 +146,6 @@
     }
   ],
   "definitions": {
-    "CallDataInstantiate": {
-      "type": "object",
-      "properties": {
-        "admins": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "bech32"
-          }
-        },
-        "base_denom": {
-          "type": "string"
-        },
-        "decimals": {
-          "type": "integer"
-        },
-        "minters": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "bech32"
-          }
-        },
-        "name": {
-          "type": "string"
-        },
-        "symbol": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "admins",
-        "minters",
-        "name",
-        "symbol",
-        "decimals",
-        "base_denom"
-      ]
-    },
     "InstantiateMsg": {
       "type": "object",
       "properties": {
@@ -517,6 +486,86 @@
         "symbol",
         "decimals"
       ]
+    },
+    "instantiate": {
+      "type": "object",
+      "properties": {
+        "admins": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "bech32"
+          }
+        },
+        "base_denom": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer"
+        },
+        "minters": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "bech32"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "admins",
+        "minters",
+        "name",
+        "symbol",
+        "decimals",
+        "base_denom"
+      ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "allowance": {
+          "$ref": "#/definitions/MsgAllowance"
+        },
+        "approve": {
+          "$ref": "#/definitions/MsgApprove"
+        },
+        "approveFrom": {
+          "$ref": "#/definitions/MsgApproveFrom"
+        },
+        "balanceOf": {
+          "$ref": "#/definitions/MsgBalanceOf"
+        },
+        "burn": {
+          "$ref": "#/definitions/MsgBurn"
+        },
+        "decimals": {
+          "$ref": "#/definitions/MsgDecimals"
+        },
+        "mint": {
+          "$ref": "#/definitions/MsgMint"
+        },
+        "name": {
+          "$ref": "#/definitions/MsgName"
+        },
+        "symbol": {
+          "$ref": "#/definitions/MsgSymbol"
+        },
+        "totalSupply": {
+          "$ref": "#/definitions/MsgTotalSupply"
+        },
+        "transfer": {
+          "$ref": "#/definitions/MsgTransfer"
+        },
+        "transferFrom": {
+          "$ref": "#/definitions/MsgTransferFrom"
+        }
+      }
     }
   }
 }

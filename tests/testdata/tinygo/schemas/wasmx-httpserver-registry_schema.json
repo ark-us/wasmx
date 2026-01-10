@@ -3,6 +3,11 @@
   "title": "wasmx-httpserver-registry",
   "description": "JSON Schema for wasmx-httpserver-registry TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -440,6 +445,51 @@
         "route",
         "folder_path"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        },
+        "close_server": {
+          "$ref": "#/definitions/CloseServerRequest"
+        },
+        "connect_database": {
+          "$ref": "#/definitions/ConnectDatabaseRequest"
+        },
+        "get_route": {
+          "$ref": "#/definitions/GetRouteRequest"
+        },
+        "get_routes": {
+          "$ref": "#/definitions/GetRoutesRequest"
+        },
+        "get_static_routes": {
+          "$ref": "#/definitions/GetStaticRoutesRequest"
+        },
+        "init_genesis": {
+          "$ref": "#/definitions/InitGenesisRequest"
+        },
+        "remove_route": {
+          "$ref": "#/definitions/RemoveRouteRequest"
+        },
+        "remove_static_route": {
+          "$ref": "#/definitions/RemoveStaticRouteRequest"
+        },
+        "set_route": {
+          "$ref": "#/definitions/SetRouteRequest"
+        },
+        "set_routes": {
+          "$ref": "#/definitions/SetRoutesRequest"
+        },
+        "set_static_route": {
+          "$ref": "#/definitions/SetStaticRouteRequest"
+        },
+        "start_web_server": {
+          "$ref": "#/definitions/StartWebServerRequest"
+        }
+      }
     },
     "serverConfig": {
       "type": "object",

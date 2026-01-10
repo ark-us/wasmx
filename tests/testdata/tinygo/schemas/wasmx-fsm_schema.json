@@ -3,6 +3,14 @@
   "title": "wasmx-fsm",
   "description": "JSON Schema for wasmx-fsm TinyGo contract",
   "type": "object",
+  "properties": {
+    "instantiate": {
+      "$ref": "#/definitions/instantiate"
+    },
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -202,24 +210,6 @@
     },
     "CallDataGetCurrentState": {
       "type": "object"
-    },
-    "CallDataInstantiate": {
-      "type": "object",
-      "properties": {
-        "context": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ContextParam"
-          }
-        },
-        "initialState": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "initialState",
-        "context"
-      ]
     },
     "CallDataRun": {
       "type": "object",
@@ -713,6 +703,55 @@
         "name",
         "transitions"
       ]
+    },
+    "instantiate": {
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ContextParam"
+          }
+        },
+        "initialState": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "initialState",
+        "context"
+      ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "SetupNode": {
+          "type": "string",
+          "x-go-type": "wasmx.HookCalld"
+        },
+        "StartNode": {
+          "type": "string",
+          "x-go-type": "wasmx.HookCalld"
+        },
+        "execute": {
+          "$ref": "#/definitions/CallDataExecuteAction"
+        },
+        "getContextValue": {
+          "$ref": "#/definitions/CallDataGetContextValue"
+        },
+        "getCurrentState": {
+          "$ref": "#/definitions/CallDataGetCurrentState"
+        },
+        "instantiate": {
+          "$ref": "#/definitions/CallDataInstantiate"
+        },
+        "run": {
+          "$ref": "#/definitions/CallDataRun"
+        },
+        "setup": {
+          "type": "string"
+        }
+      }
     }
   }
 }

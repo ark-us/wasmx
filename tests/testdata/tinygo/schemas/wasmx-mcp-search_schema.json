@@ -3,6 +3,11 @@
   "title": "wasmx-mcp-search",
   "description": "JSON Schema for wasmx-mcp-search TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -522,6 +527,30 @@
       "required": [
         "description"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "HttpRequestHandler": {
+          "$ref": "#/definitions/HttpRequestIncoming"
+        },
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        },
+        "execute_tool": {
+          "$ref": "#/definitions/ExecuteToolRequest"
+        },
+        "generate_embeddings": {
+          "$ref": "#/definitions/GenerateEmbeddingsRequest"
+        },
+        "init_genesis": {
+          "$ref": "#/definitions/InitGenesisRequest"
+        },
+        "populate": {
+          "$ref": "#/definitions/PopulateRequest"
+        }
+      }
     }
   }
 }

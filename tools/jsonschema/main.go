@@ -25,6 +25,8 @@ type Schema struct {
 	Required    []string           `json:"required,omitempty"`
 	Definitions map[string]*Schema `json:"definitions,omitempty"`
 	OneOf       []*Schema          `json:"oneOf,omitempty"`
+	AnyOf       []*Schema          `json:"anyOf,omitempty"`
+	AllOf       []*Schema          `json:"allOf,omitempty"`
 	Description string             `json:"description,omitempty"`
 	// Custom extensions for complex types
 	XGoType string `json:"x-go-type,omitempty"`
@@ -36,6 +38,7 @@ type ContractSchema struct {
 	Title       string             `json:"title"`
 	Description string             `json:"description,omitempty"`
 	Type        string             `json:"type"`
+	Properties  map[string]*Schema `json:"properties,omitempty"`
 	OneOf       []*Schema          `json:"oneOf,omitempty"`
 	Definitions map[string]*Schema `json:"definitions"`
 }
@@ -242,10 +245,10 @@ func parseGoFiles(dirPath string) (map[string]*TypeInfo, *TypeInfo, *TypeInfo, e
 				types[typeSpec.Name.Name] = typeInfo
 
 				// Check for special types
-				if typeSpec.Name.Name == "CallData" {
+				if typeSpec.Name.Name == "CallData" || typeSpec.Name.Name == "Calldata" {
 					callDataType = typeInfo
 				}
-				if typeSpec.Name.Name == "CallDataInstantiate" {
+				if typeSpec.Name.Name == "CallDataInstantiate" || typeSpec.Name.Name == "CalldataInstantiate" || typeSpec.Name.Name == "InstantiateMsg" {
 					instantiateType = typeInfo
 				}
 			}
@@ -340,7 +343,10 @@ func generateSchema(moduleName string, types map[string]*TypeInfo, callDataType 
 	// Add all type definitions
 	for name, typeInfo := range types {
 		// Skip CallData itself (it's the root)
-		if name == "CallData" {
+		if callDataType != nil && name == callDataType.Name {
+			continue
+		}
+		if instantiateType != nil && name == instantiateType.Name {
 			continue
 		}
 		schema.Definitions[name] = typeInfoToSchema(typeInfo, types)
@@ -348,6 +354,12 @@ func generateSchema(moduleName string, types map[string]*TypeInfo, callDataType 
 
 	// Generate oneOf for CallData (execute messages)
 	if callDataType != nil {
+		if schema.Properties == nil {
+			schema.Properties = make(map[string]*Schema)
+		}
+		schema.Definitions["main"] = typeInfoToSchema(callDataType, types)
+		schema.Properties["main"] = &Schema{Ref: "#/definitions/main"}
+
 		for _, field := range callDataType.Fields {
 			if field.JSONName == "-" {
 				continue
@@ -366,7 +378,13 @@ func generateSchema(moduleName string, types map[string]*TypeInfo, callDataType 
 
 	// Add instantiate type if exists
 	if instantiateType != nil {
-		schema.Definitions["InstantiateMsg"] = typeInfoToSchema(instantiateType, types)
+		if schema.Properties == nil {
+			schema.Properties = make(map[string]*Schema)
+		}
+		instantiateSchema := typeInfoToSchema(instantiateType, types)
+		schema.Definitions["instantiate"] = instantiateSchema
+		schema.Definitions["InstantiateMsg"] = instantiateSchema
+		schema.Properties["instantiate"] = &Schema{Ref: "#/definitions/instantiate"}
 	}
 
 	return schema

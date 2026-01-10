@@ -3,6 +3,11 @@
   "title": "wasmx-staking",
   "description": "JSON Schema for wasmx-staking TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -1290,6 +1295,17 @@
         "unbonding_on_hold_ref_count",
         "unbonding_ids"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "GetParams": {
+          "$ref": "#/definitions/MsgGetParams"
+        },
+        "InitGenesis": {
+          "$ref": "#/definitions/MsgInitGenesis"
+        }
+      }
     }
   }
 }

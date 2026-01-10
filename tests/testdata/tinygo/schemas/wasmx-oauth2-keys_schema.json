@@ -3,6 +3,11 @@
   "title": "wasmx-oauth2-keys",
   "description": "JSON Schema for wasmx-oauth2-keys TinyGo contract",
   "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
   "oneOf": [
     {
       "type": "object",
@@ -601,6 +606,44 @@
         "private_key",
         "address"
       ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "delete_expired_keys": {
+          "$ref": "#/definitions/MsgDeleteExpiredKeys"
+        },
+        "generate_ephemeral_key": {
+          "$ref": "#/definitions/MsgGenerateEphemeralKey"
+        },
+        "init_account": {
+          "$ref": "#/definitions/MsgInitAccount"
+        },
+        "init_genesis": {
+          "$ref": "#/definitions/MsgInitGenesis"
+        },
+        "query_get_key_info": {
+          "$ref": "#/definitions/MsgQueryGetKeyInfo"
+        },
+        "query_get_public_key": {
+          "$ref": "#/definitions/MsgQueryGetPublicKey"
+        },
+        "query_validate_and_get_key": {
+          "$ref": "#/definitions/MsgQueryValidateAndGetKey"
+        },
+        "register_external_key": {
+          "$ref": "#/definitions/MsgRegisterExternalKey"
+        },
+        "revoke_key": {
+          "$ref": "#/definitions/MsgRevokeKey"
+        },
+        "sign_and_broadcast_tx": {
+          "$ref": "#/definitions/MsgSignAndBroadcastTx"
+        },
+        "sign_transaction": {
+          "$ref": "#/definitions/MsgSignTransaction"
+        }
+      }
     }
   }
 }
