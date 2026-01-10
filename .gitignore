@@ -11,3 +11,5 @@ private.md
 .claude/
 tests/codes_compiled/
 private
+
+.gocache

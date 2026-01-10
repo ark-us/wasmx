@@ -3,6 +3,9 @@
 TINYGO_DIR := ./tests/testdata/tinygo
 PRECOMPILE_DIR := ./wasmx/x/wasmx/vm/precompiles
 JSONSCHEMA_TOOL := ./tools/jsonschema/jsonschema
+PROTOJSONSCHEMA_TOOL := ./tools/protojsonschema/protojsonschema
+PROTOJSONSCHEMA_OUT_DIR ?=
+PROTOJSONSCHEMA_TITLE ?= wasmx-governance
 
 # Mapping of tinygo modules to precompile wasm filenames
 # Format: module_path:output_filename
@@ -100,13 +103,29 @@ $(TINYGO_MODULES):
 # JSON Schema Generation
 # ============================================================================
 
-.PHONY: jsonschema-tool jsonschema jsonschema-%
+.PHONY: jsonschema-tool jsonschema jsonschema-% protojsonschema-tool protojsonschema
 
 # Build the JSON schema generator tool
 jsonschema-tool:
 	@echo "Building JSON schema generator tool..."
 	@env GOWORK=off go build -C ./tools/jsonschema -o $(abspath $(JSONSCHEMA_TOOL)) .
 	@echo "Built $(JSONSCHEMA_TOOL)"
+
+# Build the protobuf JSON schema generator tool
+protojsonschema-tool:
+	@echo "Building protobuf JSON schema generator tool..."
+	@env GOWORK=off go build -C ./tools/protojsonschema -o $(abspath $(PROTOJSONSCHEMA_TOOL)) .
+	@echo "Built $(PROTOJSONSCHEMA_TOOL)"
+
+# Generate JSON schema for governance messages from protobufs
+# Usage: make protojsonschema
+protojsonschema: protojsonschema-tool
+	@if [ -z "$(PROTOJSONSCHEMA_OUT_DIR)" ]; then \
+		echo "Error: PROTOJSONSCHEMA_OUT_DIR is required"; \
+		exit 1; \
+	fi; \
+	echo "Generating protobuf JSON schemas -> $(PROTOJSONSCHEMA_OUT_DIR)"; \
+	$(PROTOJSONSCHEMA_TOOL) -out-dir "$(PROTOJSONSCHEMA_OUT_DIR)" -title "$(PROTOJSONSCHEMA_TITLE)"
 
 # Generate JSON schema for all TinyGo modules
 # Usage: make jsonschema

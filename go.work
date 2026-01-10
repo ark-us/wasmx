@@ -9,6 +9,7 @@ use (
 	./wasmx-vmimap
 	./wasmx-vmsmtp
 	./wasmx-vmpostgresql
+	./tools/protojsonschema
 
 	// tests
 	./tests
