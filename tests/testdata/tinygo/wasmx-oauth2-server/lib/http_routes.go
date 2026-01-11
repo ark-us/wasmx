@@ -38,6 +38,7 @@ func registerHttpRoutes(registryAddr wasmx.Bech32String, staticRoutes []StaticRo
 		"/auth/logout",
 		"/auth/me",
 		"/auth/contract_addresses",
+		"/sign_and_broadcast",
 	}
 
 	for _, rt := range routes {

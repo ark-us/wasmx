@@ -25,6 +25,7 @@ import (
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 
 	testdata "github.com/loredanacirstea/mythos-tests/testdata/tinygo"
+	wasmxtest "github.com/loredanacirstea/mythos-tests/testdata/wasmx"
 	"github.com/loredanacirstea/mythos-tests/vmsql/utils"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	networkgrpc "github.com/loredanacirstea/wasmx/x/network/keeper"
@@ -904,9 +905,56 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	time.Sleep(time.Second * 10)
 
 	// ========================================
-	// PART 6: Verify MCP Tools Registration
+	// PART 6: Sign and Broadcast via OAuth2 Server
 	// ========================================
-	suite.T().Log("--- Part 6: MCP Tools Registration ---")
+	suite.T().Log("--- Part 6: Sign and Broadcast via OAuth2 Server ---")
+
+	wasmbin := wasmxtest.WasmxSimpleStorage
+	codeId := appA.StoreCode(sender, wasmbin, nil)
+	contractAddress := appA.InstantiateCode(sender, codeId, types.WasmxExecutionMessage{Data: []byte{}}, "simpleStorage", nil)
+
+	data := []byte(`{"set":{"key":"hello","value":"sammy"}}`)
+	signReqBody, _ := json.Marshal(map[string]interface{}{
+		"target_contract": contractAddress.String(),
+		"calldata":        base64.StdEncoding.EncodeToString(data),
+		"gas_limit":       3000000,
+	})
+
+	signReq, err := http.NewRequest("POST", testServerAddr+"/sign_and_broadcast", bytes.NewBuffer(signReqBody))
+	suite.Require().NoError(err)
+	signReq.Header.Set("Authorization", "Bearer "+accessToken)
+	signReq.Header.Set("Content-Type", "application/json")
+
+	signResp, err := client.Do(signReq)
+	suite.Require().NoError(err)
+	signBody, _ := io.ReadAll(signResp.Body)
+	signResp.Body.Close()
+	suite.T().Logf("sign_and_broadcast response: status=%d body=%s", signResp.StatusCode, string(signBody))
+	suite.Require().Equal(http.StatusOK, signResp.StatusCode, "sign_and_broadcast should succeed")
+
+	var signRespBody struct {
+		Success   bool   `json:"success"`
+		TxHash    string `json:"tx_hash"`
+		TxHashHex string `json:"tx_hash_hex"`
+		Address   string `json:"address"`
+		Error     string `json:"error,omitempty"`
+	}
+	err = json.Unmarshal(signBody, &signRespBody)
+	suite.Require().NoError(err)
+	suite.Require().True(signRespBody.Success, "sign_and_broadcast should return success")
+	suite.Require().NotEmpty(signRespBody.TxHashHex, "tx hash hex should be returned")
+	suite.Require().Equal(keyResponse.Address, signRespBody.Address, "signing address should match token address")
+
+	// Wait for the transaction to be processed, then verify storage
+	time.Sleep(time.Second * 5)
+
+	qres := appA.WasmxQueryRaw(sender, contractAddress, types.WasmxExecutionMessage{Data: []byte(`{"get":{"key":"hello"}}`)}, nil, nil)
+	suite.Require().Equal(string(qres), "sammy")
+
+	// ========================================
+	// PART 7: Verify MCP Tools Registration
+	// ========================================
+	suite.T().Log("--- Part 7: MCP Tools Registration ---")
 
 	// Verify the mcp-userdata tools are registered with MCP registry
 	mcpRegistryAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_MCP_REGISTRY))
@@ -946,9 +994,9 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	suite.Require().True(foundGetColor, "get_favorite_color tool should be registered")
 
 	// ========================================
-	// PART 7: HTTP POST with Transaction Signing
+	// PART 8: HTTP POST with Transaction Signing
 	// ========================================
-	suite.T().Log("--- Part 7: HTTP POST with Transaction Signing ---")
+	suite.T().Log("--- Part 8: HTTP POST with Transaction Signing ---")
 
 	// This tests the full flow:
 	// 1. HTTP POST → httpserver-registry
@@ -1000,9 +1048,9 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	suite.T().Log("HTTP POST with transaction signing tests passed!")
 
 	// ========================================
-	// PART 8: HTTP POST for Read Operation (with Bearer Token)
+	// PART 9: HTTP POST for Read Operation (with Bearer Token)
 	// ========================================
-	suite.T().Log("--- Part 8: HTTP POST for Read Operation (with Bearer Token) ---")
+	suite.T().Log("--- Part 9: HTTP POST for Read Operation (with Bearer Token) ---")
 
 	time.Sleep(time.Second * 5)
 

@@ -1,0 +1,710 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-identity",
+  "description": "JSON Schema for wasmx-identity TinyGo contract",
+  "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "register_user": {
+          "$ref": "#/definitions/MsgRegisterUser"
+        }
+      },
+      "required": [
+        "register_user"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "add_address": {
+          "$ref": "#/definitions/MsgAddAddress"
+        }
+      },
+      "required": [
+        "add_address"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "add_address_internal": {
+          "$ref": "#/definitions/MsgAddAddressInternal"
+        }
+      },
+      "required": [
+        "add_address_internal"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "remove_address": {
+          "$ref": "#/definitions/MsgRemoveAddress"
+        }
+      },
+      "required": [
+        "remove_address"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "update_permissions": {
+          "$ref": "#/definitions/MsgUpdatePermissions"
+        }
+      },
+      "required": [
+        "update_permissions"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "set_primary_address": {
+          "$ref": "#/definitions/MsgSetPrimaryAddress"
+        }
+      },
+      "required": [
+        "set_primary_address"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_user_by_id": {
+          "$ref": "#/definitions/MsgQueryUserByID"
+        }
+      },
+      "required": [
+        "query_user_by_id"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_user_by_address": {
+          "$ref": "#/definitions/MsgQueryUserByAddress"
+        }
+      },
+      "required": [
+        "query_user_by_address"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_address_info": {
+          "$ref": "#/definitions/MsgQueryAddressInfo"
+        }
+      },
+      "required": [
+        "query_address_info"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_validate_permission": {
+          "$ref": "#/definitions/MsgQueryValidatePermission"
+        }
+      },
+      "required": [
+        "query_validate_permission"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "init_genesis": {
+          "$ref": "#/definitions/MsgInitGenesis"
+        }
+      },
+      "required": [
+        "init_genesis"
+      ]
+    }
+  ],
+  "definitions": {
+    "AddressInfo": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "default_allowances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "expires_at": {
+          "type": "integer"
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Permission"
+          }
+        },
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "service_domain": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "public_key",
+        "service_domain",
+        "permissions",
+        "expires_at",
+        "created_at"
+      ]
+    },
+    "InitialUser": {
+      "type": "object",
+      "properties": {
+        "addresses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MsgRegisterUser"
+          }
+        }
+      },
+      "required": [
+        "addresses"
+      ]
+    },
+    "MsgAddAddress": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "default_allowances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "expires_at": {
+          "type": "integer"
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Permission"
+          }
+        },
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "service_domain": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "address",
+        "public_key"
+      ]
+    },
+    "MsgAddAddressInternal": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "default_allowances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "expires_at": {
+          "type": "integer"
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Permission"
+          }
+        },
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "service_domain": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "address",
+        "public_key"
+      ]
+    },
+    "MsgAddAddressInternalResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgAddAddressResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgApproveFrom": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "spender": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        }
+      },
+      "required": [
+        "owner",
+        "spender",
+        "value"
+      ]
+    },
+    "MsgInitGenesis": {
+      "type": "object",
+      "properties": {
+        "initial_users": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InitialUser"
+          }
+        }
+      }
+    },
+    "MsgQueryAddressInfo": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "address"
+      ]
+    },
+    "MsgQueryUserByAddress": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address"
+      ]
+    },
+    "MsgQueryUserByID": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id"
+      ]
+    },
+    "MsgQueryValidatePermission": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "operation_data": {
+          "type": "object"
+        },
+        "operation_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "operation_type",
+        "operation_data"
+      ]
+    },
+    "MsgRegisterUser": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "integer"
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Permission"
+          }
+        },
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "service_domain": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "public_key"
+      ]
+    },
+    "MsgRegisterUserResponse": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id"
+      ]
+    },
+    "MsgRemoveAddress": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "address"
+      ]
+    },
+    "MsgRemoveAddressResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgSetPrimaryAddress": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "address"
+      ]
+    },
+    "MsgSetPrimaryAddressResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgUpdatePermissions": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Permission"
+          }
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "address",
+        "permissions"
+      ]
+    },
+    "MsgUpdatePermissionsResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "Permission": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "type": "object"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "params"
+      ]
+    },
+    "QueryAddressByDenom": {
+      "type": "object",
+      "properties": {
+        "denom": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "denom"
+      ]
+    },
+    "QueryAddressByDenomResponse": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address"
+      ]
+    },
+    "QueryAddressInfoResponse": {
+      "type": "object",
+      "properties": {
+        "address_info": {
+          "$ref": "#/definitions/AddressInfo"
+        }
+      },
+      "required": [
+        "address_info"
+      ]
+    },
+    "QueryUserByAddressResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/UserIdentity"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "user"
+      ]
+    },
+    "QueryUserByIDResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/UserIdentity"
+        }
+      },
+      "required": [
+        "user"
+      ]
+    },
+    "QueryValidatePermissionResponse": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "valid"
+      ]
+    },
+    "UserIdentity": {
+      "type": "object",
+      "properties": {
+        "addresses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "primary_address": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "integer"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "primary_address",
+        "addresses",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "add_address": {
+          "$ref": "#/definitions/MsgAddAddress"
+        },
+        "add_address_internal": {
+          "$ref": "#/definitions/MsgAddAddressInternal"
+        },
+        "init_genesis": {
+          "$ref": "#/definitions/MsgInitGenesis"
+        },
+        "query_address_info": {
+          "$ref": "#/definitions/MsgQueryAddressInfo"
+        },
+        "query_user_by_address": {
+          "$ref": "#/definitions/MsgQueryUserByAddress"
+        },
+        "query_user_by_id": {
+          "$ref": "#/definitions/MsgQueryUserByID"
+        },
+        "query_validate_permission": {
+          "$ref": "#/definitions/MsgQueryValidatePermission"
+        },
+        "register_user": {
+          "$ref": "#/definitions/MsgRegisterUser"
+        },
+        "remove_address": {
+          "$ref": "#/definitions/MsgRemoveAddress"
+        },
+        "set_primary_address": {
+          "$ref": "#/definitions/MsgSetPrimaryAddress"
+        },
+        "update_permissions": {
+          "$ref": "#/definitions/MsgUpdatePermissions"
+        }
+      }
+    }
+  }
+}

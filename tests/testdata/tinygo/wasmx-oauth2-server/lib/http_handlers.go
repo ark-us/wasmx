@@ -54,6 +54,8 @@ func HandleHttpRequestWrap(req wasmxhttp.HttpRequestIncoming) []byte {
 		return handleAccountInfo(req)
 	case "/auth/contract_addresses":
 		return handleContractAddresses(req)
+	case "/sign_and_broadcast":
+		return handleSignAndBroadcast(req)
 	default:
 		return marshalHTTP(wasmxhttp.HttpResponseWrap{
 			Error: "",
@@ -79,9 +81,9 @@ func handleWellKnown(req wasmxhttp.HttpRequestIncoming) []byte {
 
 	base := fmt.Sprintf("%s://%s", scheme, host)
 	body, _ := json.Marshal(map[string]interface{}{
-		"issuer":                                base,
-		"authorization_endpoint":                base + "/oauth/authorize",
-		"token_endpoint":                        base + "/oauth/token",
+		"issuer":                 base,
+		"authorization_endpoint": base + "/oauth/authorize",
+		"token_endpoint":         base + "/oauth/token",
 		// Expose userinfo for OIDC-style compatibility.
 		"userinfo_endpoint":                     base + "/oauth/userinfo",
 		"grant_types_supported":                 []string{"authorization_code", "refresh_token"},
@@ -622,7 +624,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 
 	<script src="https://cdn.jsdelivr.net/gh/ark-us/mythosjs@1e26ca270ac577a2f39966e4df44459df5881f90/packages/wasmxjs-browser-bundle/dist/wasmxjs-bundle.umd.js"></script>
 
-    <script type="module">
+	<script type="module">
         import * as secp from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@2.1.0/+esm';
         import { sha256 } from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/sha256/+esm';
         import { ripemd160 } from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/ripemd160/+esm';
@@ -634,6 +636,7 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 		console.log("module script");
 		const rpcEndpoint = 'https://wasmxtest.rpc.provable.dev'; // TODO: get from config
 		// const rpcEndpoint = 'http://localhost:26657';
+		const supabaseKeyEndpoint = '` + string(wasmx.StorageLoad([]byte(STORAGE_SUPABASE_KEY_ENDPOINT))) + `';
 
         document.getElementById('blockchainOptions').style.display = 'block';
 		document.getElementById('pin').required = true;
@@ -974,6 +977,39 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 				requestData.public_key = keyPair.publicKey;
 				requestData.address = address;
 
+				// Store encrypted private key in Supabase vault via edge function
+				if (!supabaseKeyEndpoint) {
+					errorDiv.textContent = 'Supabase key endpoint not configured.';
+					return;
+				}
+				successDiv.textContent = 'Saving encrypted key to Nomen...';
+				try {
+					const keyResp = await fetch(supabaseKeyEndpoint, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'Authorization': 'Bearer ' + session.access_token
+						},
+						body: JSON.stringify({
+							address: address,
+							public_key: keyPair.publicKey,
+							encrypted_private_key: encryptedPrivateKey,
+							bech32_prefix: bech32Prefix,
+							key_format: 'secp256k1'
+						})
+					});
+					const keyResult = await keyResp.json();
+					if (!keyResp.ok || keyResult?.success === false) {
+						console.log('Failed storing encrypted key:', keyResult?.error || keyResult);
+						errorDiv.textContent = 'Failed to save encrypted key in Nomen.';
+						return;
+					}
+				} catch (err) {
+					console.log('Failed storing encrypted key:', err);
+					errorDiv.textContent = 'Failed to save encrypted key in Nomen.';
+					return;
+				}
+
 				// Initialize the blockchain account by sending it native coins
 				successDiv.textContent = 'Initializing blockchain account...';
 				try {
@@ -1189,6 +1225,164 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 			StatusCode: 200,
 			Header:     http.Header{"Content-Type": []string{"application/json"}},
 			Data:       resp,
+		},
+	})
+}
+
+func handleSignAndBroadcast(req wasmxhttp.HttpRequestIncoming) []byte {
+	if req.Method != "POST" {
+		return methodNotAllowed()
+	}
+
+	authHeader := strings.TrimSpace(req.Header.Get("Authorization"))
+	if authHeader == "" {
+		return unauthorized("missing authorization header")
+	}
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return unauthorized("invalid authorization header")
+	}
+	token := strings.TrimSpace(parts[1])
+	if token == "" {
+		return unauthorized("missing token")
+	}
+
+	validateResp := ValidateAccessToken(ValidateAccessTokenRequest{Token: token})
+	var validateData ValidateAccessTokenResponse
+	if err := json.Unmarshal(validateResp, &validateData); err != nil || !validateData.Valid {
+		return unauthorized("invalid or expired token")
+	}
+
+	type gasPricePayload struct {
+		Denom  string `json:"denom"`
+		Amount string `json:"amount"`
+	}
+	type signRequest struct {
+		TargetContract string           `json:"target_contract"`
+		Calldata       []byte           `json:"calldata,omitempty"`
+		GasLimit       uint64           `json:"gas_limit,omitempty"`
+		GasPrice       *gasPricePayload `json:"gas_price,omitempty"`
+		ChainID        string           `json:"chain_id,omitempty"`
+	}
+
+	var body signRequest
+	if err := json.Unmarshal(req.Data, &body); err != nil {
+		return badRequest("invalid json")
+	}
+
+	if body.TargetContract == "" {
+		return badRequest("target_contract is required")
+	}
+
+	if body.ChainID != "" {
+		currentChain := wasmx.GetChainId()
+		if currentChain != "" && body.ChainID != currentChain {
+			return badRequest("chain_id mismatch")
+		}
+	}
+
+	calldata := body.Calldata
+	if calldata == nil {
+		return badRequest("calldata is required")
+	}
+
+	keysAddr := wasmx.GetAddressByRole(wasmx.ROLE_OAUTH2_KEYS)
+	if keysAddr == "" {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"oauth2 keys contract not found"}`),
+			},
+		})
+	}
+
+	msg := map[string]interface{}{
+		"sign_and_broadcast_tx": map[string]interface{}{
+			"oauth_token":     token,
+			"target_contract": body.TargetContract,
+			"calldata":        calldata,
+			"gas_limit":       body.GasLimit,
+		},
+	}
+	if body.GasPrice != nil && body.GasPrice.Denom != "" && body.GasPrice.Amount != "" {
+		msg["sign_and_broadcast_tx"].(map[string]interface{})["gas_price"] = map[string]interface{}{
+			"denom":  body.GasPrice.Denom,
+			"amount": body.GasPrice.Amount,
+		}
+	}
+
+	msgBz, err := json.Marshal(msg)
+	if err != nil {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to marshal request"}`),
+			},
+		})
+	}
+
+	ok, data := wasmx.CallSimple(keysAddr, msgBz, false, MODULE_NAME)
+	if !ok {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to sign and broadcast: ` + string(data) + `"}`),
+			},
+		})
+	}
+
+	var resp struct {
+		Success bool   `json:"success"`
+		TxHash  []byte `json:"tx_hash"`
+		Address string `json:"address"`
+		Error   string `json:"error,omitempty"`
+	}
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"failed to parse response"}`),
+			},
+		})
+	}
+
+	if !resp.Success {
+		return marshalHTTP(wasmxhttp.HttpResponseWrap{
+			Error: "",
+			Data: wasmxhttp.HttpResponse{
+				Status:     "500 Internal Server Error",
+				StatusCode: 500,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Data:       []byte(`{"error":"` + resp.Error + `"}`),
+			},
+		})
+	}
+
+	respBody, _ := json.Marshal(map[string]interface{}{
+		"success":     true,
+		"tx_hash":     base64.StdEncoding.EncodeToString(resp.TxHash),
+		"tx_hash_hex": hex.EncodeToString(resp.TxHash),
+		"address":     resp.Address,
+	})
+	return marshalHTTP(wasmxhttp.HttpResponseWrap{
+		Error: "",
+		Data: wasmxhttp.HttpResponse{
+			Status:     "200 OK",
+			StatusCode: 200,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Data:       respBody,
 		},
 	})
 }
