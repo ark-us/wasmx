@@ -12,7 +12,6 @@ const (
 	STORAGE_PARAMS               = "params"
 	STORAGE_INIT_DATA            = "init_data"      // InitGenesisRequest for RoleChanged
 	STORAGE_SUPABASE_JWT_SECRET  = "supabase_jwt"   // Supabase JWT secret for session verification
-	STORAGE_SUPABASE_KEY_ENDPOINT = "supabase_key_endpoint" // Supabase edge function for key storage
 	STORAGE_OAUTH_CLIENTS        = "oauth_clients"  // []string of client IDs
 	STORAGE_OAUTH_CLIENT_PREFIX  = "oauth_client:"  // oauth_client:{client_id} -> OAuthClient
 	STORAGE_USERS                = "users"          // []string of user IDs
@@ -279,5 +278,4 @@ type InitGenesisRequest struct {
 	InitialClients []RegisterOAuthClientRequest `json:"initial_clients,omitempty"`
 	StaticRoutes   []StaticRoute                `json:"static_routes,omitempty"`
 	SupabaseJWT    string                       `json:"supabase_jwt,omitempty"`
-	SupabaseKeyEndpoint string                  `json:"supabase_key_endpoint,omitempty"`
 }

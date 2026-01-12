@@ -636,8 +636,6 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 		console.log("module script");
 		const rpcEndpoint = 'https://wasmxtest.rpc.provable.dev'; // TODO: get from config
 		// const rpcEndpoint = 'http://localhost:26657';
-		const supabaseKeyEndpoint = '` + string(wasmx.StorageLoad([]byte(STORAGE_SUPABASE_KEY_ENDPOINT))) + `';
-
         document.getElementById('blockchainOptions').style.display = 'block';
 		document.getElementById('pin').required = true;
 		document.getElementById('pinConfirm').required = true;
@@ -970,45 +968,15 @@ func handleRegister(req wasmxhttp.HttpRequestIncoming) []byte {
 				// Encrypt private key with PIN
 				const encryptedPrivateKey = await encryptPrivateKey(keyPair.privateKey, pin);
 
-				// Store encrypted private key in localStorage
+				// Store encrypted private key and derived address in localStorage
 				localStorage.setItem('wasmx_encrypted_key_' + email, encryptedPrivateKey);
+				localStorage.setItem('wasmx_address_' + email, address);
 
 				// Add blockchain info to registration
 				requestData.public_key = keyPair.publicKey;
 				requestData.address = address;
 
-				// Store encrypted private key in Supabase vault via edge function
-				if (!supabaseKeyEndpoint) {
-					errorDiv.textContent = 'Supabase key endpoint not configured.';
-					return;
-				}
-				successDiv.textContent = 'Saving encrypted key to Nomen...';
-				try {
-					const keyResp = await fetch(supabaseKeyEndpoint, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							'Authorization': 'Bearer ' + session.access_token
-						},
-						body: JSON.stringify({
-							address: address,
-							public_key: keyPair.publicKey,
-							encrypted_private_key: encryptedPrivateKey,
-							bech32_prefix: bech32Prefix,
-							key_format: 'secp256k1'
-						})
-					});
-					const keyResult = await keyResp.json();
-					if (!keyResp.ok || keyResult?.success === false) {
-						console.log('Failed storing encrypted key:', keyResult?.error || keyResult);
-						errorDiv.textContent = 'Failed to save encrypted key in Nomen.';
-						return;
-					}
-				} catch (err) {
-					console.log('Failed storing encrypted key:', err);
-					errorDiv.textContent = 'Failed to save encrypted key in Nomen.';
-					return;
-				}
+				// Encrypted key is stored locally for now.
 
 				// Initialize the blockchain account by sending it native coins
 				successDiv.textContent = 'Initializing blockchain account...';

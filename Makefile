@@ -26,16 +26,29 @@ TINYGO_TARGETS := \
 	wasmx-oauth2-keys:70.wasmx_oauth2_keys_0.0.1.wasm \
 	wasmx-erc20x:71.erc20xjson_go_0.0.1.wasm
 
-# Extended TinyGo modules for schema generation
-TINYGO_TARGETS_EXTENDED := \
-	$(TINYGO_TARGETS) \
-	wasmx-gov:35.gov_0.0.1.wasm \
-	wasmx-gov-continuous:37.gov_cont_0.0.1.wasm \
-	wasmx-lobby:4d.lobby_json_0.0.1.wasm \
-	wasmx-mcp-search:62.mcp_search_0.0.1.wasm \
-	wasmx-multichain-registry:4a.multichain_registry_0.0.1.wasm \
-	wasmx-slashing:45.slashing_0.0.1.wasm \
-	wasmx-staking:30.staking_0.0.1.wasm
+# TinyGo modules for JSON schema generation
+JSONSCHEMA_TARGETS := \
+	wasmx-erc20 \
+	wasmx-fsm \
+	wasmx-raft-lib \
+	wasmx-raftp2p-lib \
+	wasmx-ondemand-single-lib \
+	emailchain \
+	wasmx-oauth2-server \
+	wasmx-mcp-registry \
+	wasmx-httpserver-registry \
+	wasmx-identity \
+	wasmx-oauth2-keys \
+	wasmx-erc20x \
+	wasmx-gov \
+	wasmx-gov-continuous \
+	wasmx-lobby \
+	wasmx-mcp-search \
+	wasmx-multichain-registry \
+	wasmx-slashing \
+	wasmx-staking \
+	mcp-userdata \
+	simple_storage
 
 # wasmx-bank:31.bank_0.0.1.wasm \
 # wasmx-auth:38.auth_0.0.1.wasm \
@@ -132,14 +145,13 @@ protojsonschema: protojsonschema-tool
 jsonschema: jsonschema-tool
 	@set -e; \
 	echo "Generating JSON schemas for all TinyGo modules..."; \
-	for pair in $(TINYGO_TARGETS_EXTENDED); do \
-		mod="$${pair%%:*}"; \
-		if [ -d "$(TINYGO_DIR)/$$mod/lib" ] || [ -d "$(TINYGO_DIR)/$$mod/gov" ]; then \
+	for mod in $(JSONSCHEMA_TARGETS); do \
+		if [ -d "$(TINYGO_DIR)/$$mod" ]; then \
 			echo "-> $$mod"; \
 			mkdir -p "$(TINYGO_DIR)/schemas"; \
 			$(JSONSCHEMA_TOOL) -module "$(TINYGO_DIR)/$$mod" -output "$(TINYGO_DIR)/schemas/$${mod}_schema.json"; \
 		else \
-			echo "skipping $$mod (no lib/ or gov/ directory)"; \
+			echo "skipping $$mod (module not found)"; \
 		fi; \
 	done
 

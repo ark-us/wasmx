@@ -33,6 +33,7 @@ const (
 	flagSource                    = "code-source-url"
 	flagBuilder                   = "builder"
 	flagCodeHash                  = "code-hash"
+	flagJSONSchema                = "json-schema"
 	flagAdmin                     = "admin"
 	flagNoAdmin                   = "no-admin"
 	flagFixMsg                    = "fix-msg"
@@ -106,6 +107,7 @@ func StoreCodeCmd(wasmVmMeta memc.IWasmVmMeta, ac address.Codec, appCreator mult
 		SilenceUsage: true,
 	}
 	multichain.AddMultiChainFlagsToCmd(cmd)
+	cmd.Flags().String(flagJSONSchema, "", "Path to JSON schema file to attach to code metadata")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
@@ -135,6 +137,18 @@ func ParseStoreCodeArgs(addrCodec address.Codec, file string, sender sdk.AccAddr
 	msg := types.MsgStoreCode{
 		Sender:   senderstr,
 		ByteCode: wasm,
+	}
+
+	schemaPath, err := flags.GetString(flagJSONSchema)
+	if err != nil {
+		return types.MsgStoreCode{}, err
+	}
+	if schemaPath != "" {
+		schemaBytes, err := os.ReadFile(schemaPath)
+		if err != nil {
+			return types.MsgStoreCode{}, err
+		}
+		msg.Metadata.JsonSchema = schemaBytes
 	}
 	return msg, nil
 }

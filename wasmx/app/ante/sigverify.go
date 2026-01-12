@@ -1,7 +1,6 @@
 package ante
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
@@ -90,11 +89,9 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 
 		// retrieve pubkey
 		pubKey := acc.GetPubKey()
-		fmt.Println("--VerifySignature.AnteHandler.pubKey--", sigPrefixed.String(), pubKey)
 		if !simulate && pubKey == nil {
 			return ctx, errorsmod.Wrap(sdkerrors.ErrInvalidPubKey, "pubkey on account is not set")
 		}
-		fmt.Println("--VerifySignature.AnteHandler.pubKey--", sigPrefixed.String(), pubKey, hex.EncodeToString(pubKey.Bytes()))
 
 		// Check account sequence number.
 		if sig.Sequence != acc.GetSequence() {
@@ -126,7 +123,6 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 					Value:   anyPk.Value,
 				},
 			}
-			fmt.Println("--VerifySignature.AnteHandler.signerData--", sigPrefixed.String(), pubKey, signerData)
 
 			adaptableTx, ok := tx.(authsigning.V2AdaptableTx)
 			if !ok {
@@ -134,12 +130,6 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 			}
 			txData := adaptableTx.GetSigningTxData()
 
-			// DEBUG: Print transaction bytes for debugging signature verification
-			fmt.Printf("--DEBUG.TxData.BodyBytes-- %d\n", len(txData.BodyBytes))
-			fmt.Printf("--DEBUG.TxData.AuthInfoBytes-- %s\n", hex.EncodeToString(txData.AuthInfoBytes))
-			fmt.Printf("--DEBUG.SignerData-- chainId=%s accNum=%d seq=%d\n", chainID, accNum, acc.GetSequence())
-
-			fmt.Println("--VerifySignature.AnteHandler.signature--", sig.Data)
 			err = authsigning.VerifySignature(ctx, pubKey, signerData, sig.Data, svd.signModeHandler, txData)
 			if err != nil {
 				var errMsg string

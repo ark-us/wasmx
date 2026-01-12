@@ -1,0 +1,282 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "mcp-userdata",
+  "description": "JSON Schema for mcp-userdata TinyGo contract",
+  "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "execute_tool": {
+          "$ref": "#/definitions/ExecuteToolRequest"
+        }
+      },
+      "required": [
+        "execute_tool"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "init_genesis": {
+          "$ref": "#/definitions/InitGenesisRequest"
+        }
+      },
+      "required": [
+        "init_genesis"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        }
+      },
+      "required": [
+        "RoleChanged"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "HttpRequestHandler": {
+          "$ref": "#/definitions/HttpRequestIncoming"
+        }
+      },
+      "required": [
+        "HttpRequestHandler"
+      ]
+    }
+  ],
+  "definitions": {
+    "ContentItem": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "ExecuteToolRequest": {
+      "type": "object",
+      "properties": {
+        "arguments": {
+          "type": "object"
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_name",
+        "arguments"
+      ]
+    },
+    "ExecuteToolResponse": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ContentItem"
+          }
+        },
+        "isError": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "content"
+      ]
+    },
+    "HttpRequestIncoming": {
+      "type": "object",
+      "properties": {
+        "content_length": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "header": {
+          "type": "object"
+        },
+        "method": {
+          "type": "string"
+        },
+        "remote_address": {
+          "type": "string"
+        },
+        "request_uri": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "url",
+        "header",
+        "content_length",
+        "data",
+        "remote_address",
+        "request_uri"
+      ]
+    },
+    "HttpResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "header": {
+          "type": "object"
+        },
+        "status": {
+          "type": "string"
+        },
+        "status_code": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status_code",
+        "status",
+        "header",
+        "data"
+      ]
+    },
+    "HttpResponseWrap": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/HttpResponse"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "data"
+      ]
+    },
+    "InitGenesisRequest": {
+      "type": "object",
+      "properties": {
+        "route_prefix": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "route_prefix"
+      ]
+    },
+    "Item": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description"
+      ]
+    },
+    "JSONRPCRequest": {
+      "type": "object",
+      "properties": {
+        "id": {},
+        "jsonrpc": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {}
+      },
+      "required": [
+        "jsonrpc",
+        "id",
+        "method"
+      ]
+    },
+    "JSONRPCResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/RPCError"
+        },
+        "id": {},
+        "jsonrpc": {
+          "type": "string"
+        },
+        "result": {}
+      },
+      "required": [
+        "jsonrpc",
+        "id"
+      ]
+    },
+    "RPCError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "HttpRequestHandler": {
+          "$ref": "#/definitions/HttpRequestIncoming"
+        },
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        },
+        "execute_tool": {
+          "$ref": "#/definitions/ExecuteToolRequest"
+        },
+        "init_genesis": {
+          "$ref": "#/definitions/InitGenesisRequest"
+        }
+      }
+    }
+  }
+}

@@ -422,9 +422,6 @@
         },
         "supabase_jwt": {
           "type": "string"
-        },
-        "supabase_key_endpoint": {
-          "type": "string"
         }
       }
     },

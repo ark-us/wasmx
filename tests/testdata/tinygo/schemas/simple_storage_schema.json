@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "simple_storage",
+  "description": "JSON Schema for simple_storage TinyGo contract",
+  "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "store": {
+          "$ref": "#/definitions/StoreRequest"
+        }
+      },
+      "required": [
+        "store"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "load": {
+          "$ref": "#/definitions/LoadRequest"
+        }
+      },
+      "required": [
+        "load"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "wrapStore": {
+          "$ref": "#/definitions/WrapStoreRequest"
+        }
+      },
+      "required": [
+        "wrapStore"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "wrapLoad": {
+          "$ref": "#/definitions/WrapLoadRequest"
+        }
+      },
+      "required": [
+        "wrapLoad"
+      ]
+    }
+  ],
+  "definitions": {
+    "LoadRequest": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    },
+    "StoreRequest": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "WrapLoadRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "sm": {}
+      },
+      "required": [
+        "address",
+        "key",
+        "sm"
+      ]
+    },
+    "WrapStoreRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "key",
+        "value"
+      ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "load": {
+          "$ref": "#/definitions/LoadRequest"
+        },
+        "store": {
+          "$ref": "#/definitions/StoreRequest"
+        },
+        "wrapLoad": {
+          "$ref": "#/definitions/WrapLoadRequest"
+        },
+        "wrapStore": {
+          "$ref": "#/definitions/WrapStoreRequest"
+        }
+      }
+    }
+  }
+}
