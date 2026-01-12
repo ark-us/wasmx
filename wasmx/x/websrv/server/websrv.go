@@ -29,7 +29,6 @@ type WebsrvServer struct {
 	cfg         *config.WebsrvConfig
 }
 
-// NewBackend creates a new Backend instance for cosmos and ethereum namespaces
 func NewWebsrvServer(
 	svrCtx *server.Context,
 	logger log.Logger,

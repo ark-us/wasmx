@@ -1,0 +1,24 @@
+syntax = "proto3";
+package mythos.wasmx.v1;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/loredanacirstea/wasmx/x/wasmx/types";
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.equal_all) = false;
+
+message ChainConfig {
+  string bech32_prefix_acc_addr = 1;
+  string bech32_prefix_acc_pub = 2;
+  string bech32_prefix_val_addr = 3;
+  string bech32_prefix_val_pub = 4;
+  string bech32_prefix_cons_addr = 5;
+  string bech32_prefix_cons_pub = 6;
+  string name = 7;
+  string human_coin_unit = 8;
+  string base_denom = 9;
+  string denom_unit = 10;
+  uint32 base_denom_unit = 11;
+  string bond_base_denom = 12;
+  string bond_denom = 13;
+}

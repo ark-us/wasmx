@@ -7,6 +7,7 @@ import "cosmos/base/v1beta1/coin.proto";
 import "cosmos/base/query/v1beta1/pagination.proto";
 import "mythos/wasmx/v1/params.proto";
 import "mythos/wasmx/v1/contract.proto";
+import "mythos/wasmx/v1/config.proto";
 
 option go_package = "github.com/loredanacirstea/wasmx/x/wasmx/types";
 option (gogoproto.goproto_getters_all) = false;
@@ -68,6 +69,10 @@ service Query {
   // Params gets the module params
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
     option (google.api.http).get = "/wasmx/v1/codes/params";
+  }
+  // ChainConfig gets the chain config for a chain id
+  rpc ChainConfig(QueryChainConfigRequest) returns (QueryChainConfigResponse) {
+    option (google.api.http).get = "/wasmx/v1/chain_config/{chain_id}";
   }
 
   // ContractsByCreator gets the contracts by creator
@@ -272,6 +277,16 @@ message QueryParamsRequest {}
 message QueryParamsResponse {
   // params defines the parameters of the module.
   Params params = 1 [ (gogoproto.nullable) = false ];
+}
+
+// QueryChainConfigRequest is the request type for the Query/ChainConfig RPC method.
+message QueryChainConfigRequest {
+  string chain_id = 1;
+}
+
+// QueryChainConfigResponse is the response type for the Query/ChainConfig RPC method.
+message QueryChainConfigResponse {
+  ChainConfig config = 1;
 }
 
 // QueryContractsByCreatorRequest is the request type for the

@@ -14,6 +14,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
+	mcfg "github.com/loredanacirstea/wasmx/config"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	cchtypes "github.com/loredanacirstea/wasmx/x/wasmx/types/contract_handler"
 )
@@ -291,6 +292,37 @@ func (k *Keeper) CallEth(c context.Context, req *types.QueryCallEthRequest) (rsp
 		return nil, types.ErrNotFound
 	}
 	return &types.QueryCallEthResponse{Data: bz, GasUsed: ctx.GasMeter().GasConsumed()}, nil
+}
+
+func (k *Keeper) ChainConfig(c context.Context, req *types.QueryChainConfigRequest) (*types.QueryChainConfigResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	if req.ChainId == "" {
+		return nil, status.Error(codes.InvalidArgument, "empty chain id")
+	}
+	config, err := mcfg.GetChainConfig(req.ChainId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryChainConfigResponse{
+		Config: &types.ChainConfig{
+			Bech32PrefixAccAddr:  config.Bech32PrefixAccAddr,
+			Bech32PrefixAccPub:   config.Bech32PrefixAccPub,
+			Bech32PrefixValAddr:  config.Bech32PrefixValAddr,
+			Bech32PrefixValPub:   config.Bech32PrefixValPub,
+			Bech32PrefixConsAddr: config.Bech32PrefixConsAddr,
+			Bech32PrefixConsPub:  config.Bech32PrefixConsPub,
+			Name:                 config.Name,
+			HumanCoinUnit:        config.HumanCoinUnit,
+			BaseDenom:            config.BaseDenom,
+			DenomUnit:            config.DenomUnit,
+			BaseDenomUnit:        config.BaseDenomUnit,
+			BondBaseDenom:        config.BondBaseDenom,
+			BondDenom:            config.BondDenom,
+		},
+	}, nil
 }
 
 func (k *Keeper) DebugContractCall(c context.Context, req *types.QueryDebugContractCallRequest) (rsp *types.QueryDebugContractCallResponse, err error) {
