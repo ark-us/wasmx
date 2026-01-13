@@ -508,6 +508,9 @@ func NewApp(
 		panic(err)
 	}
 
+	app.Logger().Info("module authority gov", "bech32", govAuthorityAddr)
+	app.Logger().Info("module authority wasmx", "bech32", wasmxAuthorityAddr)
+
 	app.ParamsKeeper = initParamsKeeper(
 		appCodec,
 		cdc,

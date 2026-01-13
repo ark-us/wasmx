@@ -61,6 +61,10 @@ mythosd testnet create-levels 1 2 --chain-id="mythos_7000-14" --keyring-backend 
 | secp384r1_registry | 7826207180357cfff71028dfd847688e6379cfaac6f8f7d5624bd801fb99111f | 0x0000000000000000000000000000000000000000000000000000000000000021 |
 | evm_shanghai | 8870e4eb2859ccaaa50a06de94cec658d78617df336a8ec29f0a5c9f29bf975a | 0x0000000000000000000000000000000000000000000000000000000000000023 |
 
+## Authority Addresses
+
+* governance authority: `mythos10d07y265gmmuvt4z0w9aw880jnsr700j9dqxtr`
+
 ## Default Ports
 
 * `1317` API server; REST HTTP server generated from protos (cosmos-sdk)
