@@ -93,6 +93,33 @@ func QueryUserByAddress(identityContract wasmx.Bech32String, address string) (st
 	return resp.UserID, nil
 }
 
+// QueryAddressByUserID queries the identity contract to get address from a user_id
+func QueryAddressByUserID(identityContract wasmx.Bech32String, userID string) (string, error) {
+	query := map[string]interface{}{
+		"query_user_by_id": map[string]string{
+			"user_id": userID,
+		},
+	}
+	queryBz, _ := json.Marshal(query)
+
+	ok, respBz := wasmx.CallSimple(identityContract, queryBz, true, MODULE_NAME)
+	if !ok {
+		return "", nil
+	}
+
+	var resp struct {
+		Addresses []string `json:"addresses"`
+		Error     string   `json:"error,omitempty"`
+	}
+	if err := json.Unmarshal(respBz, &resp); err != nil {
+		return "", err
+	}
+	if resp.Error != "" || len(resp.Addresses) == 0 {
+		return "", nil
+	}
+	return resp.Addresses[0], nil
+}
+
 // QueryUserExists queries if a user_id exists in the identity contract
 func QueryUserExists(identityContract wasmx.Bech32String, userID string) bool {
 	query := map[string]interface{}{
@@ -166,4 +193,51 @@ func MarshalJSON(v interface{}) []byte {
 
 func CallInternal(target wasmx.Bech32String, calldata []byte, isQuery bool) (bool, []byte) {
 	return wasmx.CallInternal(target, nil, calldata, big.NewInt(50_000_000), isQuery, MODULE_NAME)
+}
+
+func callBank(calldata string, isQuery bool) (bool, []byte) {
+	return wasmx.CallInternal(wasmx.Bech32String(wasmx.ROLE_BANK), nil, []byte(calldata), big.NewInt(50_000_000), isQuery, MODULE_NAME)
+}
+
+func getTokenAddressByDenom(denom string) (wasmx.Bech32String, bool) {
+	payload := struct {
+		Req struct {
+			Denom string `json:"denom"`
+		} `json:"GetAddressByDenom"`
+	}{}
+	payload.Req.Denom = denom
+	bz, _ := json.Marshal(&payload)
+	ok, resp := callBank(string(bz), true)
+	if !ok {
+		return "", false
+	}
+	var out struct {
+		Address string `json:"address"`
+	}
+	_ = json.Unmarshal(resp, &out)
+	if out.Address == "" {
+		return "", false
+	}
+	return wasmx.Bech32String(out.Address), true
+}
+
+func getTokenBalance(token wasmx.Bech32String, owner string) (string, bool) {
+	payload := struct {
+		Q struct {
+			Owner string `json:"owner"`
+		} `json:"balanceOf"`
+	}{}
+	payload.Q.Owner = owner
+	bz, _ := json.Marshal(&payload)
+	ok, resp := wasmx.CallSimple(token, bz, true, MODULE_NAME)
+	if !ok {
+		return "", false
+	}
+	var out struct {
+		Balance wasmx.Coin `json:"balance"`
+	}
+	if err := json.Unmarshal(resp, &out); err != nil {
+		return "", false
+	}
+	return out.Balance.Amount.String(), true
 }

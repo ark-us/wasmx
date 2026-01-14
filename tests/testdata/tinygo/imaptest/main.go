@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 

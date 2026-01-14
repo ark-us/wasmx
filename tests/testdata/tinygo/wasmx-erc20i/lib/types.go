@@ -5,9 +5,9 @@ import (
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
-const MODULE_NAME = "erc20"
+const MODULE_NAME = "erc20i"
 
-const ZERO_ADDRESS = "wasmx1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqnrql8a"
+const ZERO_ADDRESS = "user_0"
 
 // Storage keys
 const (
@@ -21,12 +21,12 @@ const (
 
 // CallDataInstantiate is the initialization message
 type CallDataInstantiate struct {
-	Admins     []wasmx.Bech32String `json:"admins"`
-	Minters    []wasmx.Bech32String `json:"minters"`
-	Name       string                `json:"name"`
-	Symbol     string                `json:"symbol"`
-	Decimals   int32                 `json:"decimals"`
-	BaseDenom  string                `json:"base_denom"`
+	Admins    []string `json:"admins"`
+	Minters   []string `json:"minters"`
+	Name      string   `json:"name"`
+	Symbol    string   `json:"symbol"`
+	Decimals  int32    `json:"decimals"`
+	BaseDenom string   `json:"base_denom"`
 }
 
 // TokenInfo stores basic token information
@@ -63,7 +63,7 @@ type MsgTotalSupplyResponse struct {
 }
 
 type MsgBalanceOf struct {
-	Owner wasmx.Bech32String `json:"owner"`
+	Owner string `json:"owner"`
 }
 
 type MsgBalanceOfResponse struct {
@@ -71,34 +71,34 @@ type MsgBalanceOfResponse struct {
 }
 
 type MsgTransfer struct {
-	To    wasmx.Bech32String `json:"to"`
-	Value sdkmath.Int        `json:"value"`
+	To    string     `json:"to"`
+	Value sdkmath.Int `json:"value"`
 }
 
 type MsgTransferResponse struct{}
 
 type MsgTransferFrom struct {
-	From  wasmx.Bech32String `json:"from"`
-	To    wasmx.Bech32String `json:"to"`
-	Value sdkmath.Int        `json:"value"`
+	From  string     `json:"from"`
+	To    string     `json:"to"`
+	Value sdkmath.Int `json:"value"`
 }
 
 type MsgTransferFromResponse struct{}
 
 type MsgApprove struct {
-	Spender wasmx.Bech32String `json:"spender"`
-	Value   sdkmath.Int        `json:"value"`
+	Spender string     `json:"spender"`
+	Value   sdkmath.Int `json:"value"`
 }
 
 type MsgApproveResponse struct {
 	Success bool `json:"success"`
 }
 
-// MsgApproveFrom allows admins (like identity contract) to set allowance on behalf of owner
+// MsgApproveFrom allows admins (like system contracts) to set allowance on behalf of owner
 type MsgApproveFrom struct {
-	Owner   wasmx.Bech32String `json:"owner"`
-	Spender wasmx.Bech32String `json:"spender"`
-	Value   sdkmath.Int        `json:"value"`
+	Owner   string     `json:"owner"`
+	Spender string     `json:"spender"`
+	Value   sdkmath.Int `json:"value"`
 }
 
 type MsgApproveFromResponse struct {
@@ -106,8 +106,8 @@ type MsgApproveFromResponse struct {
 }
 
 type MsgAllowance struct {
-	Owner   wasmx.Bech32String `json:"owner"`
-	Spender wasmx.Bech32String `json:"spender"`
+	Owner   string `json:"owner"`
+	Spender string `json:"spender"`
 }
 
 type MsgAllowanceResponse struct {
@@ -115,13 +115,13 @@ type MsgAllowanceResponse struct {
 }
 
 type MsgMint struct {
-	To    wasmx.Bech32String `json:"to"`
-	Value sdkmath.Int        `json:"value"`
+	To    string     `json:"to"`
+	Value sdkmath.Int `json:"value"`
 }
 
 type MsgBurn struct {
-	From  wasmx.Bech32String `json:"from"`
-	Value sdkmath.Int        `json:"value"`
+	From  string     `json:"from"`
+	Value sdkmath.Int `json:"value"`
 }
 
 // CallData structure for routing

@@ -49,6 +49,22 @@ func RouteCallData(data []byte) []byte {
 		return RemoveAdmin(callData.RemoveAdmin)
 	}
 
+	if callData.SubmitGroupProposal != nil {
+		return SubmitGroupProposal(callData.SubmitGroupProposal)
+	}
+
+	if callData.VoteGroupProposal != nil {
+		return VoteGroupProposal(callData.VoteGroupProposal)
+	}
+
+	if callData.VoteGroupProposalWeighted != nil {
+		return VoteGroupProposalWeighted(callData.VoteGroupProposalWeighted)
+	}
+
+	if callData.DepositVoteGroupProposal != nil {
+		return DepositVoteGroupProposal(callData.DepositVoteGroupProposal)
+	}
+
 	// Handle queries
 	if callData.QueryIsMember != nil {
 		return QueryIsMember(callData.QueryIsMember)
@@ -76,6 +92,10 @@ func RouteCallData(data []byte) []byte {
 
 	if callData.QueryIsAdmin != nil {
 		return QueryIsAdmin(callData.QueryIsAdmin)
+	}
+
+	if callData.QueryGetVoterPower != nil {
+		return QueryGetVoterPower(callData.QueryGetVoterPower)
 	}
 
 	if callData.QueryGetConfig != nil {

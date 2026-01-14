@@ -93,6 +93,9 @@ var (
 	//go:embed 33.derc20json_0.0.1.wasm
 	derc20json_contract []byte
 
+	//go:embed 73.erc20ijson_go_0.0.1.wasm
+	erc20ijson_contract []byte
+
 	//go:embed 34.hooks_0.0.1.wasm
 	hooks_contract []byte
 
@@ -192,6 +195,9 @@ var (
 	//go:embed 72.wasmx_groups_0.0.1.wasm
 	wasmx_groups []byte
 
+	//go:embed 74.erc20govjson_go_0.0.1.wasm
+	wasmx_erc20gov []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -290,6 +296,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = wasmx_erc20x // erc20json_contract
 	case types.DERC20_v001:
 		wasmbin = derc20json_contract
+	case types.ERC20I_v001:
+		wasmbin = erc20ijson_contract
 	case types.HOOKS_v001:
 		wasmbin = hooks_contract
 	case types.GOV_v001:
@@ -396,6 +404,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = wasmx_oauth2_keys_001
 	case "groups_0.0.1":
 		wasmbin = wasmx_groups
+	case "erc20gov_0.0.1":
+		wasmbin = wasmx_erc20gov
 	}
 	return wasmbin
 }

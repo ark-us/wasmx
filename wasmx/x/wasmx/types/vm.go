@@ -365,6 +365,7 @@ var BANK_v001 = "bank_0.0.1"
 
 var ERC20_v001 = "erc20json"
 var DERC20_v001 = "derc20json"
+var ERC20I_v001 = "erc20ijson"
 
 var HOOKS_v001 = "hooks_0.0.1"
 var GOV_v001 = "gov_0.0.1"

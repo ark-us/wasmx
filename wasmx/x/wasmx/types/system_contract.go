@@ -496,6 +496,16 @@ func CosmosPrecompiles(feeCollectorBech32 string, mintBech32 string, bondBaseDen
 			StorageType: ContractStorageType_CoreConsensus,
 			Deps:        []string{},
 		},
+		// we only need to create, not initialize the erc20i contract
+		{
+			Address:     "",
+			Label:       ERC20I_v001,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
 		{
 			Address:     ADDR_SLASHING,
 			Label:       SLASHING_v001,

@@ -38,6 +38,8 @@ func InitGenesis(msg *MsgInitGenesis) []byte {
 				Admins:      groupGenesis.Admins,
 				Metadata:    groupGenesis.Metadata,
 				Protocol:    groupGenesis.Protocol,
+				TokenDenom:  groupGenesis.TokenDenom,
+				Token:       groupGenesis.Token,
 			}
 
 			if err := SaveGroup(group); err != nil {
@@ -103,6 +105,8 @@ func CreateGroup(msg *MsgCreateGroup) []byte {
 		Admins:      admins,
 		Metadata:    msg.Metadata,
 		Protocol:    msg.Protocol,
+		TokenDenom:  msg.TokenDenom,
+		Token:       msg.Token,
 	}
 
 	if err := SaveGroup(group); err != nil {
@@ -408,11 +412,176 @@ func RemoveAdmin(msg *MsgRemoveAdmin) []byte {
 }
 
 // =============================================================================
+// GOVERNANCE FORWARDING
+// =============================================================================
+
+func SubmitGroupProposal(msg *MsgSubmitGroupProposal) []byte {
+	config := LoadConfig()
+	if config == nil {
+		Revert("contract not initialized")
+	}
+
+	group, _ := LoadGroup(msg.GroupID)
+	if group == nil {
+		Revert("group not found: " + msg.GroupID)
+	}
+
+	caller := wasmx.GetCaller()
+	respBz := QueryGetVoterPower(&MsgQueryGetVoterPower{GroupID: msg.GroupID, Voter: string(caller)})
+	var powerResp QueryGetVoterPowerResponse
+	if err := json.Unmarshal(respBz, &powerResp); err != nil || !powerResp.IsMember {
+		Revert("caller is not a group member")
+	}
+
+	payload := map[string]interface{}{
+		"SubmitProposal": map[string]interface{}{
+			"messages":        msg.Messages,
+			"initial_deposit": msg.InitialDeposit,
+			"proposer":        string(caller),
+			"metadata":        msg.Metadata,
+			"title":           msg.Title,
+			"summary":         msg.Summary,
+			"expedited":       msg.Expedited,
+			"group_id":        msg.GroupID,
+			"group_contract":  string(group.Protocol.GovernanceContract),
+		},
+	}
+	bz, _ := json.Marshal(payload)
+	ok, resp := CallInternal(group.Protocol.GovernanceContract, bz, false)
+	if !ok {
+		Revert("gov submit failed: " + string(resp))
+	}
+	return resp
+}
+
+func VoteGroupProposal(msg *MsgVoteGroupProposal) []byte {
+	group, _ := LoadGroup(msg.GroupID)
+	if group == nil {
+		Revert("group not found: " + msg.GroupID)
+	}
+
+	caller := wasmx.GetCaller()
+	respBz := QueryGetVoterPower(&MsgQueryGetVoterPower{GroupID: msg.GroupID, Voter: string(caller)})
+	var powerResp QueryGetVoterPowerResponse
+	if err := json.Unmarshal(respBz, &powerResp); err != nil || !powerResp.IsMember {
+		Revert("caller is not a group member")
+	}
+
+	payload := map[string]interface{}{
+		"Vote": map[string]interface{}{
+			"proposal_id": msg.ProposalID,
+			"voter":       string(caller),
+			"option":      msg.Option,
+			"metadata":    msg.Metadata,
+		},
+	}
+	bz, _ := json.Marshal(payload)
+	ok, resp := CallInternal(group.Protocol.GovernanceContract, bz, false)
+	if !ok {
+		Revert("gov vote failed: " + string(resp))
+	}
+	return resp
+}
+
+func VoteGroupProposalWeighted(msg *MsgVoteGroupProposalWeighted) []byte {
+	group, _ := LoadGroup(msg.GroupID)
+	if group == nil {
+		Revert("group not found: " + msg.GroupID)
+	}
+
+	caller := wasmx.GetCaller()
+	respBz := QueryGetVoterPower(&MsgQueryGetVoterPower{GroupID: msg.GroupID, Voter: string(caller)})
+	var powerResp QueryGetVoterPowerResponse
+	if err := json.Unmarshal(respBz, &powerResp); err != nil || !powerResp.IsMember {
+		Revert("caller is not a group member")
+	}
+
+	payload := map[string]interface{}{
+		"VoteWeighted": map[string]interface{}{
+			"proposal_id": msg.ProposalID,
+			"voter":       string(caller),
+			"option":      msg.Option,
+			"metadata":    msg.Metadata,
+		},
+	}
+	bz, _ := json.Marshal(payload)
+	ok, resp := CallInternal(group.Protocol.GovernanceContract, bz, false)
+	if !ok {
+		Revert("gov vote weighted failed: " + string(resp))
+	}
+	return resp
+}
+
+func DepositVoteGroupProposal(msg *MsgDepositVoteGroupProposal) []byte {
+	group, _ := LoadGroup(msg.GroupID)
+	if group == nil {
+		Revert("group not found: " + msg.GroupID)
+	}
+
+	caller := wasmx.GetCaller()
+	respBz := QueryGetVoterPower(&MsgQueryGetVoterPower{GroupID: msg.GroupID, Voter: string(caller)})
+	var powerResp QueryGetVoterPowerResponse
+	if err := json.Unmarshal(respBz, &powerResp); err != nil || !powerResp.IsMember {
+		Revert("caller is not a group member")
+	}
+
+	payload := map[string]interface{}{
+		"DepositVote": map[string]interface{}{
+			"proposal_id":        msg.ProposalID,
+			"option_id":          msg.OptionID,
+			"voter":              string(caller),
+			"amount":             msg.Amount,
+			"arbitration_amount": msg.ArbitrationAmount,
+			"metadata":           msg.Metadata,
+		},
+	}
+	bz, _ := json.Marshal(payload)
+	ok, resp := CallInternal(group.Protocol.GovernanceContract, bz, false)
+	if !ok {
+		Revert("gov deposit vote failed: " + string(resp))
+	}
+	return resp
+}
+
+// =============================================================================
 // QUERIES
 // =============================================================================
 
 // QueryIsMember checks if a user is a member of a group
 func QueryIsMember(msg *MsgQueryIsMember) []byte {
+	group, _ := LoadGroup(msg.GroupID)
+	if group == nil {
+		return MarshalJSON(QueryIsMemberResponse{IsMember: false})
+	}
+
+	if group.Token != "" || group.TokenDenom != "" {
+		config := LoadConfig()
+		if config == nil {
+			return MarshalJSON(QueryIsMemberResponse{IsMember: false})
+		}
+
+		addr, _ := QueryAddressByUserID(config.IdentityContract, msg.UserID)
+		if addr == "" {
+			return MarshalJSON(QueryIsMemberResponse{IsMember: false})
+		}
+
+		token := group.Token
+		if token == "" && group.TokenDenom != "" {
+			if tokenAddr, ok := getTokenAddressByDenom(group.TokenDenom); ok {
+				token = tokenAddr
+			}
+		}
+
+		if token != "" {
+			if balance, ok := getTokenBalance(token, addr); ok {
+				if balance != "0" {
+					return MarshalJSON(QueryIsMemberResponse{IsMember: true})
+				}
+			}
+		}
+		return MarshalJSON(QueryIsMemberResponse{IsMember: false})
+	}
+
 	member, _ := LoadMember(msg.GroupID, msg.UserID)
 
 	response := QueryIsMemberResponse{
@@ -536,6 +705,58 @@ func QueryIsAdmin(msg *MsgQueryIsAdmin) []byte {
 
 	return MarshalJSON(QueryIsAdminResponse{
 		IsAdmin: StringInList(msg.UserID, group.Admins),
+	})
+}
+
+// QueryGetVoterPower returns membership and voting power for a voter
+func QueryGetVoterPower(msg *MsgQueryGetVoterPower) []byte {
+	config := LoadConfig()
+	if config == nil {
+		return MarshalJSON(map[string]string{"error": "contract not initialized"})
+	}
+
+	group, _ := LoadGroup(msg.GroupID)
+	if group == nil {
+		return MarshalJSON(QueryGetVoterPowerResponse{IsMember: false, Power: "0"})
+	}
+
+	userID, _ := QueryUserByAddress(config.IdentityContract, msg.Voter)
+
+	if group.Token != "" || group.TokenDenom != "" {
+		token := group.Token
+		if token == "" && group.TokenDenom != "" {
+			if tokenAddr, ok := getTokenAddressByDenom(group.TokenDenom); ok {
+				token = tokenAddr
+			}
+		}
+
+		if token != "" {
+			if balance, ok := getTokenBalance(token, msg.Voter); ok {
+				isMember := balance != "0"
+				return MarshalJSON(QueryGetVoterPowerResponse{
+					IsMember: isMember,
+					UserID:   userID,
+					Power:    balance,
+					Denom:    group.TokenDenom,
+					Token:    string(token),
+				})
+			}
+		}
+	}
+
+	if userID == "" {
+		return MarshalJSON(QueryGetVoterPowerResponse{IsMember: false, Power: "0"})
+	}
+
+	member, _ := LoadMember(msg.GroupID, userID)
+	if member == nil {
+		return MarshalJSON(QueryGetVoterPowerResponse{IsMember: false, UserID: userID, Power: "0"})
+	}
+
+	return MarshalJSON(QueryGetVoterPowerResponse{
+		IsMember: true,
+		UserID:   userID,
+		Power:    "1",
 	})
 }
 

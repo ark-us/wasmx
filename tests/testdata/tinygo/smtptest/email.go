@@ -8,7 +8,7 @@ import (
 
 	"github.com/emersion/go-message/mail"
 
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
 )
 
 // BuildRawEmail builds a full MIME email from an Email struct.

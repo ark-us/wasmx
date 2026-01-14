@@ -1,0 +1,430 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-erc20gov",
+  "description": "JSON Schema for wasmx-erc20gov TinyGo contract",
+  "type": "object",
+  "properties": {
+    "instantiate": {
+      "$ref": "#/definitions/instantiate"
+    },
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-go-type": "MsgName"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "x-go-type": "MsgSymbol"
+        }
+      },
+      "required": [
+        "symbol"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "decimals": {
+          "type": "string",
+          "x-go-type": "MsgDecimals"
+        }
+      },
+      "required": [
+        "decimals"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "totalSupply": {
+          "type": "string",
+          "x-go-type": "MsgTotalSupply"
+        }
+      },
+      "required": [
+        "totalSupply"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "memberCount": {
+          "$ref": "#/definitions/MsgMemberCount"
+        }
+      },
+      "required": [
+        "memberCount"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "balanceOf": {
+          "type": "string",
+          "x-go-type": "MsgBalanceOf"
+        }
+      },
+      "required": [
+        "balanceOf"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "getGovernanceAddress": {
+          "$ref": "#/definitions/MsgGetGovernanceAddress"
+        }
+      },
+      "required": [
+        "getGovernanceAddress"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "getAdmins": {
+          "$ref": "#/definitions/MsgGetAdmins"
+        }
+      },
+      "required": [
+        "getAdmins"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "transfer": {
+          "$ref": "#/definitions/MsgTransfer"
+        }
+      },
+      "required": [
+        "transfer"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "mint": {
+          "type": "string",
+          "x-go-type": "MsgMint"
+        }
+      },
+      "required": [
+        "mint"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "burn": {
+          "type": "string",
+          "x-go-type": "MsgBurn"
+        }
+      },
+      "required": [
+        "burn"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "transferFrom": {
+          "$ref": "#/definitions/MsgTransferFrom"
+        }
+      },
+      "required": [
+        "transferFrom"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "setGovernanceAddress": {
+          "$ref": "#/definitions/MsgSetGovernanceAddress"
+        }
+      },
+      "required": [
+        "setGovernanceAddress"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "setAdmins": {
+          "$ref": "#/definitions/MsgSetAdmins"
+        }
+      },
+      "required": [
+        "setAdmins"
+      ]
+    }
+  ],
+  "definitions": {
+    "InstantiateMsg": {
+      "type": "object",
+      "properties": {
+        "admins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "decimals": {
+          "type": "integer"
+        },
+        "governance_address": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "admins",
+        "name",
+        "symbol",
+        "decimals",
+        "governance_address"
+      ]
+    },
+    "MsgGetAdmins": {
+      "type": "object"
+    },
+    "MsgGetAdminsResponse": {
+      "type": "object",
+      "properties": {
+        "admins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "admins"
+      ]
+    },
+    "MsgGetGovernanceAddress": {
+      "type": "object"
+    },
+    "MsgGetGovernanceAddressResponse": {
+      "type": "object",
+      "properties": {
+        "governance_address": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "governance_address"
+      ]
+    },
+    "MsgMemberCount": {
+      "type": "object"
+    },
+    "MsgMemberCountResponse": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "count"
+      ]
+    },
+    "MsgSetAdmins": {
+      "type": "object",
+      "properties": {
+        "admins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "admins"
+      ]
+    },
+    "MsgSetAdminsResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgSetGovernanceAddress": {
+      "type": "object",
+      "properties": {
+        "new_governance_address": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "new_governance_address"
+      ]
+    },
+    "MsgSetGovernanceAddressResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgTransfer": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "value"
+      ]
+    },
+    "MsgTransferFrom": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "value"
+      ]
+    },
+    "MsgTransferResponse": {
+      "type": "object"
+    },
+    "instantiate": {
+      "type": "object",
+      "properties": {
+        "admins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "decimals": {
+          "type": "integer"
+        },
+        "governance_address": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "admins",
+        "name",
+        "symbol",
+        "decimals",
+        "governance_address"
+      ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "balanceOf": {
+          "type": "string",
+          "x-go-type": "MsgBalanceOf"
+        },
+        "burn": {
+          "type": "string",
+          "x-go-type": "MsgBurn"
+        },
+        "decimals": {
+          "type": "string",
+          "x-go-type": "MsgDecimals"
+        },
+        "getAdmins": {
+          "$ref": "#/definitions/MsgGetAdmins"
+        },
+        "getGovernanceAddress": {
+          "$ref": "#/definitions/MsgGetGovernanceAddress"
+        },
+        "memberCount": {
+          "$ref": "#/definitions/MsgMemberCount"
+        },
+        "mint": {
+          "type": "string",
+          "x-go-type": "MsgMint"
+        },
+        "name": {
+          "type": "string",
+          "x-go-type": "MsgName"
+        },
+        "setAdmins": {
+          "$ref": "#/definitions/MsgSetAdmins"
+        },
+        "setGovernanceAddress": {
+          "$ref": "#/definitions/MsgSetGovernanceAddress"
+        },
+        "symbol": {
+          "type": "string",
+          "x-go-type": "MsgSymbol"
+        },
+        "totalSupply": {
+          "type": "string",
+          "x-go-type": "MsgTotalSupply"
+        },
+        "transfer": {
+          "$ref": "#/definitions/MsgTransfer"
+        },
+        "transferFrom": {
+          "$ref": "#/definitions/MsgTransferFrom"
+        }
+      }
+    }
+  }
+}

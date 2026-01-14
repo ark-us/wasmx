@@ -23,7 +23,11 @@ func InstantiateToken() []byte {
 
 	minters := calld.Minters
 	if len(minters) == 0 {
-		minters = []wasmx.Bech32String{wasmx.GetCaller()}
+		callerUserID := GetCallerUserID()
+		if callerUserID == "" {
+			Revert("caller must have a registered identity")
+		}
+		minters = []string{callerUserID}
 	}
 	SetMinters(minters)
 
@@ -73,7 +77,7 @@ func TotalSupply() []byte {
 
 // BalanceOf returns the balance of an address
 func BalanceOf(req *MsgBalanceOf) []byte {
-	value := GetBalance(string(req.Owner))
+	value := GetBalance(req.Owner)
 	info := GetInfo()
 	resp := MsgBalanceOfResponse{
 		Balance: wasmx.Coin{Denom: info.Symbol, Amount: value},
@@ -84,8 +88,11 @@ func BalanceOf(req *MsgBalanceOf) []byte {
 
 // Transfer transfers tokens to another address
 func Transfer(req *MsgTransfer) []byte {
-	from := wasmx.GetCaller()
-	LoggerDebug("transfer", []string{"from", string(from), "to", string(req.To), "value", req.Value.String()})
+	from := GetCallerUserID()
+	if from == "" {
+		Revert("caller must have a registered identity")
+	}
+	LoggerDebug("transfer", []string{"from", from, "to", req.To, "value", req.Value.String()})
 	Move(from, req.To, req.Value)
 	resp := MsgTransferResponse{}
 	data, _ := json.Marshal(resp)
@@ -94,26 +101,29 @@ func Transfer(req *MsgTransfer) []byte {
 
 // TransferFrom transfers tokens on behalf of another address
 func TransferFrom(req *MsgTransferFrom) []byte {
-	spender := wasmx.GetCaller()
+	spender := GetCallerUserID()
+	if spender == "" {
+		Revert("caller must have a registered identity")
+	}
 	admins := GetAdmins()
-	authorized := wasmx.IsAuthorized(spender, admins)
+	authorized := StringInList(spender, admins)
 
 	LoggerDebug("transferFrom", []string{
-		"from", string(req.From),
-		"to", string(req.To),
+		"from", req.From,
+		"to", req.To,
 		"value", req.Value.String(),
-		"caller", string(spender),
+		"caller", spender,
 		"authorized", fmt.Sprintf("%t", authorized),
 	})
 
 	if authorized {
 		Move(req.From, req.To, req.Value)
 	} else {
-		allow := GetAllowance(string(req.From), string(spender))
+		allow := GetAllowance(req.From, spender)
 		if allow.GTE(req.Value) {
 			Move(req.From, req.To, req.Value)
 			allow = allow.Sub(req.Value)
-			SetAllowance(string(req.From), string(spender), allow)
+			SetAllowance(req.From, spender, allow)
 		} else {
 			Revert(fmt.Sprintf("insufficient allowance: %s < %s", allow.String(), req.Value.String()))
 		}
@@ -126,37 +136,43 @@ func TransferFrom(req *MsgTransferFrom) []byte {
 
 // Approve approves an address to spend tokens
 func Approve(req *MsgApprove) []byte {
-	owner := wasmx.GetCaller()
-	SetAllowance(string(owner), string(req.Spender), req.Value)
+	owner := GetCallerUserID()
+	if owner == "" {
+		Revert("caller must have a registered identity")
+	}
+	SetAllowance(owner, req.Spender, req.Value)
 	LogApproval(owner, req.Spender, req.Value)
 	return []byte("{}")
 }
 
-// ApproveFrom allows admins (like identity contract) to set allowance on behalf of owner
+// ApproveFrom allows admins (like system contracts) to set allowance on behalf of owner
 func ApproveFrom(req *MsgApproveFrom) []byte {
-	caller := wasmx.GetCaller()
+	caller := GetCallerUserID()
+	if caller == "" {
+		Revert("caller must have a registered identity")
+	}
 	admins := GetAdmins()
-	authorized := wasmx.IsAuthorized(caller, admins)
+	authorized := StringInList(caller, admins)
 
 	if !authorized {
-		Revert("caller not admin for approveFrom: " + string(caller))
+		Revert("caller not admin for approveFrom: " + caller)
 	}
 
 	LoggerDebug("approveFrom", []string{
-		"owner", string(req.Owner),
-		"spender", string(req.Spender),
+		"owner", req.Owner,
+		"spender", req.Spender,
 		"value", req.Value.String(),
-		"caller", string(caller),
+		"caller", caller,
 	})
 
-	SetAllowance(string(req.Owner), string(req.Spender), req.Value)
+	SetAllowance(req.Owner, req.Spender, req.Value)
 	LogApproval(req.Owner, req.Spender, req.Value)
 	return []byte("{}")
 }
 
 // Allowance returns the allowance for an owner/spender pair
 func Allowance(req *MsgAllowance) []byte {
-	value := GetAllowance(string(req.Owner), string(req.Spender))
+	value := GetAllowance(req.Owner, req.Spender)
 	resp := MsgAllowanceResponse{Remaining: value}
 	data, _ := json.Marshal(resp)
 	return data
@@ -164,98 +180,104 @@ func Allowance(req *MsgAllowance) []byte {
 
 // Mint mints new tokens
 func Mint(req *MsgMint) []byte {
-	caller := wasmx.GetCaller()
+	caller := GetCallerUserID()
+	if caller == "" {
+		Revert("caller must have a registered identity")
+	}
 	minters := GetMinters()
-	authorized := wasmx.IsAuthorized(caller, minters)
+	authorized := StringInList(caller, minters)
 
 	if !authorized {
-		Revert("caller cannot mint: " + string(caller))
+		Revert("caller cannot mint: " + caller)
 	}
 
 	LoggerDebug("mint", []string{
-		"to", string(req.To),
+		"to", req.To,
 		"value", req.Value.String(),
 		"authorized", fmt.Sprintf("%t", authorized),
 	})
 
-	balance := GetBalance(string(req.To))
+	balance := GetBalance(req.To)
 	balance = balance.Add(req.Value)
-	SetBalance(string(req.To), balance)
+	SetBalance(req.To, balance)
 
 	supply := GetTotalSupply()
 	supply = supply.Add(req.Value)
 	SetTotalSupply(supply)
 
-	LogTransfer(wasmx.Bech32String(ZERO_ADDRESS), req.To, req.Value)
+	LogTransfer(ZERO_ADDRESS, req.To, req.Value)
 
 	return []byte("{}")
 }
 
 // Burn burns tokens
 func Burn(req *MsgBurn) []byte {
-	caller := wasmx.GetCaller()
+	caller := GetCallerUserID()
+	if caller == "" {
+		Revert("caller must have a registered identity")
+	}
 	minters := GetMinters()
-	authorized := wasmx.IsAuthorized(caller, minters)
+	authorized := StringInList(caller, minters)
 
 	if !authorized {
-		Revert("caller cannot burn: " + string(caller))
+		Revert("caller cannot burn: " + caller)
 	}
 
 	LoggerDebug("burn", []string{
-		"from", string(req.From),
+		"from", req.From,
 		"value", req.Value.String(),
 		"authorized", fmt.Sprintf("%t", authorized),
 	})
 
-	balance := GetBalance(string(req.From))
+	balance := GetBalance(req.From)
 	if balance.LT(req.Value) {
 		Revert(fmt.Sprintf("balance not enough for burning: %s; burning %s", balance.String(), req.Value.String()))
 	}
 
 	balance = balance.Sub(req.Value)
-	SetBalance(string(req.From), balance)
+	SetBalance(req.From, balance)
 
 	supply := GetTotalSupply()
 	supply = supply.Sub(req.Value)
 	SetTotalSupply(supply)
 
-	LogTransfer(req.From, wasmx.Bech32String(ZERO_ADDRESS), req.Value)
+	LogTransfer(req.From, ZERO_ADDRESS, req.Value)
 
 	return []byte("{}")
 }
 
-// Move transfers tokens between addresses
-func Move(from, to wasmx.Bech32String, amount sdkmath.Int) {
-	balanceFrom := GetBalance(string(from))
+// Move transfers tokens between users
+func Move(from, to string, amount sdkmath.Int) {
+	balanceFrom := GetBalance(from)
 	if balanceFrom.LT(amount) {
 		Revert(fmt.Sprintf("cannot move coins from %s to %s; amount: %s; balance: %s",
 			from, to, amount.String(), balanceFrom.String()))
 	}
 
-	balanceTo := GetBalance(string(to))
+	balanceTo := GetBalance(to)
 	balanceFrom = balanceFrom.Sub(amount)
 	balanceTo = balanceTo.Add(amount)
 
-	SetBalance(string(from), balanceFrom)
+	SetBalance(from, balanceFrom)
 	LogTransfer(from, to, amount)
-	SetBalance(string(to), balanceTo)
+	SetBalance(to, balanceTo)
 }
 
 // LogTransfer emits a Transfer event
-func LogTransfer(from, to wasmx.Bech32String, amount sdkmath.Int) {
+func LogTransfer(from, to string, amount sdkmath.Int) {
 	topic0str := "Transfer(address,address,uint256)"
-	topic1 := hexToUint8Array32(string(from))
-	topic2 := hexToUint8Array32(string(to))
+	topic1 := userIDToTopic(from)
+	topic2 := userIDToTopic(to)
 	topic3 := hexToUint8Array32(amount.BigInt().Text(16))
 
 	wasmx.LogWithMsgTopic(topic0str, []byte{}, [][32]byte{topic1, topic2, topic3})
 }
 
 // LogApproval emits an Approval event
-func LogApproval(owner, spender wasmx.Bech32String, amount sdkmath.Int) {
+func LogApproval(owner, spender string, amount sdkmath.Int) {
 	topic0str := "Approval(address,address,uint256)"
-	topic1 := hexToUint8Array32(string(owner))
-	topic2 := hexToUint8Array32(string(spender))
+	topic1 := userIDToTopic(owner)
+	topic2 := userIDToTopic(spender)
 	topic3 := hexToUint8Array32(amount.BigInt().Text(16))
 
 	wasmx.LogWithMsgTopic(topic0str, []byte{}, [][32]byte{topic1, topic2, topic3})

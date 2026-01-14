@@ -130,8 +130,10 @@ type Group struct {
 	UpdatedAt   int64                `json:"updated_at"`
 	MemberCount uint64               `json:"member_count"`
 	Admins      []string             `json:"admins"` // user_ids that can manage directly (for bootstrap)
-	Metadata    string               `json:"metadata"`
+	Metadata    string                  `json:"metadata"`
 	Protocol    VotingProtocolReference `json:"protocol"` // Governance protocol for membership changes
+	TokenDenom  string                  `json:"token_denom,omitempty"`
+	Token       wasmx.Bech32String      `json:"token,omitempty"`
 }
 
 // GroupConfig stores initialization parameters
@@ -156,6 +158,8 @@ type GroupGenesis struct {
 	Admins      []string                `json:"admins"` // user_ids
 	Members     []GroupMemberGenesis    `json:"members"`
 	Protocol    VotingProtocolReference `json:"protocol"`
+	TokenDenom  string                  `json:"token_denom,omitempty"`
+	Token       wasmx.Bech32String      `json:"token,omitempty"`
 	Metadata    string                  `json:"metadata,omitempty"`
 }
 
@@ -171,6 +175,8 @@ type MsgCreateGroup struct {
 	Description string                  `json:"description"`
 	Admins      []string                `json:"admins"` // Initial admins (user_ids)
 	Protocol    VotingProtocolReference `json:"protocol"`
+	TokenDenom  string                  `json:"token_denom,omitempty"`
+	Token       wasmx.Bech32String      `json:"token,omitempty"`
 	Metadata    string                  `json:"metadata,omitempty"`
 }
 
@@ -227,6 +233,48 @@ type MsgRemoveAdmin struct {
 
 type MsgRemoveAdminResponse struct {
 	Success bool `json:"success"`
+}
+
+// =============================================================================
+// GOVERNANCE FORWARDING
+// =============================================================================
+
+type MsgSubmitGroupProposal struct {
+	GroupID        string       `json:"group_id"`
+	Messages       []string     `json:"messages"`
+	InitialDeposit []wasmx.Coin `json:"initial_deposit"`
+	Metadata       string       `json:"metadata"`
+	Title          string       `json:"title"`
+	Summary        string       `json:"summary"`
+	Expedited      bool         `json:"expedited"`
+}
+
+type MsgVoteGroupProposal struct {
+	GroupID    string `json:"group_id"`
+	ProposalID string `json:"proposal_id"`
+	Option     string `json:"option"`
+	Metadata   string `json:"metadata"`
+}
+
+type GroupWeightedVoteOption struct {
+	Option string `json:"option"`
+	Weight string `json:"weight"`
+}
+
+type MsgVoteGroupProposalWeighted struct {
+	GroupID    string                    `json:"group_id"`
+	ProposalID string                    `json:"proposal_id"`
+	Option     []GroupWeightedVoteOption `json:"option"`
+	Metadata   string                    `json:"metadata"`
+}
+
+type MsgDepositVoteGroupProposal struct {
+	GroupID            string `json:"group_id"`
+	ProposalID         string `json:"proposal_id"`
+	OptionID           int32  `json:"option_id"`
+	Amount             string `json:"amount"`
+	ArbitrationAmount  string `json:"arbitration_amount"`
+	Metadata           string `json:"metadata"`
 }
 
 // =============================================================================
@@ -304,6 +352,20 @@ type QueryIsAdminResponse struct {
 	IsAdmin bool `json:"is_admin"`
 }
 
+// MsgQueryGetVoterPower returns membership and voting power for a voter
+type MsgQueryGetVoterPower struct {
+	GroupID string `json:"group_id"`
+	Voter   string `json:"voter"`
+}
+
+type QueryGetVoterPowerResponse struct {
+	IsMember bool   `json:"is_member"`
+	UserID   string `json:"user_id,omitempty"`
+	Power    string `json:"power"`
+	Denom    string `json:"denom,omitempty"`
+	Token    string `json:"token,omitempty"`
+}
+
 // MsgQueryGetConfig returns the contract configuration
 type MsgQueryGetConfig struct{}
 
@@ -339,6 +401,10 @@ type CallData struct {
 	UpdateProtocol *MsgUpdateProtocol `json:"update_protocol,omitempty"`
 	AddAdmin       *MsgAddAdmin       `json:"add_admin,omitempty"`
 	RemoveAdmin    *MsgRemoveAdmin    `json:"remove_admin,omitempty"`
+	SubmitGroupProposal       *MsgSubmitGroupProposal       `json:"submit_group_proposal,omitempty"`
+	VoteGroupProposal         *MsgVoteGroupProposal         `json:"vote_group_proposal,omitempty"`
+	VoteGroupProposalWeighted *MsgVoteGroupProposalWeighted `json:"vote_group_proposal_weighted,omitempty"`
+	DepositVoteGroupProposal  *MsgDepositVoteGroupProposal  `json:"deposit_vote_group_proposal,omitempty"`
 
 	// Queries
 	QueryIsMember          *MsgQueryIsMember          `json:"query_is_member,omitempty"`
@@ -348,5 +414,6 @@ type CallData struct {
 	QueryGetVotingProtocol *MsgQueryGetVotingProtocol `json:"query_get_voting_protocol,omitempty"`
 	QueryGetUserGroups     *MsgQueryGetUserGroups     `json:"query_get_user_groups,omitempty"`
 	QueryIsAdmin           *MsgQueryIsAdmin           `json:"query_is_admin,omitempty"`
+	QueryGetVoterPower     *MsgQueryGetVoterPower     `json:"query_get_voter_power,omitempty"`
 	QueryGetConfig         *MsgQueryGetConfig         `json:"query_get_config,omitempty"`
 }

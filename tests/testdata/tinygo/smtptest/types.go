@@ -1,7 +1,7 @@
 package main
 
 import (
-	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp/lib"
 )
 
 type Calldata struct {

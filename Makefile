@@ -1,9 +1,10 @@
 #!/usr/bin/make -f
 
-TINYGO_DIR := ./tests/testdata/tinygo
-PRECOMPILE_DIR := ./wasmx/x/wasmx/vm/precompiles
-JSONSCHEMA_TOOL := ./tools/jsonschema/jsonschema
-PROTOJSONSCHEMA_TOOL := ./tools/protojsonschema/protojsonschema
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+TINYGO_DIR := $(MAKEFILE_DIR)/tests/testdata/tinygo
+PRECOMPILE_DIR := $(MAKEFILE_DIR)/wasmx/x/wasmx/vm/precompiles
+JSONSCHEMA_TOOL := $(MAKEFILE_DIR)/tools/jsonschema/jsonschema
+PROTOJSONSCHEMA_TOOL := $(MAKEFILE_DIR)/tools/protojsonschema/protojsonschema
 PROTOJSONSCHEMA_OUT_DIR ?=
 PROTOJSONSCHEMA_TITLE ?= wasmx-governance
 
@@ -27,7 +28,9 @@ TINYGO_TARGETS := \
 	wasmx-identity:69.wasmx_identity_0.0.1.wasm \
 	wasmx-oauth2-keys:70.wasmx_oauth2_keys_0.0.1.wasm \
 	wasmx-erc20x:71.erc20xjson_go_0.0.1.wasm \
-	wasmx-groups:72.wasmx_groups_0.0.1.wasm
+	wasmx-groups:72.wasmx_groups_0.0.1.wasm \
+	wasmx-erc20i:73.erc20ijson_go_0.0.1.wasm \
+	wasmx-erc20gov:74.erc20govjson_go_0.0.1.wasm
 
 # TinyGo modules for JSON schema generation
 JSONSCHEMA_TARGETS := \
@@ -43,6 +46,8 @@ JSONSCHEMA_TARGETS := \
 	wasmx-identity \
 	wasmx-oauth2-keys \
 	wasmx-erc20x \
+	wasmx-erc20i \
+	wasmx-erc20gov \
 	wasmx-gov \
 	wasmx-gov-continuous \
 	wasmx-groups \
@@ -74,6 +79,7 @@ tinygo:
 	if [ -z "$(filter-out tinygo,$(MAKECMDGOALS))" ]; then \
 		echo "Tidying TinyGo modules..."; \
 		cd $(TINYGO_DIR) && find . -name go.mod -execdir env GOWORK=off go mod tidy \; ; \
+		$(MAKE) jsonschema-tool; \
 		echo "Building TinyGo precompiles..."; \
 		cd $(TINYGO_DIR); \
 		for pair in $(TINYGO_TARGETS); do \
@@ -84,6 +90,11 @@ tinygo:
 				cd "$$mod"; \
 				env GOWORK=off tinygo build -o "$(abspath $(PRECOMPILE_DIR))/$$out" -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd; \
 				cd - >/dev/null; \
+				if echo " $(JSONSCHEMA_TARGETS) " | grep -q " $$mod "; then \
+					echo "Generating JSON schema for $$mod..."; \
+					mkdir -p "$(TINYGO_DIR)/schemas"; \
+					$(JSONSCHEMA_TOOL) -module "$(TINYGO_DIR)/$$mod" -output "$(TINYGO_DIR)/schemas/$${mod}_schema.json"; \
+				fi; \
 			else \
 				echo "skipping $$mod (no cmd/main.go)"; \
 			fi; \
@@ -114,7 +125,11 @@ $(TINYGO_MODULES):
 	(cd "$(TINYGO_DIR)/$$mod" && env GOWORK=off tinygo build -o "$(abspath $(PRECOMPILE_DIR))/$$out" -no-debug -scheduler=none -gc=leaking -target=wasi ./cmd); \
 	echo "Built $(PRECOMPILE_DIR)/$$out"; \
 	echo "Generating JSON schema for $$mod..."; \
-	$(JSONSCHEMA_TOOL) -module "$(TINYGO_DIR)/$$mod"
+	if [ ! -x "$(JSONSCHEMA_TOOL)" ]; then \
+		$(MAKE) jsonschema-tool; \
+	fi; \
+	mkdir -p "$(TINYGO_DIR)/schemas"; \
+	$(JSONSCHEMA_TOOL) -module "$(TINYGO_DIR)/$$mod" -output "$(TINYGO_DIR)/schemas/$${mod}_schema.json"
 
 # ============================================================================
 # JSON Schema Generation

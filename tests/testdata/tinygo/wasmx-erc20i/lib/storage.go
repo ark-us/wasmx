@@ -32,36 +32,36 @@ func GetInfo() TokenInfo {
 	return info
 }
 
-// SetAdmins stores the admin addresses
-func SetAdmins(admins []wasmx.Bech32String) {
+// SetAdmins stores the admin user IDs
+func SetAdmins(admins []string) {
 	data, _ := json.Marshal(admins)
 	wasmx.StorageStore([]byte(ADMINS_KEY), data)
 }
 
-// GetAdmins retrieves the admin addresses
-func GetAdmins() []wasmx.Bech32String {
+// GetAdmins retrieves the admin user IDs
+func GetAdmins() []string {
 	value := wasmx.StorageLoad([]byte(ADMINS_KEY))
 	if len(value) == 0 {
-		return []wasmx.Bech32String{}
+		return []string{}
 	}
-	var admins []wasmx.Bech32String
+	var admins []string
 	json.Unmarshal(value, &admins)
 	return admins
 }
 
-// SetMinters stores the minter addresses
-func SetMinters(minters []wasmx.Bech32String) {
+// SetMinters stores the minter user IDs
+func SetMinters(minters []string) {
 	data, _ := json.Marshal(minters)
 	wasmx.StorageStore([]byte(MINTERS_KEY), data)
 }
 
-// GetMinters retrieves the minter addresses
-func GetMinters() []wasmx.Bech32String {
+// GetMinters retrieves the minter user IDs
+func GetMinters() []string {
 	value := wasmx.StorageLoad([]byte(MINTERS_KEY))
 	if len(value) == 0 {
-		return []wasmx.Bech32String{}
+		return []string{}
 	}
-	var minters []wasmx.Bech32String
+	var minters []string
 	json.Unmarshal(value, &minters)
 	return minters
 }

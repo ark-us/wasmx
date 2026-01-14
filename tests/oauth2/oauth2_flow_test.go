@@ -13,12 +13,8 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
-	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/simulation"
-	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	jwt "github.com/golang-jwt/jwt/v5"
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
@@ -704,7 +700,7 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	}
 	suite.Require().NotNil(acc, "account should be created after register_init")
 
-	txBytes := buildIdentityRegisterTx(suite, &appA, privKey, address.String(), pubKeyBytes)
+	txBytes := ut.BuildIdentityRegisterTx(&appA, privKey, address.String(), pubKeyBytes)
 	registerTxReq, _ := json.Marshal(map[string]string{
 		"signed_tx": base64.StdEncoding.EncodeToString(txBytes),
 		"address":   address.String(),
@@ -739,7 +735,7 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	suite.T().Logf("User registered: UserID=%s", registerResp.UserID)
 	suite.Require().NotEmpty(registerResp.IdentityUserID, "Identity user ID should be set")
 
-	identityUserID := queryIdentityUserID(suite, &appA, sender, address.String())
+	identityUserID := ut.QueryIdentityUserID(&appA, sender, address.String())
 	suite.Require().NotEmpty(identityUserID, "Identity contract should have user for address")
 	suite.Require().Equal(registerResp.IdentityUserID, identityUserID, "Identity user id should match identity contract")
 
@@ -1157,111 +1153,4 @@ func createSupabaseJWT(email, secret string) string {
 		panic("failed to sign supabase jwt: " + err.Error())
 	}
 	return signed
-}
-
-func buildIdentityRegisterTx(
-	suite *KeeperTestSuite,
-	appA *ut.AppContext,
-	privKey *secp256k1.PrivKey,
-	address string,
-	pubKeyBytes []byte,
-) []byte {
-	identityAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ACCOUNT_IDENTITY))
-	baseDenom := appA.Chain.Config.BaseDenom
-	gasLimit := uint64(30000000)
-	gasPrice := sdkmath.NewInt(100)
-
-	registerUserMsg := map[string]interface{}{
-		"register_user": map[string]interface{}{
-			"address":        address,
-			"public_key":     base64.StdEncoding.EncodeToString(pubKeyBytes),
-			"service_domain": "",
-			"permissions":    []string{},
-			"expires_at":     0,
-		},
-	}
-	innerMsgBytes, err := json.Marshal(registerUserMsg)
-	suite.Require().NoError(err)
-	wrappedMsg := map[string]string{
-		"data": base64.StdEncoding.EncodeToString(innerMsgBytes),
-	}
-	msgBytes, err := json.Marshal(wrappedMsg)
-	suite.Require().NoError(err)
-
-	executeMsg := &types.MsgExecuteContract{
-		Sender:       address,
-		Contract:     identityAddr.String(),
-		Msg:          msgBytes,
-		Funds:        sdk.NewCoins(),
-		Dependencies: []string{},
-	}
-
-	txConfig := appA.App.TxConfig()
-	txBuilder := txConfig.NewTxBuilder()
-	txBuilder.SetGasLimit(gasLimit)
-	feeAmount := gasPrice.MulRaw(int64(gasLimit))
-	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin(baseDenom, feeAmount)))
-	err = txBuilder.SetMsgs(executeMsg)
-	suite.Require().NoError(err)
-
-	accAddrBz, err := appA.AddressCodec().StringToBytes(address)
-	suite.Require().NoError(err)
-	accAddrPrefixed := appA.BytesToAccAddressPrefixed(accAddrBz)
-	acc, err := appA.App.AccountKeeper.GetAccountPrefixed(appA.Context(), accAddrPrefixed)
-	suite.Require().NoError(err)
-	suite.Require().NotNil(acc)
-
-	sigV2 := signing.SignatureV2{
-		PubKey: privKey.PubKey(),
-		Data: &signing.SingleSignatureData{
-			SignMode:  signing.SignMode(txConfig.SignModeHandler().DefaultMode()),
-			Signature: nil,
-		},
-		Sequence: acc.GetSequence(),
-	}
-	err = txBuilder.SetSignatures(sigV2)
-	suite.Require().NoError(err)
-
-	signerData := authsigning.SignerData{
-		ChainID:       appA.Context().ChainID(),
-		AccountNumber: acc.GetAccountNumber(),
-		Sequence:      acc.GetSequence(),
-		PubKey:        privKey.PubKey(),
-		Address:       acc.GetAddressPrefixed().String(),
-	}
-	sigV2, err = tx.SignWithPrivKey(
-		appA.Context().Context(),
-		signing.SignMode(txConfig.SignModeHandler().DefaultMode()),
-		signerData,
-		txBuilder,
-		privKey,
-		txConfig,
-		acc.GetSequence(),
-	)
-	suite.Require().NoError(err)
-	err = txBuilder.SetSignatures(sigV2)
-	suite.Require().NoError(err)
-
-	txBytes, err := txConfig.TxEncoder()(txBuilder.GetTx())
-	suite.Require().NoError(err)
-	suite.Require().NotEmpty(txBytes)
-	return txBytes
-}
-
-func queryIdentityUserID(suite *KeeperTestSuite, appA *ut.AppContext, sender simulation.Account, address string) string {
-	identityAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_ACCOUNT_IDENTITY))
-	queryMsg := map[string]interface{}{
-		"query_user_by_address": map[string]interface{}{
-			"address": address,
-		},
-	}
-	queryMsgBytes, err := json.Marshal(queryMsg)
-	suite.Require().NoError(err)
-	resp := appA.QueryContract(sender, identityAddr, queryMsgBytes, nil, nil)
-	var out struct {
-		UserID string `json:"user_id"`
-	}
-	err = json.Unmarshal(resp, &out)
-	suite.Require().NoError(err)
-	return out.UserID
 }

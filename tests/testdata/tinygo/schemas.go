@@ -14,6 +14,9 @@ var SchemaERC20 string
 //go:embed schemas/wasmx-erc20x_schema.json
 var SchemaERC20X string
 
+//go:embed schemas/wasmx-erc20i_schema.json
+var SchemaERC20I string
+
 //go:embed schemas/wasmx-fsm_schema.json
 var SchemaFSM string
 
@@ -71,6 +74,7 @@ var Schemas = map[string]string{
 	// ERC20 tokens
 	"erc20json":  SchemaERC20,
 	"derc20json": SchemaERC20X,
+	"erc20ijson": SchemaERC20I,
 
 	// Interpreters
 	"28.finite_state_machine": SchemaFSM,
@@ -88,10 +92,10 @@ var Schemas = map[string]string{
 
 	// Multichain / lobby
 	"multichain_registry_0.0.1": SchemaMultichainRegistry,
-	"lobby_json_0.0.1":           SchemaLobby,
+	"lobby_json_0.0.1":          SchemaLobby,
 
 	// MCP contracts
-	"mcp_search":   SchemaMCPSearch,
+	"mcp_search": SchemaMCPSearch,
 
 	// Special contracts
 	"oauth2_server_0.0.1":       SchemaOAuth2Server,

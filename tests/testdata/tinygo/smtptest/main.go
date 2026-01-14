@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 
-	vmimap "github.com/loredanacirstea/wasmx-env-imap"
-	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp"
+	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
+	vmsmtp "github.com/loredanacirstea/wasmx-env-smtp/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
