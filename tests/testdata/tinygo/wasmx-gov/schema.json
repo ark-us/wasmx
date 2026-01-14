@@ -1,0 +1,1022 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-gov",
+  "description": "JSON Schema for wasmx-gov TinyGo contract",
+  "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "InitGenesis": {
+          "$ref": "#/definitions/GenesisState"
+        }
+      },
+      "required": [
+        "InitGenesis"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "SubmitProposal": {
+          "$ref": "#/definitions/MsgSubmitProposal"
+        }
+      },
+      "required": [
+        "SubmitProposal"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "Vote": {
+          "$ref": "#/definitions/MsgVote"
+        }
+      },
+      "required": [
+        "Vote"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "VoteWeighted": {
+          "$ref": "#/definitions/MsgVoteWeighted"
+        }
+      },
+      "required": [
+        "VoteWeighted"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "Deposit": {
+          "$ref": "#/definitions/MsgDeposit"
+        }
+      },
+      "required": [
+        "Deposit"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "BeginBlock": {
+          "$ref": "#/definitions/MsgEmpty"
+        }
+      },
+      "required": [
+        "BeginBlock"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "EndBlock": {
+          "$ref": "#/definitions/MsgEndBlock"
+        }
+      },
+      "required": [
+        "EndBlock"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetProposal": {
+          "$ref": "#/definitions/QueryProposalRequest"
+        }
+      },
+      "required": [
+        "GetProposal"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetProposals": {
+          "$ref": "#/definitions/QueryProposalsRequest"
+        }
+      },
+      "required": [
+        "GetProposals"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetVote": {
+          "$ref": "#/definitions/QueryVoteRequest"
+        }
+      },
+      "required": [
+        "GetVote"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetVotes": {
+          "$ref": "#/definitions/QueryVotesRequest"
+        }
+      },
+      "required": [
+        "GetVotes"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetParams": {
+          "$ref": "#/definitions/QueryParamsRequest"
+        }
+      },
+      "required": [
+        "GetParams"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetDeposit": {
+          "$ref": "#/definitions/QueryDepositRequest"
+        }
+      },
+      "required": [
+        "GetDeposit"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetDeposits": {
+          "$ref": "#/definitions/QueryDepositsRequest"
+        }
+      },
+      "required": [
+        "GetDeposits"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "GetTallyResult": {
+          "$ref": "#/definitions/QueryTallyResultRequest"
+        }
+      },
+      "required": [
+        "GetTallyResult"
+      ]
+    }
+  ],
+  "definitions": {
+    "Deposit": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "depositor": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "proposal_id",
+        "depositor",
+        "amount"
+      ]
+    },
+    "GenesisState": {
+      "type": "object",
+      "properties": {
+        "constitution": {
+          "type": "string"
+        },
+        "deposits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Deposit"
+          }
+        },
+        "params": {
+          "$ref": "#/definitions/Params"
+        },
+        "proposals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Proposal"
+          }
+        },
+        "starting_proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "votes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Vote"
+          }
+        }
+      },
+      "required": [
+        "starting_proposal_id",
+        "deposits",
+        "votes",
+        "proposals",
+        "params",
+        "constitution"
+      ]
+    },
+    "MsgDeposit": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "depositor": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "proposal_id",
+        "depositor",
+        "amount"
+      ]
+    },
+    "MsgDepositResponse": {
+      "type": "object"
+    },
+    "MsgEmpty": {
+      "type": "object"
+    },
+    "MsgEndBlock": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "MsgInitialize": {
+      "type": "object",
+      "properties": {
+        "bond_base_denom": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bond_base_denom"
+      ]
+    },
+    "MsgSubmitProposal": {
+      "type": "object",
+      "properties": {
+        "expedited": {
+          "type": "boolean"
+        },
+        "initial_deposit": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "proposer": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "messages",
+        "initial_deposit",
+        "proposer",
+        "metadata",
+        "title",
+        "summary",
+        "expedited"
+      ]
+    },
+    "MsgSubmitProposalResponse": {
+      "type": "object",
+      "properties": {
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "proposal_id"
+      ]
+    },
+    "MsgVote": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "type": "string"
+        },
+        "option": {
+          "type": "string"
+        },
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "voter": {
+          "type": "string",
+          "format": "bech32"
+        }
+      },
+      "required": [
+        "proposal_id",
+        "voter",
+        "option",
+        "metadata"
+      ]
+    },
+    "MsgVoteResponse": {
+      "type": "object"
+    },
+    "MsgVoteWeighted": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "type": "string"
+        },
+        "option": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WeightedVoteOption"
+          }
+        },
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "voter": {
+          "type": "string",
+          "format": "bech32"
+        }
+      },
+      "required": [
+        "proposal_id",
+        "voter",
+        "option",
+        "metadata"
+      ]
+    },
+    "PageRequest": {
+      "type": "object",
+      "properties": {
+        "count_total": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string",
+          "x-go-type": "uint8"
+        },
+        "limit": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "offset": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "reverse": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "key",
+        "offset",
+        "limit",
+        "count_total",
+        "reverse"
+      ]
+    },
+    "PageResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "total"
+      ]
+    },
+    "Params": {
+      "type": "object",
+      "properties": {
+        "burn_proposal_deposit_prevote": {
+          "type": "boolean"
+        },
+        "burn_vote_quorum": {
+          "type": "boolean"
+        },
+        "burn_vote_veto": {
+          "type": "boolean"
+        },
+        "expedited_min_deposit": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "expedited_threshold": {
+          "type": "string"
+        },
+        "expedited_voting_period": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "max_deposit_period": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "min_deposit": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "min_deposit_ratio": {
+          "type": "string"
+        },
+        "min_initial_deposit_ratio": {
+          "type": "string"
+        },
+        "proposal_cancel_dest": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "proposal_cancel_ratio": {
+          "type": "string"
+        },
+        "quorum": {
+          "type": "string"
+        },
+        "threshold": {
+          "type": "string"
+        },
+        "veto_threshold": {
+          "type": "string"
+        },
+        "voting_period": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "min_deposit",
+        "max_deposit_period",
+        "voting_period",
+        "quorum",
+        "threshold",
+        "veto_threshold",
+        "min_initial_deposit_ratio",
+        "proposal_cancel_ratio",
+        "proposal_cancel_dest",
+        "expedited_voting_period",
+        "expedited_threshold",
+        "expedited_min_deposit",
+        "burn_vote_quorum",
+        "burn_proposal_deposit_prevote",
+        "burn_vote_veto",
+        "min_deposit_ratio"
+      ]
+    },
+    "Proposal": {
+      "type": "object",
+      "properties": {
+        "deposit_end_time": {
+          "type": "string"
+        },
+        "expedited": {
+          "type": "boolean"
+        },
+        "failed_reason": {
+          "type": "string"
+        },
+        "final_tally_result": {
+          "$ref": "#/definitions/TallyResult"
+        },
+        "id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "proposer": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "status": {
+          "type": "string",
+          "x-go-type": "ProposalStatus"
+        },
+        "submit_time": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "total_deposit": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "voting_end_time": {
+          "type": "string"
+        },
+        "voting_start_time": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "messages",
+        "status",
+        "final_tally_result",
+        "submit_time",
+        "deposit_end_time",
+        "total_deposit",
+        "voting_start_time",
+        "voting_end_time",
+        "metadata",
+        "title",
+        "summary",
+        "proposer",
+        "expedited",
+        "failed_reason"
+      ]
+    },
+    "QueryDepositRequest": {
+      "type": "object",
+      "properties": {
+        "depositor": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "proposal_id",
+        "depositor"
+      ]
+    },
+    "QueryDepositsRequest": {
+      "type": "object",
+      "properties": {
+        "pagination": {
+          "$ref": "#/definitions/PageRequest"
+        },
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "proposal_id",
+        "pagination"
+      ]
+    },
+    "QueryParamsRequest": {
+      "type": "object",
+      "properties": {
+        "params_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "params_type"
+      ]
+    },
+    "QueryParamsResponse": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "$ref": "#/definitions/Params"
+        }
+      },
+      "required": [
+        "params"
+      ]
+    },
+    "QueryProposalRequest": {
+      "type": "object",
+      "properties": {
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "proposal_id"
+      ]
+    },
+    "QueryProposalResponse": {
+      "type": "object",
+      "properties": {
+        "proposal": {
+          "$ref": "#/definitions/Proposal"
+        }
+      }
+    },
+    "QueryProposalsRequest": {
+      "type": "object",
+      "properties": {
+        "depositor": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "pagination": {
+          "$ref": "#/definitions/PageRequest"
+        },
+        "proposal_status": {
+          "type": "string"
+        },
+        "voter": {
+          "type": "string",
+          "format": "bech32"
+        }
+      },
+      "required": [
+        "proposal_status",
+        "voter",
+        "depositor",
+        "pagination"
+      ]
+    },
+    "QueryProposalsResponse": {
+      "type": "object",
+      "properties": {
+        "pagination": {
+          "$ref": "#/definitions/PageResponse"
+        },
+        "proposals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Proposal"
+          }
+        }
+      },
+      "required": [
+        "proposals",
+        "pagination"
+      ]
+    },
+    "QueryTallyResultRequest": {
+      "type": "object",
+      "properties": {
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "proposal_id"
+      ]
+    },
+    "QueryTallyResultResponse": {
+      "type": "object",
+      "properties": {
+        "tally": {
+          "$ref": "#/definitions/TallyResult"
+        }
+      },
+      "required": [
+        "tally"
+      ]
+    },
+    "QueryVoteRequest": {
+      "type": "object",
+      "properties": {
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "voter": {
+          "type": "string",
+          "format": "bech32"
+        }
+      },
+      "required": [
+        "proposal_id",
+        "voter"
+      ]
+    },
+    "QueryVotesRequest": {
+      "type": "object",
+      "properties": {
+        "pagination": {
+          "$ref": "#/definitions/PageRequest"
+        },
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "proposal_id",
+        "pagination"
+      ]
+    },
+    "Response": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "ResponseBz": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ]
+    },
+    "TallyResult": {
+      "type": "object",
+      "properties": {
+        "abstain_count": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        },
+        "no_count": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        },
+        "no_with_veto_count": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        },
+        "yes_count": {
+          "type": "string",
+          "format": "bigint",
+          "x-go-type": "bigint"
+        }
+      },
+      "required": [
+        "yes_count",
+        "abstain_count",
+        "no_count",
+        "no_with_veto_count"
+      ]
+    },
+    "Vote": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WeightedVoteOption"
+          }
+        },
+        "proposal_id": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "voter": {
+          "type": "string",
+          "format": "bech32"
+        }
+      },
+      "required": [
+        "proposal_id",
+        "voter",
+        "options",
+        "metadata"
+      ]
+    },
+    "WeightedVoteOption": {
+      "type": "object",
+      "properties": {
+        "option": {
+          "type": "string",
+          "x-go-type": "VoteOption"
+        },
+        "weight": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "option",
+        "weight"
+      ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "BeginBlock": {
+          "$ref": "#/definitions/MsgEmpty"
+        },
+        "Deposit": {
+          "$ref": "#/definitions/MsgDeposit"
+        },
+        "EndBlock": {
+          "$ref": "#/definitions/MsgEndBlock"
+        },
+        "GetDeposit": {
+          "$ref": "#/definitions/QueryDepositRequest"
+        },
+        "GetDeposits": {
+          "$ref": "#/definitions/QueryDepositsRequest"
+        },
+        "GetParams": {
+          "$ref": "#/definitions/QueryParamsRequest"
+        },
+        "GetProposal": {
+          "$ref": "#/definitions/QueryProposalRequest"
+        },
+        "GetProposals": {
+          "$ref": "#/definitions/QueryProposalsRequest"
+        },
+        "GetTallyResult": {
+          "$ref": "#/definitions/QueryTallyResultRequest"
+        },
+        "GetVote": {
+          "$ref": "#/definitions/QueryVoteRequest"
+        },
+        "GetVotes": {
+          "$ref": "#/definitions/QueryVotesRequest"
+        },
+        "InitGenesis": {
+          "$ref": "#/definitions/GenesisState"
+        },
+        "SubmitProposal": {
+          "$ref": "#/definitions/MsgSubmitProposal"
+        },
+        "Vote": {
+          "$ref": "#/definitions/MsgVote"
+        },
+        "VoteWeighted": {
+          "$ref": "#/definitions/MsgVoteWeighted"
+        }
+      }
+    }
+  }
+}

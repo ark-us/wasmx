@@ -189,6 +189,9 @@ var (
 	//go:embed 71.erc20xjson_go_0.0.1.wasm
 	wasmx_erc20x []byte
 
+	//go:embed 72.wasmx_groups_0.0.1.wasm
+	wasmx_groups []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -391,6 +394,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = wasmx_identity_001
 	case types.OAUTH2_KEYS_v001:
 		wasmbin = wasmx_oauth2_keys_001
+	case "groups_0.0.1":
+		wasmbin = wasmx_groups
 	}
 	return wasmbin
 }

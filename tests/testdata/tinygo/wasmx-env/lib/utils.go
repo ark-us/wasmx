@@ -73,6 +73,16 @@ func IsGoCoreModule(addr []byte) bool {
 	return false
 }
 
+// IsGoCoreModuleAddress checks if addr bytes match a known GoCore module.
+func IsGoCoreModuleAddress(addr []byte, modname string) bool {
+	hexstr := hex.EncodeToString(addr)
+	name, ok := GOCORE_MODULE_ADDRESSES[hexstr]
+	if !ok {
+		return false
+	}
+	return name == modname
+}
+
 // IsInternalContract returns true if addr is a role address for moduleName or a GoCore module address.
 func IsInternalContract(moduleName string, addr Bech32String) bool {
 	if HasRole(addr, moduleName) {

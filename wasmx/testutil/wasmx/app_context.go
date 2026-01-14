@@ -2,6 +2,7 @@ package wasmx
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -822,6 +823,9 @@ func (s *AppContext) SubmitGovProposal(
 	return resp
 }
 
+// PassGovProposal submits and passes a governance proposal using the chain's
+// configured governance contract. This is a convenience wrapper around
+// PassProposalWithGovContract that uses the chain's ROLE_GOVERNANCE contract.
 func (s *AppContext) PassGovProposal(
 	valAccount,
 	sender simulation.Account,
@@ -829,63 +833,229 @@ func (s *AppContext) PassGovProposal(
 	metadata, title, summary string,
 	expedited bool,
 ) {
+	// Get the chain's governance contract
+	govContract, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), types.ROLE_GOVERNANCE)
+	s.S.Require().NoError(err)
+
+	// Use the unified helper with chain's vote type
+	s.PassProposalWithGovContract(
+		govContract,
+		s.GetGovVoteType(),
+		valAccount,
+		sender,
+		msgs,
+		metadata,
+		title,
+		summary,
+		expedited,
+	)
+}
+
+// GovVoteType represents the type of governance voting mechanism
+type GovVoteType int
+
+const (
+	GovVoteStakeWeighted GovVoteType = iota // wasmx-gov: stake-weighted voting
+	GovVoteContinuous                       // wasmx-gov-continuous: deposit-based voting
+)
+
+// SubmitProposalOnly submits a governance proposal and returns the proposal ID
+// without voting on it
+func (s *AppContext) SubmitProposalOnly(
+	govContract mcodec.AccAddressPrefixed,
+	voteType GovVoteType,
+	sender simulation.Account,
+	msgs []sdk.Msg,
+	metadata, title, summary string,
+	expedited bool,
+) uint64 {
+	if voteType == GovVoteContinuous {
+		return s.SubmitProposalOnlyContinuous(govContract, sender, msgs, metadata, title, summary, expedited)
+	}
 	deposit := sdk.NewCoins(sdk.NewCoin(s.Chain.Config.BaseDenom, sdkmath.NewInt(1_000_000_000_000)))
-	resp := s.SubmitGovProposal(sender, msgs, deposit, metadata, title, summary, expedited)
+
+	senderStr, err := s.AddressCodec().BytesToString(sender.Address)
+	s.S.Require().NoError(err)
+
+	proposalMsg, err := govtypes1.NewMsgSubmitProposal(msgs, deposit, senderStr, metadata, title, summary, expedited)
+	s.S.Require().NoError(err)
+
+	resp, err := s.DeliverTx(sender, proposalMsg)
+	s.S.Require().NoError(err)
+	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
 
 	proposalId, err := s.GetProposalIdFromEvents(resp.GetEvents())
 	s.S.Require().NoError(err)
+
 	proposal, err := s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
 	s.S.Require().NoError(err)
+	s.S.Require().NotNil(proposal.Proposal)
 	s.S.Require().Equal(govtypes1.StatusVotingPeriod, proposal.Proposal.Status)
-	var voteMsg sdk.Msg
-	if !s.Chain.GovernanceContinuous {
-		valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
-		s.S.Require().NoError(err)
-		voteMsg = &govtypes1.MsgVote{
-			ProposalId: proposalId,
-			Voter:      valstr,
-			Option:     govtypes1.OptionYes,
-			Metadata:   "votemetadata",
-		}
-	} else {
-		govAddr, err := s.App.WasmxKeeper.GetAddressOrRole(s.Context(), types.ROLE_GOVERNANCE)
-		s.S.Require().NoError(err)
-		valstr, err := s.AddressCodec().BytesToString(valAccount.Address)
-		s.S.Require().NoError(err)
 
-		msg1 := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":0,"voter":"%s","amount":"65536","arbitration_amount":"0","metadata":"votemetadata"}}`, proposalId, valstr))
-		msg11 := types.WasmxExecutionMessage{Data: msg1}
-		msgbz, err := json.Marshal(msg11)
-		s.S.Require().NoError(err)
-		voteMsg = &types.MsgExecuteContract{
-			Sender:   valstr,
-			Contract: govAddr.String(),
-			Msg:      msgbz,
-		}
+	s.S.Commit()
+	return proposalId
+}
 
-		// vote two times, so we pass the threshold
-		resp, err = s.DeliverTx(valAccount, voteMsg)
+// SubmitProposalOnlyContinuous submits a proposal to wasmx-gov-continuous and returns the proposal ID.
+func (s *AppContext) SubmitProposalOnlyContinuous(
+	govContract mcodec.AccAddressPrefixed,
+	sender simulation.Account,
+	msgs []sdk.Msg,
+	metadata, title, summary string,
+	expedited bool,
+) uint64 {
+	senderStr, err := s.AddressCodec().BytesToString(sender.Address)
+	s.S.Require().NoError(err)
+
+	encodedMsgs := make([]string, 0, len(msgs))
+	anys, err := txtypes.SetMsgs(msgs)
+	for _, anymsg := range anys {
+		msgBz, err := s.App.JSONCodec().MarshalJSON(anymsg)
 		s.S.Require().NoError(err)
-		s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
-		s.S.Commit()
+		encodedMsgs = append(encodedMsgs, base64.StdEncoding.EncodeToString(msgBz))
 	}
 
-	resp, err = s.DeliverTx(valAccount, voteMsg)
+	deposit := []map[string]string{
+		{
+			"denom":  s.Chain.Config.BaseDenom,
+			"amount": "1000000000000",
+		},
+	}
+
+	payload := map[string]interface{}{
+		"SubmitProposal": map[string]interface{}{
+			"messages":        encodedMsgs,
+			"initial_deposit": deposit,
+			"proposer":        senderStr,
+			"metadata":        metadata,
+			"title":           title,
+			"summary":         summary,
+			"expedited":       expedited,
+		},
+	}
+	payloadBz, err := json.Marshal(payload)
+	s.S.Require().NoError(err)
+
+	msgWrap := types.WasmxExecutionMessage{Data: payloadBz}
+	msgbz, err := json.Marshal(msgWrap)
+	s.S.Require().NoError(err)
+
+	submitMsg := &types.MsgExecuteContract{
+		Sender:   senderStr,
+		Contract: govContract.String(),
+		Msg:      msgbz,
+	}
+	resp, err := s.DeliverTx(sender, submitMsg)
+	s.S.Require().NoError(err)
+	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
+
+	proposalId, err := s.GetProposalIdFromEvents(resp.GetEvents())
+	s.S.Require().NoError(err)
+	s.S.Commit()
+	return proposalId
+}
+
+// VoteStakeWeighted votes on a proposal using stake-weighted voting (wasmx-gov)
+func (s *AppContext) VoteStakeWeighted(
+	voter simulation.Account,
+	proposalId uint64,
+	option govtypes1.VoteOption,
+) {
+	voterStr, err := s.AddressCodec().BytesToString(voter.Address)
+	s.S.Require().NoError(err)
+
+	voteMsg := &govtypes1.MsgVote{
+		ProposalId: proposalId,
+		Voter:      voterStr,
+		Option:     option,
+		Metadata:   "votemetadata",
+	}
+
+	resp, err := s.DeliverTx(voter, voteMsg)
 	s.S.Require().NoError(err)
 	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
 	s.S.Commit()
+}
+
+// VoteDeposit votes on a proposal using deposit voting (wasmx-gov-continuous)
+func (s *AppContext) VoteDeposit(
+	govContract mcodec.AccAddressPrefixed,
+	voter simulation.Account,
+	proposalId uint64,
+	optionId int,
+	amount string,
+	arbitrationAmount string,
+) {
+	voterStr, err := s.AddressCodec().BytesToString(voter.Address)
+	s.S.Require().NoError(err)
+
+	msg := []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":%d,"voter":"%s","amount":"%s","arbitration_amount":"%s","metadata":"votemetadata"}}`,
+		proposalId, optionId, voterStr, amount, arbitrationAmount))
+	msgWrap := types.WasmxExecutionMessage{Data: msg}
+	msgbz, err := json.Marshal(msgWrap)
+	s.S.Require().NoError(err)
+
+	voteMsg := &types.MsgExecuteContract{
+		Sender:   voterStr,
+		Contract: govContract.String(),
+		Msg:      msgbz,
+	}
+
+	resp, err := s.DeliverTx(voter, voteMsg)
+	s.S.Require().NoError(err)
+	s.S.Require().True(resp.IsOK(), resp.GetLog(), resp.GetEvents())
+	s.S.Commit()
+}
+
+// WaitForVotingPeriodEnd advances blocks until voting period ends
+func (s *AppContext) WaitForVotingPeriodEnd() {
 	params, err := s.App.GovKeeper.Params(s.Context(), &govtypes1.QueryParamsRequest{})
 	s.S.Require().NoError(err)
-	voteEnd := *params.Params.VotingPeriod //  + time.Hour
+	voteEnd := *params.Params.VotingPeriod
 	s.S.CommitNBlocks_(s.Chain, uint64(voteEnd.Milliseconds()/500))
 	s.S.Commit()
+}
 
-	// check proposal passed
-	proposal, err = s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
-	s.S.Require().NoError(err)
-	if !s.Chain.GovernanceContinuous {
+// PassProposalWithGovContract passes a proposal using specified governance contract
+// This is a more flexible version of PassGovProposal that allows specifying
+// any governance contract address and vote type
+func (s *AppContext) PassProposalWithGovContract(
+	govContract mcodec.AccAddressPrefixed,
+	voteType GovVoteType,
+	voter simulation.Account,
+	sender simulation.Account,
+	msgs []sdk.Msg,
+	metadata, title, summary string,
+	expedited bool,
+) {
+	proposalId := s.SubmitProposalOnly(govContract, voteType, sender, msgs, metadata, title, summary, expedited)
+
+	switch voteType {
+	case GovVoteStakeWeighted:
+		s.VoteStakeWeighted(voter, proposalId, govtypes1.OptionYes)
+
+	case GovVoteContinuous:
+		// Vote twice to pass threshold for deposit voting
+		s.VoteDeposit(govContract, voter, proposalId, 2, "65536", "0")
+		s.VoteDeposit(govContract, voter, proposalId, 2, "65536", "0")
+	}
+
+	s.WaitForVotingPeriodEnd()
+
+	// Verify proposal passed (only for stake-weighted - continuous may still be active)
+	if voteType == GovVoteStakeWeighted {
+		proposal, err := s.App.GovKeeper.Proposal(s.Context(), &govtypes1.QueryProposalRequest{ProposalId: proposalId})
+		s.S.Require().NoError(err)
 		s.S.Require().Equal(govtypes1.StatusPassed, proposal.Proposal.Status, "gov proposal does not have status passed")
 	}
+}
+
+// GetGovVoteType returns the appropriate vote type based on chain configuration
+func (s *AppContext) GetGovVoteType() GovVoteType {
+	if s.Chain.GovernanceContinuous {
+		return GovVoteContinuous
+	}
+	return GovVoteStakeWeighted
 }
 
 func (s *AppContext) ParseProposal(proposal govtypes1.Proposal) ([]sdk.Msg, error) {

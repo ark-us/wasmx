@@ -3,7 +3,6 @@ package keeper
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 	"time"
 
@@ -216,8 +215,6 @@ func (r *ActionExecutor) ExecuteWithMockHeader(goCtx context.Context, mode sdk.E
 func (r *ActionExecutor) ExecuteWithHeader(goCtx context.Context, header cmtproto.Header, mode sdk.ExecMode, cb func(goctx context.Context) (any, error)) (any, error) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
-
-	fmt.Println("--ActionExecutor.ExecuteWithHeader--")
 
 	sdkCtx, commitCacheCtx, ctxcachems, err := CreateQueryContextWithHeader(r.app.GetBaseApp(), r.logger, header, false)
 	if err != nil {
