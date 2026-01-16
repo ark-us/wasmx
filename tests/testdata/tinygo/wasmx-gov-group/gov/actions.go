@@ -3,6 +3,7 @@ package gov
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -67,7 +68,11 @@ func EndBlock(req MsgEndBlock) []byte {
 	for _, p := range ending {
 		removeActiveVotingProposal(uint64(p.ID))
 
-		totalStake := callGetTotalStake()
+		denom := p.GroupDenom
+		if denom == "" {
+			Revert("group denom is required")
+		}
+		totalStake := callGetTotalStake(denom)
 		// Use 18 decimal places for precise percentage calculations
 		quorumInt := parseDecimalToSdkInt(params.Quorum, 18)
 		quorumAmount := totalStake.Mul(quorumInt).Quo(NewSdkIntPow10(18))
@@ -241,10 +246,12 @@ func DoVote(req MsgVote) []byte {
 	addProposalVote(uint64(req.ProposalID), Vote{ProposalID: utils.StringUint64(req.ProposalID), Voter: req.Voter, Options: []WeightedVoteOption{option}, Metadata: metadata})
 
 	groupPower, ok := getGroupVoterPower(proposal.GroupContract, proposal.GroupID, req.Voter)
+	fmt.Println("--getGroupVoterPower--", ok, groupPower)
 	if !ok || !groupPower.IsMember || groupPower.Power == "0" {
 		Revert("voter is not eligible for group")
 	}
 	stake, ok := sdkmath.NewIntFromString(groupPower.Power)
+	fmt.Println("--getGroupVoterPower.stake--", groupPower.Power, stake)
 	if !ok {
 		Revert("invalid voter power")
 	}
@@ -262,6 +269,7 @@ func DoVote(req MsgVote) []byte {
 		amount := proposal.FinalTallyResult.NoWithVetoCount.Add(stake)
 		proposal.FinalTallyResult.NoWithVetoCount = amount
 	}
+	fmt.Println("--getGroupVoterPower.proposal.FinalTallyResult--", proposal.FinalTallyResult)
 	setProposal(uint64(proposal.ID), proposal)
 	// Emit vote event
 	optbz, _ := json.Marshal([]WeightedVoteOption{option})

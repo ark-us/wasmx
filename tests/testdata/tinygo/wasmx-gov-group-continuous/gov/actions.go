@@ -136,11 +136,12 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 	}
 
 	groupDenom := groupPower.Denom
-	if groupDenom != "" {
-		for _, deposit := range req.InitialDeposit {
-			if deposit.Denom != localParams.ArbitrationDenom && deposit.Denom != groupDenom {
-				Revert("invalid denom; expected " + groupDenom + ", got " + deposit.Denom)
-			}
+	if groupDenom == "" {
+		Revert("group denom is required")
+	}
+	for _, deposit := range req.InitialDeposit {
+		if deposit.Denom != localParams.ArbitrationDenom && deposit.Denom != groupDenom {
+			Revert("invalid denom; expected " + groupDenom + ", got " + deposit.Denom)
 		}
 	}
 
@@ -157,7 +158,7 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 			proposalCoin = deposit
 		}
 	}
-	if groupDenom != "" && proposalCoin.Denom == "" {
+	if proposalCoin.Denom == "" {
 		Revert("proposal must include group denom")
 	}
 	w := sdkmath.NewInt(0)
@@ -918,6 +919,10 @@ func callBank(calldata string, isQuery bool) (bool, []byte) {
 
 // bankSendCoinFromAccountToModule locks coins by calling bank module
 func bankSendCoinFromAccountToModule(from wasmx.Bech32String, to wasmx.Bech32String, coins []wasmx.Coin) {
+	coins = filterNonZeroCoins(coins)
+	if len(coins) == 0 {
+		return
+	}
 	// Envelope mirrors base gov: {"SendCoinsFromAccountToModule": {"from_address":"...","to_address":"...","amount":[...]}}
 	payload := struct {
 		Send struct {
@@ -934,4 +939,15 @@ func bankSendCoinFromAccountToModule(from wasmx.Bech32String, to wasmx.Bech32Str
 	if !ok {
 		Revert("could not transfer coins by bank: " + string(resp))
 	}
+}
+
+func filterNonZeroCoins(coins []wasmx.Coin) []wasmx.Coin {
+	filtered := make([]wasmx.Coin, 0, len(coins))
+	for _, coin := range coins {
+		if coin.Denom == "" || coin.Amount.IsZero() {
+			continue
+		}
+		filtered = append(filtered, coin)
+	}
+	return filtered
 }

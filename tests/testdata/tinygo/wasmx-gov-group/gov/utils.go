@@ -3,6 +3,7 @@ package gov
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"strconv"
 
@@ -103,6 +104,7 @@ func getGroupVoterPower(groupContract wasmx.Bech32String, groupID string, voter 
 	if !ok {
 		return groupVoterPowerResponse{}, false
 	}
+	fmt.Println("--getGroupVoterPower.resp--", string(resp))
 	var out groupVoterPowerResponse
 	if err := json.Unmarshal(resp, &out); err != nil {
 		return groupVoterPowerResponse{}, false
@@ -175,8 +177,10 @@ func callGetStake(tokenAddress wasmx.Bech32String, delegator wasmx.Bech32String)
 	return out.Balance.Amount
 }
 
-func callGetTotalStake() sdkmath.Int {
-	denom := GetVotingDenom()
+func callGetTotalStake(denom string) sdkmath.Int {
+	if denom == "" {
+		Revert("group denom is required")
+	}
 	tokenAddress := getTokenAddress(denom)
 	payload := struct {
 		Q struct{} `json:"totalSupply"`
@@ -210,7 +214,10 @@ func executeProposal(p Proposal) Response {
 }
 
 // Wrapper to match AS getStake signature
-func getStake(voter wasmx.Bech32String) sdkmath.Int {
-	addr := getTokenAddress(GetVotingDenom())
+func getStake(denom string, voter wasmx.Bech32String) sdkmath.Int {
+	if denom == "" {
+		Revert("group denom is required")
+	}
+	addr := getTokenAddress(denom)
 	return callGetStake(addr, voter)
 }

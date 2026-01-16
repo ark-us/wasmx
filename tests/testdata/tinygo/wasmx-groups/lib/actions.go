@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/json"
+	"strings"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	utils "github.com/loredanacirstea/wasmx-utils"
@@ -547,7 +548,10 @@ func QueryGetVoterPower(msg *MsgQueryGetVoterPower) []byte {
 		return MarshalJSON(QueryGetVoterPowerResponse{IsMember: false, Power: "0"})
 	}
 
-	userID, _ := QueryUserByAddress(msg.Voter)
+	userID := ""
+	if strings.HasPrefix(msg.Voter, "user_") {
+		userID = msg.Voter
+	}
 
 	if group.Token == "" {
 		return MarshalJSON(QueryGetVoterPowerResponse{IsMember: false, UserID: userID, Power: "0"})

@@ -626,6 +626,13 @@ func (suite *KeeperTestSuite) TestGovGroupWithERC20Gov() {
 	s.Require().NoError(err)
 	s.Require().NotZero(proposalId)
 
+	votePayload := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"Vote":{"proposal_id":%d,"voter":"%s","option":"VOTE_OPTION_YES","metadata":"vote"}}`, proposalId, senderAddr)),
+	}
+	voteRes := appA.ExecuteContract(setup.Sender, govGroupContract, votePayload, nil, nil)
+	s.Require().True(voteRes.IsOK(), "vote failed: %s", voteRes.Log)
+
+	// non members cannot vote
 	nonMemberVotePayload := types.WasmxExecutionMessage{
 		Data: []byte(fmt.Sprintf(`{"Vote":{"proposal_id":%d,"voter":"%s","option":"VOTE_OPTION_YES","metadata":"vote"}}`, proposalId, receiverAddr)),
 	}
@@ -633,12 +640,6 @@ func (suite *KeeperTestSuite) TestGovGroupWithERC20Gov() {
 	s.Require().NoError(err)
 	s.Require().False(nonMemberVoteRes.IsOK(), "voting should fail, oter should be not eligible for group")
 	s.Require().Contains(nonMemberVoteRes.GetLog(), "failed to execute message", nonMemberVoteRes.GetEvents())
-
-	votePayload := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"Vote":{"proposal_id":%d,"voter":"%s","option":"VOTE_OPTION_YES","metadata":"vote"}}`, proposalId, senderAddr)),
-	}
-	voteRes := appA.ExecuteContract(setup.Sender, govGroupContract, votePayload, nil, nil)
-	s.Require().True(voteRes.IsOK(), "vote failed: %s", voteRes.Log)
 
 	appA.WaitForVotingPeriodEnd()
 
@@ -666,6 +667,7 @@ func (suite *KeeperTestSuite) TestGovGroupContinuousWithERC20Gov() {
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(receiver.Address), sdk.NewCoin(baseDenom, initBalance))
 	receiverUserID := suite.RegisterUser(setup, receiver)
+	receiverAddr := appA.BytesToAccAddressPrefixed(receiver.Address).String()
 
 	// Use pre-instantiated gov-group-cont contract
 	govGroupContContract := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_GOV_GROUP_CONT))
@@ -716,17 +718,28 @@ func (suite *KeeperTestSuite) TestGovGroupContinuousWithERC20Gov() {
 	s.Require().True(submitRes.IsOK(), "submit proposal failed: %s", submitRes.Log)
 
 	var submitResp struct {
-		ProposalID uint64 `json:"proposal_id"`
+		ProposalID string `json:"proposal_id"`
 	}
 	err = appA.DecodeExecuteResponse(submitRes, &submitResp)
 	s.Require().NoError(err)
-	s.Require().NotZero(submitResp.ProposalID)
+	proposalID, err := strconv.ParseUint(submitResp.ProposalID, 10, 64)
+	s.Require().NoError(err)
+	s.Require().NotZero(proposalID)
 
 	depositVotePayload := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":2,"voter":"%s","amount":"100","arbitration_amount":"0","metadata":"vote"}}`, submitResp.ProposalID, senderAddr)),
+		Data: []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":2,"voter":"%s","amount":"100","arbitration_amount":"0","metadata":"vote"}}`, proposalID, senderAddr)),
 	}
 	voteRes := appA.ExecuteContract(setup.Sender, govGroupContContract, depositVotePayload, nil, nil)
 	s.Require().True(voteRes.IsOK(), "deposit vote failed: %s", voteRes.Log)
+
+	// non members cannot vote
+	nonMemberVotePayload := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":2,"voter":"%s","amount":"100","arbitration_amount":"0","metadata":"vote"}}`, proposalID, receiverAddr)),
+	}
+	nonMemberVoteRes, err := appA.ExecuteContractNoCheck(setup.Sender, govGroupContContract, nonMemberVotePayload, nil, nil, 1000000000, nil)
+	s.Require().NoError(err)
+	s.Require().False(nonMemberVoteRes.IsOK(), "voting should fail, voter should be not eligible for group")
+	s.Require().Contains(nonMemberVoteRes.GetLog(), "failed to execute message", nonMemberVoteRes.GetEvents())
 
 	balanceQuery := types.WasmxExecutionMessage{
 		Data: []byte(fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, receiverUserID)),
@@ -771,7 +784,7 @@ func (suite *KeeperTestSuite) RegisterErc20GovDenomRole(setup *GroupsTestSetup, 
 
 func (suite *KeeperTestSuite) InitGovGroupGenesis(appA *ut.AppContext, govContract mcodec.AccAddressPrefixed, baseDenom string) {
 	govGenesis := cosmosmodtypes.DefaultGovGenesisState(baseDenom)
-	votingPeriod := time.Millisecond * 500
+	votingPeriod := time.Millisecond * 800
 	govGenesis.Params.VotingPeriod = votingPeriod.Milliseconds()
 
 	msgjson, err := appA.App.AppCodec().MarshalJSON(govGenesis)
