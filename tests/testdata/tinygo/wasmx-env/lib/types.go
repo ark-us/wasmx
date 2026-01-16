@@ -85,9 +85,11 @@ type Role struct {
 	Role        string              `json:"role"`
 	StorageType ContractStorageType `json:"storage_type"`
 	Primary     int32               `json:"primary"`
-	Multiple    bool                `json:"multiple"`
-	Labels      []string            `json:"labels"`
-	Addresses   []string            `json:"addresses"`
+	// multiple determines wether multiple contracts can be active at the same point in time
+	// e.g. consensus role has multiple=false, but denom has multiple=true
+	Multiple  bool     `json:"multiple"`
+	Labels    []string `json:"labels"`
+	Addresses []string `json:"addresses"`
 }
 
 type RoleAddress struct {

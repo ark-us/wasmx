@@ -380,7 +380,9 @@ func fillRoles(precompiles []wasmx.SystemContract, bech32PrefixAccAddr string, f
 					return nil, fmt.Errorf("fillRoles failed: %s", err.Error())
 				}
 				if !slices.Contains(entry.Addresses, prefixedAddr) {
-					entry.Multiple = true
+					if slices.Contains(wasmx.ROLES_MULTIPLE, role) {
+						entry.Multiple = true
+					}
 					entry.Labels = append(entry.Labels, precompile.Role.Label)
 					entry.Addresses = append(entry.Addresses, prefixedAddr)
 				}

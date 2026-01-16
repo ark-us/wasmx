@@ -43,3 +43,12 @@ const (
 	ROLE_OAUTH2_KEYS               = "oauth2_keys"
 	ROLE_ACCOUNT_IDENTITY          = "account_identity"
 )
+
+var ROLES_MULTIPLE = []string{
+	ROLE_DENOM,
+	ROLE_GOVERNANCE,
+	ROLE_INTERPRETER,
+	ROLE_LIBRARY,
+	ROLE_MCP,
+	ROLE_HTTP_SERVER,
+}

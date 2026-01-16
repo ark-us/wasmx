@@ -106,6 +106,15 @@ var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 //go:embed kayros_verifier_schema.json
 var kayrosVerifierSchema []byte
 
+var ROLES_MULTIPLE = []string{
+	ROLE_DENOM,
+	ROLE_GOVERNANCE,
+	ROLE_INTERPRETER,
+	ROLE_LIBRARY,
+	ROLE_MCP,
+	ROLE_HTTP_SERVER,
+}
+
 func mcpRegistryInitMsg() []byte {
 	initGenesis := map[string]interface{}{
 		"init_genesis": map[string]interface{}{
@@ -1440,7 +1449,9 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 				// Check if the contract has already been added
 				prefixedAddr := accBech32Codec.BytesToAccAddressPrefixed(AccAddressFromHex(precompile.Address))
 				if !slices.Contains(entry.Addresses, prefixedAddr.String()) {
-					entry.Multiple = true
+					if slices.Contains(ROLES_MULTIPLE, role) {
+						entry.Multiple = true
+					}
 					entry.Labels = append(entry.Labels, precompile.Role.Label)
 					entry.Addresses = append(entry.Addresses, prefixedAddr.String())
 				}
