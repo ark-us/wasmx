@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math/big"
 
+	sdkmath "cosmossdk.io/math"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
@@ -64,8 +65,20 @@ func RemoveStringFromList(item string, list []string) []string {
 // IDENTITY CONTRACT CALLS
 // =============================================================================
 
+func getIdentityContract() wasmx.Bech32String {
+	identityContract := wasmx.GetAddressByRole(wasmx.ROLE_ACCOUNT_IDENTITY)
+	if identityContract == "" {
+		identityContract = wasmx.GetAddressByRole(wasmx.ROLE_IDENTITY)
+	}
+	if identityContract == "" {
+		Revert("identity role not set")
+	}
+	return identityContract
+}
+
 // QueryUserByAddress queries the identity contract to get user_id from an address
-func QueryUserByAddress(identityContract wasmx.Bech32String, address string) (string, error) {
+func QueryUserByAddress(address string) (string, error) {
+	identityContract := getIdentityContract()
 	query := map[string]interface{}{
 		"query_user_by_address": map[string]string{
 			"address": address,
@@ -94,7 +107,8 @@ func QueryUserByAddress(identityContract wasmx.Bech32String, address string) (st
 }
 
 // QueryAddressByUserID queries the identity contract to get address from a user_id
-func QueryAddressByUserID(identityContract wasmx.Bech32String, userID string) (string, error) {
+func QueryAddressByUserID(userID string) (string, error) {
+	identityContract := getIdentityContract()
 	query := map[string]interface{}{
 		"query_user_by_id": map[string]string{
 			"user_id": userID,
@@ -108,20 +122,23 @@ func QueryAddressByUserID(identityContract wasmx.Bech32String, userID string) (s
 	}
 
 	var resp struct {
-		Addresses []string `json:"addresses"`
-		Error     string   `json:"error,omitempty"`
+		User struct {
+			Addresses []string `json:"addresses"`
+		} `json:"user"`
+		Error string `json:"error,omitempty"`
 	}
 	if err := json.Unmarshal(respBz, &resp); err != nil {
 		return "", err
 	}
-	if resp.Error != "" || len(resp.Addresses) == 0 {
+	if resp.Error != "" || len(resp.User.Addresses) == 0 {
 		return "", nil
 	}
-	return resp.Addresses[0], nil
+	return resp.User.Addresses[0], nil
 }
 
 // QueryUserExists queries if a user_id exists in the identity contract
-func QueryUserExists(identityContract wasmx.Bech32String, userID string) bool {
+func QueryUserExists(userID string) bool {
+	identityContract := getIdentityContract()
 	query := map[string]interface{}{
 		"query_user_by_id": map[string]string{
 			"user_id": userID,
@@ -159,7 +176,7 @@ func IsCallerAdmin(group *Group, config *GroupConfig) bool {
 	caller := wasmx.GetCaller()
 
 	// Get user_id from caller address
-	userID, err := QueryUserByAddress(config.IdentityContract, string(caller))
+	userID, err := QueryUserByAddress(string(caller))
 	if err != nil || userID == "" {
 		return false
 	}
@@ -170,7 +187,7 @@ func IsCallerAdmin(group *Group, config *GroupConfig) bool {
 // GetCallerUserID gets the user_id for the caller from the identity contract
 func GetCallerUserID(config *GroupConfig) string {
 	caller := wasmx.GetCaller()
-	userID, _ := QueryUserByAddress(config.IdentityContract, string(caller))
+	userID, _ := QueryUserByAddress(string(caller))
 	return userID
 }
 
@@ -195,33 +212,28 @@ func CallInternal(target wasmx.Bech32String, calldata []byte, isQuery bool) (boo
 	return wasmx.CallInternal(target, nil, calldata, big.NewInt(50_000_000), isQuery, MODULE_NAME)
 }
 
-func callBank(calldata string, isQuery bool) (bool, []byte) {
-	return wasmx.CallInternal(wasmx.Bech32String(wasmx.ROLE_BANK), nil, []byte(calldata), big.NewInt(50_000_000), isQuery, MODULE_NAME)
-}
-
-func getTokenAddressByDenom(denom string) (wasmx.Bech32String, bool) {
+func getTokenSymbol(token wasmx.Bech32String) (string, bool) {
 	payload := struct {
-		Req struct {
-			Denom string `json:"denom"`
-		} `json:"GetAddressByDenom"`
+		Q struct{} `json:"symbol"`
 	}{}
-	payload.Req.Denom = denom
 	bz, _ := json.Marshal(&payload)
-	ok, resp := callBank(string(bz), true)
+	ok, resp := wasmx.CallSimple(token, bz, true, MODULE_NAME)
 	if !ok {
 		return "", false
 	}
 	var out struct {
-		Address string `json:"address"`
+		Symbol string `json:"symbol"`
 	}
-	_ = json.Unmarshal(resp, &out)
-	if out.Address == "" {
+	if err := json.Unmarshal(resp, &out); err != nil {
 		return "", false
 	}
-	return wasmx.Bech32String(out.Address), true
+	if out.Symbol == "" {
+		return "", false
+	}
+	return out.Symbol, true
 }
 
-func getTokenBalance(token wasmx.Bech32String, owner string) (string, bool) {
+func getTokenBalance(token wasmx.Bech32String, owner string) (sdkmath.Int, bool) {
 	payload := struct {
 		Q struct {
 			Owner string `json:"owner"`
@@ -231,13 +243,60 @@ func getTokenBalance(token wasmx.Bech32String, owner string) (string, bool) {
 	bz, _ := json.Marshal(&payload)
 	ok, resp := wasmx.CallSimple(token, bz, true, MODULE_NAME)
 	if !ok {
-		return "", false
+		return sdkmath.ZeroInt(), false
 	}
 	var out struct {
 		Balance wasmx.Coin `json:"balance"`
 	}
 	if err := json.Unmarshal(resp, &out); err != nil {
-		return "", false
+		return sdkmath.ZeroInt(), false
 	}
-	return out.Balance.Amount.String(), true
+	return out.Balance.Amount, true
+}
+
+func getTokenBalanceWithAddress(group *Group, owner string, userID string) (wasmx.Bech32String, sdkmath.Int) {
+	token := group.Token
+	if token == "" {
+		return "", sdkmath.ZeroInt()
+	}
+	if balance, ok := getTokenBalance(token, owner); ok && !balance.IsZero() {
+		return token, balance
+	}
+	if userID == "" {
+		if resolved, err := QueryUserByAddress(owner); err == nil {
+			userID = resolved
+		}
+	}
+	if userID != "" {
+		if balance, ok := getTokenBalance(token, userID); ok {
+			return token, balance
+		}
+	}
+	return token, sdkmath.ZeroInt()
+}
+
+func hasMinTokenBalance(group *Group, owner string, userID string) bool {
+	_, balance := getTokenBalanceWithAddress(group, owner, userID)
+	return hasMinTokenBalanceWithValue(group, balance)
+}
+
+func hasMinTokenBalanceWithValue(group *Group, balance sdkmath.Int) bool {
+	minBalance := parseMinBalance(group)
+	bal := new(big.Int)
+	bal.SetString(balance.String(), 10)
+	return bal.Cmp(minBalance) >= 0
+}
+
+func parseMinBalance(group *Group) *big.Int {
+	minBalance := new(big.Int)
+	if group == nil || group.MinBalance == "" {
+		return minBalance.SetInt64(1)
+	}
+	if _, ok := minBalance.SetString(group.MinBalance, 10); !ok {
+		return minBalance.SetInt64(1)
+	}
+	if minBalance.Sign() <= 0 {
+		return minBalance.SetInt64(1)
+	}
+	return minBalance
 }

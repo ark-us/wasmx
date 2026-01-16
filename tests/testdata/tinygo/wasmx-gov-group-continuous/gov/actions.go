@@ -114,11 +114,16 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 	now := wasmx.GetTimestamp().UTC()
 	depositEndTime := now // For continuous voting, proposals can start voting immediately
 
-	if req.GroupContract == "" || req.GroupID == "" {
-		Revert("group contract and group id are required")
+	if req.GroupID == "" {
+		Revert("group id is required")
 	}
 
-	groupPower, ok := getGroupVoterPower(req.GroupContract, req.GroupID, req.Proposer)
+	groupContract := wasmx.GetAddressByRole(wasmx.ROLE_GROUP)
+	if groupContract == "" {
+		Revert("group contract role not set")
+	}
+
+	groupPower, ok := getGroupVoterPower(groupContract, req.GroupID, req.Proposer)
 	if !ok || !groupPower.IsMember || groupPower.Power == "0" {
 		Revert("proposer is not eligible to submit for group")
 	}
@@ -140,7 +145,7 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 	}
 
 	// Transfer deposit from proposer to this module (lock funds)
-	bankSendCoinFromAccountToModule(req.Proposer, wasmx.Bech32String(wasmx.ROLE_GOVERNANCE), req.InitialDeposit)
+	bankSendCoinFromAccountToModule(req.Proposer, wasmx.GetAddress(), req.InitialDeposit)
 
 	var proposalCoin wasmx.Coin
 	arbitrationAmount := sdkmath.ZeroInt()
@@ -201,9 +206,9 @@ func SubmitProposalInternal(req MsgSubmitProposalExtended, localParams Params) [
 			Yi:      0,
 			Changed: false,
 		},
-		Winner: 0,
+		Winner:        0,
 		GroupID:       req.GroupID,
-		GroupContract: req.GroupContract,
+		GroupContract: groupContract,
 		GroupDenom:    groupDenom,
 	}
 
@@ -289,7 +294,7 @@ func AddProposalOption(req MsgAddProposalOption) []byte {
 		{Denom: proposal.Denom, Amount: req.Option.Amount},
 		{Denom: localParams.ArbitrationDenom, Amount: arbAmt},
 	}
-	bankSendCoinFromAccountToModule(req.Option.Proposer, wasmx.Bech32String(wasmx.ROLE_GOVERNANCE), deposit)
+	bankSendCoinFromAccountToModule(req.Option.Proposer, wasmx.GetAddress(), deposit)
 
 	// Recalculate voting status and weights
 	proposalLocalParams := getParams()
@@ -380,7 +385,7 @@ func DoDepositVote(req DepositVote) []byte {
 		{Denom: proposal.Denom, Amount: req.Amount},
 		{Denom: localParams.ArbitrationDenom, Amount: arb},
 	}
-	bankSendCoinFromAccountToModule(req.Voter, wasmx.Bech32String(wasmx.ROLE_GOVERNANCE), deposit)
+	bankSendCoinFromAccountToModule(req.Voter, wasmx.GetAddress(), deposit)
 
 	// Add vote
 	addProposalVote(uint64(req.ProposalID), req)

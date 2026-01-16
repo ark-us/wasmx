@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
@@ -133,11 +134,16 @@ func SubmitProposal(req MsgSubmitProposal) []byte {
 	// Loop through all messages and confirm they are valid and the gov module account
 	// is the only signer
 
-	if req.GroupContract == "" || req.GroupID == "" {
-		Revert("group contract and group id are required")
+	if req.GroupID == "" {
+		Revert("group id is required")
 	}
 
-	groupPower, ok := getGroupVoterPower(req.GroupContract, req.GroupID, req.Proposer)
+	groupContract := wasmx.GetAddressByRole(wasmx.ROLE_GROUP)
+	if groupContract == "" {
+		Revert("group contract role not set")
+	}
+
+	groupPower, ok := getGroupVoterPower(groupContract, req.GroupID, req.Proposer)
 	if !ok || !groupPower.IsMember || groupPower.Power == "0" {
 		Revert("proposer is not eligible to submit for group")
 	}
@@ -183,7 +189,7 @@ func SubmitProposal(req MsgSubmitProposal) []byte {
 		Expedited:        req.Expedited,
 		FailedReason:     "",
 		GroupID:          req.GroupID,
-		GroupContract:    req.GroupContract,
+		GroupContract:    groupContract,
 		GroupDenom:       groupDenom,
 	}
 	// promote to voting if initial deposit >= min deposit
@@ -202,7 +208,7 @@ func SubmitProposal(req MsgSubmitProposal) []byte {
 	}
 
 	// transfer deposit from proposer to this contract/module
-	bankSendCoinFromAccountToModule(req.Proposer, MODULE_NAME, req.InitialDeposit)
+	bankSendCoinFromAccountToModule(req.Proposer, wasmx.GetAddress(), req.InitialDeposit)
 
 	addProposalDeposit(pid, Deposit{ProposalID: utils.StringUint64(pid), Depositor: req.Proposer, Amount: req.InitialDeposit})
 
@@ -341,7 +347,7 @@ func DoDeposit(req MsgDeposit) []byte {
 		}
 	}
 
-	bankSendCoinFromAccountToModule(req.Depositor, MODULE_NAME, req.Amount)
+	bankSendCoinFromAccountToModule(req.Depositor, wasmx.GetAddress(), req.Amount)
 
 	addProposalDeposit(uint64(req.ProposalID), Deposit{ProposalID: utils.StringUint64(req.ProposalID), Depositor: req.Depositor, Amount: req.Amount})
 

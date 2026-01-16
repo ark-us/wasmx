@@ -152,8 +152,7 @@
         "admins": {
           "type": "array",
           "items": {
-            "type": "string",
-            "format": "bech32"
+            "type": "string"
           }
         },
         "base_denom": {
@@ -165,8 +164,7 @@
         "minters": {
           "type": "array",
           "items": {
-            "type": "string",
-            "format": "bech32"
+            "type": "string"
           }
         },
         "name": {
@@ -189,12 +187,10 @@
       "type": "object",
       "properties": {
         "owner": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         },
         "spender": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         }
       },
       "required": [
@@ -219,8 +215,7 @@
       "type": "object",
       "properties": {
         "spender": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         },
         "value": {
           "type": "string",
@@ -237,12 +232,10 @@
       "type": "object",
       "properties": {
         "owner": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         },
         "spender": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         },
         "value": {
           "type": "string",
@@ -282,8 +275,7 @@
       "type": "object",
       "properties": {
         "owner": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         }
       },
       "required": [
@@ -319,8 +311,7 @@
       "type": "object",
       "properties": {
         "from": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         },
         "value": {
           "type": "string",
@@ -351,8 +342,7 @@
       "type": "object",
       "properties": {
         "to": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         },
         "value": {
           "type": "string",
@@ -425,8 +415,7 @@
       "type": "object",
       "properties": {
         "to": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         },
         "value": {
           "type": "string",
@@ -443,12 +432,10 @@
       "type": "object",
       "properties": {
         "from": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         },
         "to": {
-          "type": "string",
-          "format": "bech32"
+          "type": "string"
         },
         "value": {
           "type": "string",
@@ -493,8 +480,7 @@
         "admins": {
           "type": "array",
           "items": {
-            "type": "string",
-            "format": "bech32"
+            "type": "string"
           }
         },
         "base_denom": {
@@ -506,8 +492,7 @@
         "minters": {
           "type": "array",
           "items": {
-            "type": "string",
-            "format": "bech32"
+            "type": "string"
           }
         },
         "name": {

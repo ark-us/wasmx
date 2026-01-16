@@ -15,9 +15,7 @@ func InitGenesis(msg *MsgInitGenesis) []byte {
 	LoggerInfo("InitGenesis called", nil)
 
 	// Save config
-	config := &GroupConfig{
-		IdentityContract: msg.IdentityContract,
-	}
+	config := &GroupConfig{}
 	if err := SaveConfig(config); err != nil {
 		Revert("failed to save config: " + err.Error())
 	}
@@ -34,12 +32,22 @@ func InitGenesis(msg *MsgInitGenesis) []byte {
 				Description: groupGenesis.Description,
 				CreatedAt:   timestamp,
 				UpdatedAt:   timestamp,
-				MemberCount: 0,
 				Admins:      groupGenesis.Admins,
 				Metadata:    groupGenesis.Metadata,
 				Protocol:    groupGenesis.Protocol,
-				TokenDenom:  groupGenesis.TokenDenom,
 				Token:       groupGenesis.Token,
+				MinBalance:  groupGenesis.MinBalance,
+			}
+			if group.Token == "" {
+				Revert("group token required")
+			}
+			if symbol, ok := getTokenSymbol(group.Token); ok {
+				group.TokenDenom = symbol
+			} else {
+				Revert("failed to query token symbol")
+			}
+			if group.MinBalance == "" {
+				group.MinBalance = "1"
 			}
 
 			if err := SaveGroup(group); err != nil {
@@ -47,19 +55,10 @@ func InitGenesis(msg *MsgInitGenesis) []byte {
 				continue
 			}
 
-			// Add initial members
-			for _, memberGenesis := range groupGenesis.Members {
-				addMemberInternal(groupID, memberGenesis.UserID, memberGenesis.Metadata, timestamp)
-			}
-
-			// Update member count
-			group.MemberCount = GetMemberCount(groupID)
-			SaveGroup(group)
-
 			LoggerInfo("Group created in genesis", []string{
 				"group_id", groupID,
 				"name", group.Name,
-				"members", utils.U64toa(group.MemberCount),
+				"token", string(group.Token),
 			})
 		}
 	}
@@ -101,12 +100,22 @@ func CreateGroup(msg *MsgCreateGroup) []byte {
 		Description: msg.Description,
 		CreatedAt:   timestamp,
 		UpdatedAt:   timestamp,
-		MemberCount: 0,
 		Admins:      admins,
 		Metadata:    msg.Metadata,
 		Protocol:    msg.Protocol,
-		TokenDenom:  msg.TokenDenom,
 		Token:       msg.Token,
+		MinBalance:  msg.MinBalance,
+	}
+	if group.Token == "" {
+		Revert("group token required")
+	}
+	if symbol, ok := getTokenSymbol(group.Token); ok {
+		group.TokenDenom = symbol
+	} else {
+		Revert("failed to query token symbol")
+	}
+	if group.MinBalance == "" {
+		group.MinBalance = "1"
 	}
 
 	if err := SaveGroup(group); err != nil {
@@ -127,143 +136,6 @@ func CreateGroup(msg *MsgCreateGroup) []byte {
 	LoggerInfo("Group created", []string{"group_id", groupID, "name", msg.Name})
 
 	return MarshalJSON(MsgCreateGroupResponse{GroupID: groupID})
-}
-
-// =============================================================================
-// MEMBER MANAGEMENT
-// =============================================================================
-
-// AddMember adds a member to a group
-// Must be called by the governance contract OR an admin during bootstrap
-func AddMember(msg *MsgAddMember) []byte {
-	LoggerInfo("AddMember called", []string{"group_id", msg.GroupID, "user_id", msg.UserID})
-
-	config := LoadConfig()
-	if config == nil {
-		Revert("contract not initialized")
-	}
-
-	group, err := LoadGroup(msg.GroupID)
-	if err != nil || group == nil {
-		Revert("group not found: " + msg.GroupID)
-	}
-
-	// Authorization: must be governance contract or admin
-	isGov := IsCallerGovernanceContract(group)
-	isAdmin := IsCallerAdmin(group, config)
-
-	if !isGov && !isAdmin {
-		Revert("unauthorized: must be governance contract or admin")
-	}
-
-	// Verify user exists in identity contract
-	if !QueryUserExists(config.IdentityContract, msg.UserID) {
-		Revert("user does not exist in identity contract: " + msg.UserID)
-	}
-
-	// Check if already a member
-	existingMember, _ := LoadMember(msg.GroupID, msg.UserID)
-	if existingMember != nil {
-		Revert("user is already a member: " + msg.UserID)
-	}
-
-	timestamp := GetBlockTime()
-	addMemberInternal(msg.GroupID, msg.UserID, msg.Metadata, timestamp)
-
-	// Update group member count
-	group.MemberCount = GetMemberCount(msg.GroupID)
-	group.UpdatedAt = timestamp
-	SaveGroup(group)
-
-	// Emit event
-	ev := wasmx.Event{
-		Type: "add_member",
-		Attributes: []wasmx.EventAttribute{
-			{Key: "group_id", Value: msg.GroupID, Index: true},
-			{Key: "user_id", Value: msg.UserID, Index: true},
-		},
-	}
-	wasmx.EmitCosmosEvents([]wasmx.Event{ev})
-
-	LoggerInfo("Member added", []string{"group_id", msg.GroupID, "user_id", msg.UserID})
-
-	return MarshalJSON(MsgAddMemberResponse{Success: true})
-}
-
-// RemoveMember removes a member from a group
-// Must be called by the governance contract OR an admin during bootstrap
-func RemoveMember(msg *MsgRemoveMember) []byte {
-	LoggerInfo("RemoveMember called", []string{"group_id", msg.GroupID, "user_id", msg.UserID})
-
-	config := LoadConfig()
-	if config == nil {
-		Revert("contract not initialized")
-	}
-
-	group, err := LoadGroup(msg.GroupID)
-	if err != nil || group == nil {
-		Revert("group not found: " + msg.GroupID)
-	}
-
-	// Authorization: must be governance contract or admin
-	isGov := IsCallerGovernanceContract(group)
-	isAdmin := IsCallerAdmin(group, config)
-
-	if !isGov && !isAdmin {
-		Revert("unauthorized: must be governance contract or admin")
-	}
-
-	// Check if member exists
-	existingMember, _ := LoadMember(msg.GroupID, msg.UserID)
-	if existingMember == nil {
-		Revert("user is not a member: " + msg.UserID)
-	}
-
-	timestamp := GetBlockTime()
-	removeMemberInternal(msg.GroupID, msg.UserID)
-
-	// Update group member count
-	group.MemberCount = GetMemberCount(msg.GroupID)
-	group.UpdatedAt = timestamp
-	SaveGroup(group)
-
-	// Emit event
-	ev := wasmx.Event{
-		Type: "remove_member",
-		Attributes: []wasmx.EventAttribute{
-			{Key: "group_id", Value: msg.GroupID, Index: true},
-			{Key: "user_id", Value: msg.UserID, Index: true},
-		},
-	}
-	wasmx.EmitCosmosEvents([]wasmx.Event{ev})
-
-	LoggerInfo("Member removed", []string{"group_id", msg.GroupID, "user_id", msg.UserID})
-
-	return MarshalJSON(MsgRemoveMemberResponse{Success: true})
-}
-
-// addMemberInternal is the internal implementation for adding a member
-func addMemberInternal(groupID, userID, metadata string, timestamp int64) {
-	member := &GroupMember{
-		UserID:   userID,
-		JoinedAt: timestamp,
-		Metadata: metadata,
-	}
-
-	if err := SaveMember(groupID, member); err != nil {
-		Revert("failed to save member: " + err.Error())
-	}
-
-	// Add to index and user groups
-	AddMemberToIndex(groupID, userID)
-	AddUserGroup(userID, groupID)
-}
-
-// removeMemberInternal is the internal implementation for removing a member
-func removeMemberInternal(groupID, userID string) {
-	DeleteMember(groupID, userID)
-	RemoveMemberFromIndex(groupID, userID)
-	RemoveUserGroup(userID, groupID)
 }
 
 // =============================================================================
@@ -554,74 +426,17 @@ func QueryIsMember(msg *MsgQueryIsMember) []byte {
 		return MarshalJSON(QueryIsMemberResponse{IsMember: false})
 	}
 
-	if group.Token != "" || group.TokenDenom != "" {
-		config := LoadConfig()
-		if config == nil {
-			return MarshalJSON(QueryIsMemberResponse{IsMember: false})
-		}
-
-		addr, _ := QueryAddressByUserID(config.IdentityContract, msg.UserID)
-		if addr == "" {
-			return MarshalJSON(QueryIsMemberResponse{IsMember: false})
-		}
-
-		token := group.Token
-		if token == "" && group.TokenDenom != "" {
-			if tokenAddr, ok := getTokenAddressByDenom(group.TokenDenom); ok {
-				token = tokenAddr
-			}
-		}
-
-		if token != "" {
-			if balance, ok := getTokenBalance(token, addr); ok {
-				if balance != "0" {
-					return MarshalJSON(QueryIsMemberResponse{IsMember: true})
-				}
-			}
-		}
+	if group.Token == "" {
 		return MarshalJSON(QueryIsMemberResponse{IsMember: false})
 	}
 
-	member, _ := LoadMember(msg.GroupID, msg.UserID)
-
-	response := QueryIsMemberResponse{
-		IsMember: member != nil,
-	}
-	if member != nil {
-		response.Member = member
+	addr, _ := QueryAddressByUserID(msg.UserID)
+	if addr == "" {
+		return MarshalJSON(QueryIsMemberResponse{IsMember: false})
 	}
 
-	return MarshalJSON(response)
-}
-
-// QueryGetAllMembers returns all members of a group
-func QueryGetAllMembers(msg *MsgQueryGetAllMembers) []byte {
-	totalCount := GetMemberCount(msg.GroupID)
-
-	offset := uint64(0)
-	limit := uint64(100) // default limit
-	if msg.Pagination.Offset > 0 {
-		offset = uint64(msg.Pagination.Offset)
-	}
-	if msg.Pagination.Limit > 0 {
-		limit = uint64(msg.Pagination.Limit)
-	}
-
-	userIDs := GetAllMemberIDs(msg.GroupID, offset, limit)
-
-	members := make([]GroupMember, 0, len(userIDs))
-	for _, userID := range userIDs {
-		member, _ := LoadMember(msg.GroupID, userID)
-		if member != nil {
-			members = append(members, *member)
-		}
-	}
-
-	return MarshalJSON(QueryGetAllMembersResponse{
-		Members: members,
-		Pagination: PageResponse{
-			Total: utils.StringUint64(totalCount),
-		},
+	return MarshalJSON(QueryIsMemberResponse{
+		IsMember: hasMinTokenBalance(group, addr, msg.UserID),
 	})
 }
 
@@ -676,14 +491,26 @@ func QueryGetVotingProtocol(msg *MsgQueryGetVotingProtocol) []byte {
 
 // QueryGetUserGroups returns all groups a user belongs to
 func QueryGetUserGroups(msg *MsgQueryGetUserGroups) []byte {
-	// This is a simplified implementation - in production you might want
-	// to maintain a reverse index for efficiency
 	count := GetGroupCount()
 	groupIDs := make([]string, 0)
+	config := LoadConfig()
+	if config == nil {
+		return MarshalJSON(QueryGetUserGroupsResponse{
+			GroupIDs: []string{},
+			Pagination: PageResponse{
+				Total: utils.StringUint64(0),
+			},
+		})
+	}
+	addr, _ := QueryAddressByUserID(msg.UserID)
 
 	for i := uint64(1); i <= count; i++ {
 		groupID := "group_" + utils.U64toa(i)
-		if IsUserInGroup(msg.UserID, groupID) {
+		group, _ := LoadGroup(groupID)
+		if group == nil {
+			continue
+		}
+		if addr != "" && hasMinTokenBalance(group, addr, msg.UserID) {
 			groupIDs = append(groupIDs, groupID)
 		}
 	}
@@ -720,43 +547,20 @@ func QueryGetVoterPower(msg *MsgQueryGetVoterPower) []byte {
 		return MarshalJSON(QueryGetVoterPowerResponse{IsMember: false, Power: "0"})
 	}
 
-	userID, _ := QueryUserByAddress(config.IdentityContract, msg.Voter)
+	userID, _ := QueryUserByAddress(msg.Voter)
 
-	if group.Token != "" || group.TokenDenom != "" {
-		token := group.Token
-		if token == "" && group.TokenDenom != "" {
-			if tokenAddr, ok := getTokenAddressByDenom(group.TokenDenom); ok {
-				token = tokenAddr
-			}
-		}
-
-		if token != "" {
-			if balance, ok := getTokenBalance(token, msg.Voter); ok {
-				isMember := balance != "0"
-				return MarshalJSON(QueryGetVoterPowerResponse{
-					IsMember: isMember,
-					UserID:   userID,
-					Power:    balance,
-					Denom:    group.TokenDenom,
-					Token:    string(token),
-				})
-			}
-		}
-	}
-
-	if userID == "" {
-		return MarshalJSON(QueryGetVoterPowerResponse{IsMember: false, Power: "0"})
-	}
-
-	member, _ := LoadMember(msg.GroupID, userID)
-	if member == nil {
+	if group.Token == "" {
 		return MarshalJSON(QueryGetVoterPowerResponse{IsMember: false, UserID: userID, Power: "0"})
 	}
 
+	token, balance := getTokenBalanceWithAddress(group, msg.Voter, userID)
+	isMember := hasMinTokenBalanceWithValue(group, balance)
 	return MarshalJSON(QueryGetVoterPowerResponse{
-		IsMember: true,
+		IsMember: isMember,
 		UserID:   userID,
-		Power:    "1",
+		Power:    balance.String(),
+		Denom:    group.TokenDenom,
+		Token:    string(token),
 	})
 }
 

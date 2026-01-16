@@ -5,13 +5,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
+	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
 )
@@ -28,6 +33,9 @@ type GroupsTestSetup struct {
 	GroupsContract mcodec.AccAddressPrefixed
 	IdentityAddr   mcodec.AccAddressPrefixed
 	GovContract    mcodec.AccAddressPrefixed
+	TokenContract  mcodec.AccAddressPrefixed
+	TokenDenom     string
+	MinBalance     string
 	UserID         string
 }
 
@@ -57,6 +65,18 @@ func (suite *KeeperTestSuite) SetupGroupsTest() *GroupsTestSetup {
 	// Use continuous governance contract address
 	govAddr := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_GOV_CONT))
 
+	// Store and instantiate ERC20 token contract for group membership
+	tokenWasm := precompiles.GetPrecompileByLabel(appA.AddressCodec(), types.ERC20_v001)
+	s.Require().NotNil(tokenWasm, "erc20 contract binary not found")
+	tokenCodeId := appA.StoreCode(sender, tokenWasm, nil)
+	tokenDenom := "ugrp"
+	tokenSymbol := "GRP"
+	tokenInitMsg := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"admins":["%s"],"minters":["%s"],"name":"Group Token","symbol":"%s","decimals":6,"base_denom":"%s","negative_balance_threshold":"0"}`,
+			senderPrefixed.String(), senderPrefixed.String(), tokenSymbol, tokenDenom)),
+	}
+	tokenContract := appA.InstantiateCode(sender, tokenCodeId, tokenInitMsg, "group_token", nil)
+
 	// Register sender with identity contract
 	senderAddr := senderPrefixed.String()
 	senderPubKeyBase64 := base64.StdEncoding.EncodeToString(sender.PubKey.Bytes())
@@ -73,17 +93,8 @@ func (suite *KeeperTestSuite) SetupGroupsTest() *GroupsTestSetup {
 	s.Require().NoError(err)
 	s.Require().NotEmpty(registerResp.UserID, "user_id should not be empty")
 
-	// Store and instantiate wasmx-groups contract
-	groupsWasm := precompiles.GetPrecompileByLabel(appA.AddressCodec(), "groups_0.0.1")
-	s.Require().NotNil(groupsWasm, "groups contract binary not found")
-
-	codeId := appA.StoreCode(sender, groupsWasm, nil)
-
-	// Initialize groups contract with identity contract reference
-	initMsg := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"identity_contract":"%s","groups":[]}`, identityAddr.String())),
-	}
-	groupsContract := appA.InstantiateCode(sender, codeId, initMsg, "wasmx_groups", nil)
+	groupsContract, found := suite.App().WasmxKeeper.GetContractAddressByRoleInitial(appA.Context(), types.ROLE_GROUP)
+	s.Require().True(found, "groups contract not found in system contracts")
 
 	return &GroupsTestSetup{
 		AppA:           appA,
@@ -92,8 +103,19 @@ func (suite *KeeperTestSuite) SetupGroupsTest() *GroupsTestSetup {
 		GroupsContract: groupsContract,
 		IdentityAddr:   identityAddr,
 		GovContract:    govAddr,
+		TokenContract:  tokenContract,
+		TokenDenom:     tokenSymbol,
+		MinBalance:     "100",
 		UserID:         registerResp.UserID,
 	}
+}
+
+func (suite *KeeperTestSuite) MintGroupToken(setup *GroupsTestSetup, toAddr string, amount string) {
+	mintMsg := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"mint":{"to":"%s","value":"%s"}}`, toAddr, amount)),
+	}
+	res := setup.AppA.ExecuteContract(setup.Sender, setup.TokenContract, mintMsg, nil, nil)
+	suite.Require().True(res.IsOK(), "mint failed: %s", res.Log)
 }
 
 // RegisterUser registers a new user with the identity contract and returns the user_id
@@ -113,6 +135,18 @@ func (suite *KeeperTestSuite) RegisterUser(setup *GroupsTestSetup, account simul
 	return resp.UserID
 }
 
+func encodeMsgsAsAnyBase64(appA *ut.AppContext, msgs []sdk.Msg) []string {
+	encoded := make([]string, 0, len(msgs))
+	anys, err := txtypes.SetMsgs(msgs)
+	appA.S.Require().NoError(err)
+	for _, anymsg := range anys {
+		msgBz, err := appA.App.JSONCodec().MarshalJSON(anymsg)
+		appA.S.Require().NoError(err)
+		encoded = append(encoded, base64.StdEncoding.EncodeToString(msgBz))
+	}
+	return encoded
+}
+
 // =============================================================================
 // WASMX-GROUPS TESTS
 // =============================================================================
@@ -126,13 +160,10 @@ func (suite *KeeperTestSuite) TestGroupsContractInit() {
 	configBz := appA.WasmxQueryRaw(setup.Sender, setup.GroupsContract, configQuery, nil, nil)
 
 	var configResp struct {
-		Config struct {
-			IdentityContract string `json:"identity_contract"`
-		} `json:"config"`
+		Config struct{} `json:"config"`
 	}
 	err := json.Unmarshal(configBz, &configResp)
 	s.Require().NoError(err)
-	s.Require().Equal(setup.IdentityAddr.String(), configResp.Config.IdentityContract)
 }
 
 func (suite *KeeperTestSuite) TestGroupsCreateGroup() {
@@ -141,8 +172,8 @@ func (suite *KeeperTestSuite) TestGroupsCreateGroup() {
 
 	// Create a group
 	createGroupMsg := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Test Group","description":"A test group","admins":["%s"],"protocol":{"governance_contract":"%s"}}}`,
-			setup.UserID, setup.GovContract.String())),
+		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Test Group","description":"A test group","admins":["%s"],"protocol":{"governance_contract":"%s"},"token":"%s","min_balance":"%s"}}`,
+			setup.UserID, setup.GovContract.String(), setup.TokenContract.String(), setup.MinBalance)),
 	}
 
 	res := appA.ExecuteContract(setup.Sender, setup.GroupsContract, createGroupMsg, nil, nil)
@@ -166,6 +197,9 @@ func (suite *KeeperTestSuite) TestGroupsCreateGroup() {
 			Name        string `json:"name"`
 			Description string `json:"description"`
 			MemberCount uint64 `json:"member_count"`
+			Token       string `json:"token"`
+			TokenDenom  string `json:"token_denom"`
+			MinBalance  string `json:"min_balance"`
 		} `json:"group"`
 	}
 	err = json.Unmarshal(groupBz, &groupResp)
@@ -173,6 +207,9 @@ func (suite *KeeperTestSuite) TestGroupsCreateGroup() {
 	s.Require().Equal("Test Group", groupResp.Group.Name)
 	s.Require().Equal("A test group", groupResp.Group.Description)
 	s.Require().Equal(uint64(0), groupResp.Group.MemberCount)
+	s.Require().Equal(setup.TokenContract.String(), groupResp.Group.Token)
+	s.Require().Equal(setup.TokenDenom, groupResp.Group.TokenDenom)
+	s.Require().Equal(setup.MinBalance, groupResp.Group.MinBalance)
 }
 
 func (suite *KeeperTestSuite) TestGroupsAddMemberByAdmin() {
@@ -184,11 +221,12 @@ func (suite *KeeperTestSuite) TestGroupsAddMemberByAdmin() {
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(newUser.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	newUserID := suite.RegisterUser(setup, newUser)
+	newUserAddr := appA.BytesToAccAddressPrefixed(newUser.Address).String()
 
 	// Create a group with sender as admin
 	createGroupMsg := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Admin Test Group","description":"Testing admin add member","admins":["%s"],"protocol":{"governance_contract":"%s"}}}`,
-			setup.UserID, setup.GovContract.String())),
+		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Admin Test Group","description":"Testing admin add member","admins":["%s"],"protocol":{"governance_contract":"%s"},"token":"%s","min_balance":"%s"}}`,
+			setup.UserID, setup.GovContract.String(), setup.TokenContract.String(), setup.MinBalance)),
 	}
 
 	res := appA.ExecuteContract(setup.Sender, setup.GroupsContract, createGroupMsg, nil, nil)
@@ -200,13 +238,15 @@ func (suite *KeeperTestSuite) TestGroupsAddMemberByAdmin() {
 	err := appA.DecodeExecuteResponse(res, &createResp)
 	s.Require().NoError(err)
 
-	// Add member by admin
+	// Add member should fail for token-based groups
 	addMemberMsg := types.WasmxExecutionMessage{
 		Data: []byte(fmt.Sprintf(`{"add_member":{"group_id":"%s","user_id":"%s"}}`, createResp.GroupID, newUserID)),
 	}
-
 	res = appA.ExecuteContract(setup.Sender, setup.GroupsContract, addMemberMsg, nil, nil)
-	s.Require().True(res.IsOK(), "add_member failed: %s", res.Log)
+	s.Require().False(res.IsOK(), "add_member should fail for token-based groups")
+
+	// Mint token to meet min_balance
+	suite.MintGroupToken(setup, newUserAddr, "1000")
 
 	// Verify member was added
 	isMemberQuery := types.WasmxExecutionMessage{
@@ -231,11 +271,12 @@ func (suite *KeeperTestSuite) TestGroupsRemoveMember() {
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(newUser.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	newUserID := suite.RegisterUser(setup, newUser)
+	newUserAddr := appA.BytesToAccAddressPrefixed(newUser.Address).String()
 
 	// Create a group
 	createGroupMsg := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Remove Test Group","description":"Testing remove member","admins":["%s"],"protocol":{"governance_contract":"%s"}}}`,
-			setup.UserID, setup.GovContract.String())),
+		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Remove Test Group","description":"Testing remove member","admins":["%s"],"protocol":{"governance_contract":"%s"},"token":"%s","min_balance":"%s"}}`,
+			setup.UserID, setup.GovContract.String(), setup.TokenContract.String(), setup.MinBalance)),
 	}
 
 	res := appA.ExecuteContract(setup.Sender, setup.GroupsContract, createGroupMsg, nil, nil)
@@ -246,19 +287,15 @@ func (suite *KeeperTestSuite) TestGroupsRemoveMember() {
 	}
 	_ = appA.DecodeExecuteResponse(res, &createResp)
 
-	// Add member
-	addMemberMsg := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"add_member":{"group_id":"%s","user_id":"%s"}}`, createResp.GroupID, newUserID)),
-	}
-	res = appA.ExecuteContract(setup.Sender, setup.GroupsContract, addMemberMsg, nil, nil)
-	s.Require().True(res.IsOK())
+	// Mint token to meet min_balance
+	suite.MintGroupToken(setup, newUserAddr, "1000")
 
 	// Remove member
 	removeMemberMsg := types.WasmxExecutionMessage{
 		Data: []byte(fmt.Sprintf(`{"remove_member":{"group_id":"%s","user_id":"%s"}}`, createResp.GroupID, newUserID)),
 	}
 	res = appA.ExecuteContract(setup.Sender, setup.GroupsContract, removeMemberMsg, nil, nil)
-	s.Require().True(res.IsOK(), "remove_member failed: %s", res.Log)
+	s.Require().False(res.IsOK(), "remove_member should fail for token-based groups")
 
 	// Verify member was removed
 	isMemberQuery := types.WasmxExecutionMessage{
@@ -270,7 +307,7 @@ func (suite *KeeperTestSuite) TestGroupsRemoveMember() {
 		IsMember bool `json:"is_member"`
 	}
 	_ = json.Unmarshal(memberBz, &isMemberResp)
-	s.Require().False(isMemberResp.IsMember)
+	s.Require().True(isMemberResp.IsMember)
 }
 
 func (suite *KeeperTestSuite) TestGroupsQueryAllMembers() {
@@ -279,8 +316,8 @@ func (suite *KeeperTestSuite) TestGroupsQueryAllMembers() {
 
 	// Create a group
 	createGroupMsg := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Members Query Group","description":"Testing query all members","admins":["%s"],"protocol":{"governance_contract":"%s"}}}`,
-			setup.UserID, setup.GovContract.String())),
+		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Members Query Group","description":"Testing query all members","admins":["%s"],"protocol":{"governance_contract":"%s"},"token":"%s","min_balance":"%s"}}`,
+			setup.UserID, setup.GovContract.String(), setup.TokenContract.String(), setup.MinBalance)),
 	}
 
 	res := appA.ExecuteContract(setup.Sender, setup.GroupsContract, createGroupMsg, nil, nil)
@@ -291,18 +328,14 @@ func (suite *KeeperTestSuite) TestGroupsQueryAllMembers() {
 	}
 	_ = appA.DecodeExecuteResponse(res, &createResp)
 
-	// Add multiple members
+	// Mint tokens for multiple users (membership is token-based)
 	for i := 0; i < 3; i++ {
 		newUser := suite.GetRandomAccount()
 		initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 		appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(newUser.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
-		userID := suite.RegisterUser(setup, newUser)
-
-		addMemberMsg := types.WasmxExecutionMessage{
-			Data: []byte(fmt.Sprintf(`{"add_member":{"group_id":"%s","user_id":"%s"}}`, createResp.GroupID, userID)),
-		}
-		res = appA.ExecuteContract(setup.Sender, setup.GroupsContract, addMemberMsg, nil, nil)
-		s.Require().True(res.IsOK())
+		_ = suite.RegisterUser(setup, newUser)
+		userAddr := appA.BytesToAccAddressPrefixed(newUser.Address).String()
+		suite.MintGroupToken(setup, userAddr, "1000")
 	}
 
 	// Query all members
@@ -321,7 +354,7 @@ func (suite *KeeperTestSuite) TestGroupsQueryAllMembers() {
 	}
 	err := json.Unmarshal(membersBz, &membersResp)
 	s.Require().NoError(err)
-	s.Require().Equal(3, len(membersResp.Members))
+	s.Require().Equal(0, len(membersResp.Members))
 }
 
 func (suite *KeeperTestSuite) TestGroupsQueryVotingProtocol() {
@@ -330,8 +363,8 @@ func (suite *KeeperTestSuite) TestGroupsQueryVotingProtocol() {
 
 	// Create a group with specific protocol
 	createGroupMsg := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Protocol Query Group","description":"Testing voting protocol query","admins":["%s"],"protocol":{"governance_contract":"%s","protocol_id":"custom_protocol"}}}`,
-			setup.UserID, setup.GovContract.String())),
+		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Protocol Query Group","description":"Testing voting protocol query","admins":["%s"],"protocol":{"governance_contract":"%s","protocol_id":"custom_protocol"},"token":"%s","min_balance":"%s"}}`,
+			setup.UserID, setup.GovContract.String(), setup.TokenContract.String(), setup.MinBalance)),
 	}
 
 	res := appA.ExecuteContract(setup.Sender, setup.GroupsContract, createGroupMsg, nil, nil)
@@ -366,8 +399,8 @@ func (suite *KeeperTestSuite) TestGroupsQueryIsAdmin() {
 
 	// Create a group with sender as admin
 	createGroupMsg := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Admin Query Group","description":"Testing is_admin query","admins":["%s"],"protocol":{"governance_contract":"%s"}}}`,
-			setup.UserID, setup.GovContract.String())),
+		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Admin Query Group","description":"Testing is_admin query","admins":["%s"],"protocol":{"governance_contract":"%s"},"token":"%s","min_balance":"%s"}}`,
+			setup.UserID, setup.GovContract.String(), setup.TokenContract.String(), setup.MinBalance)),
 	}
 
 	res := appA.ExecuteContract(setup.Sender, setup.GroupsContract, createGroupMsg, nil, nil)
@@ -411,11 +444,12 @@ func (suite *KeeperTestSuite) TestGroupsAddMemberByGovernance() {
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE).MulRaw(5000)
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(newUser.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	newUserID := suite.RegisterUser(setup, newUser)
+	newUserAddr := appA.BytesToAccAddressPrefixed(newUser.Address).String()
 
 	// Create a group with NO admins (governance-only control)
 	createGroupMsg := types.WasmxExecutionMessage{
-		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Gov Controlled Group","description":"Testing governance-controlled membership","admins":[],"protocol":{"governance_contract":"%s"}}}`,
-			setup.GovContract.String())),
+		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Gov Controlled Group","description":"Testing governance-controlled membership","admins":[],"protocol":{"governance_contract":"%s"},"token":"%s","min_balance":"%s"}}`,
+			setup.GovContract.String(), setup.TokenContract.String(), setup.MinBalance)),
 	}
 
 	res := appA.ExecuteContract(setup.Sender, setup.GroupsContract, createGroupMsg, nil, nil)
@@ -449,7 +483,7 @@ func (suite *KeeperTestSuite) TestGroupsAddMemberByGovernance() {
 		false, // not expedited
 	)
 
-	// Verify member was added
+	// Verify member was not added by governance
 	isMemberQuery := types.WasmxExecutionMessage{
 		Data: []byte(fmt.Sprintf(`{"query_is_member":{"group_id":"%s","user_id":"%s"}}`, createResp.GroupID, newUserID)),
 	}
@@ -460,7 +494,13 @@ func (suite *KeeperTestSuite) TestGroupsAddMemberByGovernance() {
 	}
 	err = json.Unmarshal(memberBz, &isMemberResp)
 	s.Require().NoError(err)
-	s.Require().True(isMemberResp.IsMember, "member should have been added via governance")
+	s.Require().False(isMemberResp.IsMember, "member should not be added via governance for token-based groups")
+
+	suite.MintGroupToken(setup, newUserAddr, "1000")
+	memberBz = appA.WasmxQueryRaw(setup.Sender, setup.GroupsContract, isMemberQuery, nil, nil)
+	err = json.Unmarshal(memberBz, &isMemberResp)
+	s.Require().NoError(err)
+	s.Require().True(isMemberResp.IsMember, "member should be added via token balance")
 }
 
 func (suite *KeeperTestSuite) TestGroupsGetUserGroups() {
@@ -472,13 +512,13 @@ func (suite *KeeperTestSuite) TestGroupsGetUserGroups() {
 	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
 	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(newUser.Address), sdk.NewCoin(appA.Chain.Config.BaseDenom, initBalance))
 	newUserID := suite.RegisterUser(setup, newUser)
+	newUserAddr := appA.BytesToAccAddressPrefixed(newUser.Address).String()
 
-	// Create multiple groups and add user to them
-	groupIDs := []string{}
+	// Create multiple groups for the user
 	for i := 0; i < 3; i++ {
 		createGroupMsg := types.WasmxExecutionMessage{
-			Data: []byte(fmt.Sprintf(`{"create_group":{"name":"User Group %d","description":"Test group %d","admins":["%s"],"protocol":{"governance_contract":"%s"}}}`,
-				i, i, setup.UserID, setup.GovContract.String())),
+			Data: []byte(fmt.Sprintf(`{"create_group":{"name":"User Group %d","description":"Test group %d","admins":["%s"],"protocol":{"governance_contract":"%s"},"token":"%s","min_balance":"%s"}}`,
+				i, i, setup.UserID, setup.GovContract.String(), setup.TokenContract.String(), setup.MinBalance)),
 		}
 
 		res := appA.ExecuteContract(setup.Sender, setup.GroupsContract, createGroupMsg, nil, nil)
@@ -488,15 +528,8 @@ func (suite *KeeperTestSuite) TestGroupsGetUserGroups() {
 			GroupID string `json:"group_id"`
 		}
 		_ = appA.DecodeExecuteResponse(res, &createResp)
-		groupIDs = append(groupIDs, createResp.GroupID)
-
-		// Add user to group
-		addMemberMsg := types.WasmxExecutionMessage{
-			Data: []byte(fmt.Sprintf(`{"add_member":{"group_id":"%s","user_id":"%s"}}`, createResp.GroupID, newUserID)),
-		}
-		res = appA.ExecuteContract(setup.Sender, setup.GroupsContract, addMemberMsg, nil, nil)
-		s.Require().True(res.IsOK())
 	}
+	suite.MintGroupToken(setup, newUserAddr, "1000")
 
 	// Query user groups
 	userGroupsQuery := types.WasmxExecutionMessage{
@@ -510,4 +543,248 @@ func (suite *KeeperTestSuite) TestGroupsGetUserGroups() {
 	err := json.Unmarshal(userGroupsBz, &userGroupsResp)
 	s.Require().NoError(err)
 	s.Require().Equal(3, len(userGroupsResp.GroupIDs))
+}
+
+func (suite *KeeperTestSuite) TestGovGroupWithERC20Gov() {
+	setup := suite.SetupGroupsTest()
+	appA := setup.AppA
+	baseDenom := appA.Chain.Config.BaseDenom
+	senderAddr := appA.BytesToAccAddressPrefixed(setup.Sender.Address).String()
+
+	receiver := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(receiver.Address), sdk.NewCoin(baseDenom, initBalance))
+	receiverUserID := suite.RegisterUser(setup, receiver)
+	receiverAddr := appA.BytesToAccAddressPrefixed(receiver.Address).String()
+
+	// Use pre-instantiated gov-group contract
+	govGroupContract := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_GOV_GROUP))
+	suite.InitGovGroupGenesis(appA, govGroupContract, baseDenom)
+
+	// Instantiate erc20gov (ERC20 type contracts need instantiation)
+	erc20govWasm := precompiles.GetPrecompileByLabel(appA.AddressCodec(), "erc20gov_0.0.1")
+	s.Require().NotNil(erc20govWasm, "erc20gov contract binary not found")
+	erc20govCodeId := appA.StoreCode(setup.Sender, erc20govWasm, nil)
+	erc20govDenom := "GOV1"
+	erc20govInit := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"governance_address":"%s","admins":["%s"],"name":"Gov Token1","symbol":"%s","decimals":6,"initial_balances":[{"user_id":"%s","amount":"1000000000"}]}`,
+			govGroupContract.String(), setup.UserID, erc20govDenom, setup.UserID)),
+	}
+	erc20govContract := appA.InstantiateCode(setup.Sender, erc20govCodeId, erc20govInit, "erc20gov_group", nil)
+	suite.RegisterErc20GovDenomRole(setup, erc20govContract, erc20govDenom)
+
+	createGroupMsg := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Gov Group","description":"Governed by gov-group","admins":[],"protocol":{"governance_contract":"%s"},"token":"%s","min_balance":"1"}}`,
+			govGroupContract.String(), erc20govContract.String())),
+	}
+	res := appA.ExecuteContract(setup.Sender, setup.GroupsContract, createGroupMsg, nil, nil)
+	s.Require().True(res.IsOK(), "create_group failed: %s", res.Log)
+	var createResp struct {
+		GroupID string `json:"group_id"`
+	}
+	err := appA.DecodeExecuteResponse(res, &createResp)
+	s.Require().NoError(err)
+	s.Require().NotEmpty(createResp.GroupID)
+
+	isMemberQuery := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"query_is_member":{"group_id":"%s","user_id":"%s"}}`, createResp.GroupID, setup.UserID)),
+	}
+	memberBz := appA.WasmxQueryRaw(setup.Sender, setup.GroupsContract, isMemberQuery, nil, nil)
+	var isMemberResp struct {
+		IsMember bool `json:"is_member"`
+	}
+	err = json.Unmarshal(memberBz, &isMemberResp)
+	s.Require().NoError(err)
+	s.Require().True(isMemberResp.IsMember)
+
+	transferMsg := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"transfer":{"from":"%s","to":"%s","value":"10"}}`, setup.UserID, receiverUserID)),
+	}
+	transferMsgBz, err := json.Marshal(transferMsg)
+	s.Require().NoError(err)
+
+	execMsg := &types.MsgExecuteContract{
+		Sender:   govGroupContract.String(),
+		Contract: erc20govContract.String(),
+		Msg:      transferMsgBz,
+	}
+	encodedMsgs := encodeMsgsAsAnyBase64(appA, []sdk.Msg{execMsg})
+
+	submitPayload := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"SubmitProposal":{"messages":["%s"],"initial_deposit":[{"denom":"%s","amount":"10000001"}],"proposer":"%s","metadata":"","title":"Transfer via gov-group","summary":"erc20gov transfer","expedited":false,"group_id":"%s"}}`,
+			encodedMsgs[0], erc20govDenom, senderAddr, createResp.GroupID)),
+	}
+	submitRes := appA.ExecuteContract(setup.Sender, govGroupContract, submitPayload, nil, nil)
+	s.Require().True(submitRes.IsOK(), "submit proposal failed: %s", submitRes.Log)
+
+	var submitResp struct {
+		ProposalID string `json:"proposal_id"`
+	}
+	err = appA.DecodeExecuteResponse(submitRes, &submitResp)
+	s.Require().NoError(err)
+	proposalId, err := strconv.ParseInt(submitResp.ProposalID, 10, 64)
+	s.Require().NoError(err)
+	s.Require().NotZero(proposalId)
+
+	nonMemberVotePayload := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"Vote":{"proposal_id":%d,"voter":"%s","option":"VOTE_OPTION_YES","metadata":"vote"}}`, proposalId, receiverAddr)),
+	}
+	nonMemberVoteRes, err := appA.ExecuteContractNoCheck(setup.Sender, govGroupContract, nonMemberVotePayload, nil, nil, 1000000000, nil)
+	s.Require().NoError(err)
+	s.Require().False(nonMemberVoteRes.IsOK(), "voting should fail, oter should be not eligible for group")
+	s.Require().Contains(nonMemberVoteRes.GetLog(), "failed to execute message", nonMemberVoteRes.GetEvents())
+
+	votePayload := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"Vote":{"proposal_id":%d,"voter":"%s","option":"VOTE_OPTION_YES","metadata":"vote"}}`, proposalId, senderAddr)),
+	}
+	voteRes := appA.ExecuteContract(setup.Sender, govGroupContract, votePayload, nil, nil)
+	s.Require().True(voteRes.IsOK(), "vote failed: %s", voteRes.Log)
+
+	appA.WaitForVotingPeriodEnd()
+
+	balanceQuery := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, receiverUserID)),
+	}
+	balanceBz := appA.WasmxQueryRaw(setup.Sender, erc20govContract, balanceQuery, nil, nil)
+	var balanceResp struct {
+		Balance struct {
+			Amount string `json:"amount"`
+		} `json:"balance"`
+	}
+	err = json.Unmarshal(balanceBz, &balanceResp)
+	s.Require().NoError(err)
+	s.Require().Equal("10", balanceResp.Balance.Amount)
+}
+
+func (suite *KeeperTestSuite) TestGovGroupContinuousWithERC20Gov() {
+	setup := suite.SetupGroupsTest()
+	appA := setup.AppA
+	baseDenom := appA.Chain.Config.BaseDenom
+	senderAddr := appA.BytesToAccAddressPrefixed(setup.Sender.Address).String()
+
+	receiver := suite.GetRandomAccount()
+	initBalance := sdkmath.NewInt(ut.DEFAULT_BALANCE)
+	appA.Faucet.Fund(appA.Context(), appA.BytesToAccAddressPrefixed(receiver.Address), sdk.NewCoin(baseDenom, initBalance))
+	receiverUserID := suite.RegisterUser(setup, receiver)
+
+	// Use pre-instantiated gov-group-cont contract
+	govGroupContContract := appA.BytesToAccAddressPrefixed(types.AccAddressFromHex(types.ADDR_GOV_GROUP_CONT))
+
+	// Instantiate erc20gov (ERC20 type contracts need instantiation)
+	erc20govWasm := precompiles.GetPrecompileByLabel(appA.AddressCodec(), "erc20gov_0.0.1")
+	s.Require().NotNil(erc20govWasm, "erc20gov contract binary not found")
+	erc20govCodeId := appA.StoreCode(setup.Sender, erc20govWasm, nil)
+	erc20denom := "GOV2"
+	erc20govInit := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"governance_address":"%s","admins":["%s"],"name":"Gov Token2","symbol":"%s","decimals":6,"initial_balances":[{"user_id":"%s","amount":"1000"}]}`,
+			govGroupContContract.String(), setup.UserID, erc20denom, setup.UserID)),
+	}
+	erc20govContract := appA.InstantiateCode(setup.Sender, erc20govCodeId, erc20govInit, "erc20gov_group_cont", nil)
+	suite.RegisterErc20GovDenomRole(setup, erc20govContract, erc20denom)
+
+	createGroupMsg := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"create_group":{"name":"Gov Group Continuous","description":"Governed by gov-group-continuous","admins":[],"protocol":{"governance_contract":"%s"},"token":"%s","min_balance":"1"}}`,
+			govGroupContContract.String(), erc20govContract.String())),
+	}
+	res := appA.ExecuteContract(setup.Sender, setup.GroupsContract, createGroupMsg, nil, nil)
+	s.Require().True(res.IsOK(), "create_group failed: %s", res.Log)
+	var createResp struct {
+		GroupID string `json:"group_id"`
+	}
+	err := appA.DecodeExecuteResponse(res, &createResp)
+	s.Require().NoError(err)
+	s.Require().NotEmpty(createResp.GroupID)
+
+	transferMsg := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"transfer":{"from":"%s","to":"%s","value":"10"}}`, setup.UserID, receiverUserID)),
+	}
+	transferMsgBz, err2 := json.Marshal(transferMsg)
+	s.Require().NoError(err2)
+
+	execMsg := &types.MsgExecuteContract{
+		Sender:   govGroupContContract.String(),
+		Contract: erc20govContract.String(),
+		Msg:      transferMsgBz,
+	}
+	encodedMsgs := encodeMsgsAsAnyBase64(appA, []sdk.Msg{execMsg})
+
+	submitPayload := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"SubmitProposal":{"messages":["%s"],"initial_deposit":[{"denom":"%s","amount":"100"}],"proposer":"%s","metadata":"","title":"Transfer via gov-group-cont","summary":"erc20gov transfer","expedited":false,"group_id":"%s"}}`,
+			encodedMsgs[0], erc20denom, senderAddr, createResp.GroupID)),
+	}
+	submitRes := appA.ExecuteContract(setup.Sender, govGroupContContract, submitPayload, nil, nil)
+	s.Require().True(submitRes.IsOK(), "submit proposal failed: %s", submitRes.Log)
+
+	var submitResp struct {
+		ProposalID uint64 `json:"proposal_id"`
+	}
+	err = appA.DecodeExecuteResponse(submitRes, &submitResp)
+	s.Require().NoError(err)
+	s.Require().NotZero(submitResp.ProposalID)
+
+	depositVotePayload := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":2,"voter":"%s","amount":"100","arbitration_amount":"0","metadata":"vote"}}`, submitResp.ProposalID, senderAddr)),
+	}
+	voteRes := appA.ExecuteContract(setup.Sender, govGroupContContract, depositVotePayload, nil, nil)
+	s.Require().True(voteRes.IsOK(), "deposit vote failed: %s", voteRes.Log)
+
+	balanceQuery := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"balanceOf":{"owner":"%s"}}`, receiverUserID)),
+	}
+	balanceBz := appA.WasmxQueryRaw(setup.Sender, erc20govContract, balanceQuery, nil, nil)
+	var balanceResp struct {
+		Balance struct {
+			Amount string `json:"amount"`
+		} `json:"balance"`
+	}
+	err = json.Unmarshal(balanceBz, &balanceResp)
+	s.Require().NoError(err)
+	s.Require().Equal("10", balanceResp.Balance.Amount)
+}
+
+func (suite *KeeperTestSuite) RegisterErc20GovDenomRole(setup *GroupsTestSetup, contract mcodec.AccAddressPrefixed, label string) {
+	appA := setup.AppA
+	title := "Register denom"
+	description := "Register denom"
+	authority := appA.MustAccAddressToString(authtypes.NewModuleAddress(types.ROLE_GOVERNANCE))
+	contractStr := contract.String()
+	valAccount := simulation.Account{
+		PrivKey: suite.Chain().SenderPrivKey,
+		PubKey:  suite.Chain().SenderPrivKey.PubKey(),
+		Address: suite.Chain().SenderAccount.GetAddress(),
+	}
+
+	msg := []byte(fmt.Sprintf(`{"SetContractForRoleGov":{"role":"%s","label":"%s","contract_address":"%s","action_type":1}}`, types.ROLE_DENOM, label, contractStr))
+	msgbz, err := json.Marshal(&types.WasmxExecutionMessage{Data: msg})
+	suite.Require().NoError(err)
+
+	proposal := &types.MsgExecuteContract{
+		Sender:   authority,
+		Contract: types.ROLE_ROLES,
+		Msg:      msgbz,
+	}
+	appA.PassGovProposal(valAccount, setup.Sender, []sdk.Msg{proposal}, "", title, description, false)
+
+	resp := appA.App.WasmxKeeper.GetRoleLabelByContract(appA.Context(), contract)
+	suite.Require().Equal(label, resp)
+}
+
+func (suite *KeeperTestSuite) InitGovGroupGenesis(appA *ut.AppContext, govContract mcodec.AccAddressPrefixed, baseDenom string) {
+	govGenesis := cosmosmodtypes.DefaultGovGenesisState(baseDenom)
+	votingPeriod := time.Millisecond * 500
+	govGenesis.Params.VotingPeriod = votingPeriod.Milliseconds()
+
+	msgjson, err := appA.App.AppCodec().MarshalJSON(govGenesis)
+	suite.Require().NoError(err)
+	msgbz := []byte(fmt.Sprintf(`{"InitGenesis":%s}`, string(msgjson)))
+	execmsg := types.WasmxExecutionMessage{Data: msgbz}
+	execmsgbz, err := json.Marshal(execmsg)
+	suite.Require().NoError(err)
+
+	_, err = appA.App.WasmxKeeper.ExecuteContract(appA.Context(), &types.MsgExecuteContract{
+		Sender:   govContract.String(),
+		Contract: govContract.String(),
+		Msg:      execmsgbz,
+	})
+	suite.Require().NoError(err)
 }

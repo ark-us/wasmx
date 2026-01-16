@@ -78,6 +78,11 @@ func TotalSupply() []byte {
 // BalanceOf returns the balance of an address
 func BalanceOf(req *MsgBalanceOf) []byte {
 	value := GetBalance(req.Owner)
+	if value.IsZero() {
+		if userID, _ := QueryUserByAddress(req.Owner); userID != "" && userID != req.Owner {
+			value = GetBalance(userID)
+		}
+	}
 	info := GetInfo()
 	resp := MsgBalanceOfResponse{
 		Balance: wasmx.Coin{Denom: info.Symbol, Amount: value},
@@ -93,7 +98,8 @@ func Transfer(req *MsgTransfer) []byte {
 		Revert("caller must have a registered identity")
 	}
 	LoggerDebug("transfer", []string{"from", from, "to", req.To, "value", req.Value.String()})
-	Move(from, req.To, req.Value)
+	to := ResolveUserIDOrAddress(req.To)
+	Move(from, to, req.Value)
 	resp := MsgTransferResponse{}
 	data, _ := json.Marshal(resp)
 	return data
@@ -115,15 +121,17 @@ func TransferFrom(req *MsgTransferFrom) []byte {
 		"caller", spender,
 		"authorized", fmt.Sprintf("%t", authorized),
 	})
+	from := ResolveUserIDOrAddress(req.From)
+	to := ResolveUserIDOrAddress(req.To)
 
 	if authorized {
-		Move(req.From, req.To, req.Value)
+		Move(from, to, req.Value)
 	} else {
-		allow := GetAllowance(req.From, spender)
+		allow := GetAllowance(from, spender)
 		if allow.GTE(req.Value) {
-			Move(req.From, req.To, req.Value)
+			Move(from, to, req.Value)
 			allow = allow.Sub(req.Value)
-			SetAllowance(req.From, spender, allow)
+			SetAllowance(from, spender, allow)
 		} else {
 			Revert(fmt.Sprintf("insufficient allowance: %s < %s", allow.String(), req.Value.String()))
 		}
@@ -197,15 +205,16 @@ func Mint(req *MsgMint) []byte {
 		"authorized", fmt.Sprintf("%t", authorized),
 	})
 
-	balance := GetBalance(req.To)
+	to := ResolveUserIDOrAddress(req.To)
+	balance := GetBalance(to)
 	balance = balance.Add(req.Value)
-	SetBalance(req.To, balance)
+	SetBalance(to, balance)
 
 	supply := GetTotalSupply()
 	supply = supply.Add(req.Value)
 	SetTotalSupply(supply)
 
-	LogTransfer(ZERO_ADDRESS, req.To, req.Value)
+	LogTransfer(ZERO_ADDRESS, to, req.Value)
 
 	return []byte("{}")
 }
@@ -229,19 +238,20 @@ func Burn(req *MsgBurn) []byte {
 		"authorized", fmt.Sprintf("%t", authorized),
 	})
 
-	balance := GetBalance(req.From)
+	from := ResolveUserIDOrAddress(req.From)
+	balance := GetBalance(from)
 	if balance.LT(req.Value) {
 		Revert(fmt.Sprintf("balance not enough for burning: %s; burning %s", balance.String(), req.Value.String()))
 	}
 
 	balance = balance.Sub(req.Value)
-	SetBalance(req.From, balance)
+	SetBalance(from, balance)
 
 	supply := GetTotalSupply()
 	supply = supply.Sub(req.Value)
 	SetTotalSupply(supply)
 
-	LogTransfer(req.From, ZERO_ADDRESS, req.Value)
+	LogTransfer(from, ZERO_ADDRESS, req.Value)
 
 	return []byte("{}")
 }

@@ -90,6 +90,14 @@ type Role struct {
 	Addresses   []string            `json:"addresses"`
 }
 
+type RoleAddress struct {
+	Role     string `json:"role"`
+	Primary  bool   `json:"primary"`
+	Multiple bool   `json:"multiple"`
+	Label    string `json:"label"`
+	Address  string `json:"address"`
+}
+
 type RolesChangedHook struct {
 	Role        *Role        `json:"role,omitempty"`
 	RoleChanged *RoleChanged `json:"role_changed,omitempty"`

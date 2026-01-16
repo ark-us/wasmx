@@ -3,8 +3,8 @@ package lib
 import (
 	"encoding/json"
 
-	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	wasmxhttp "github.com/loredanacirstea/wasmx-env-httpserver/lib"
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
 
 // RouteCallData routes incoming call data to the appropriate handler
@@ -80,8 +80,22 @@ func Query(data []byte) []byte {
 
 // OnRoleChanged is called when the contract is assigned a role
 func OnRoleChanged() []byte {
-	role := string(wasmx.GetEnv())
-	LoggerInfo("Role changed", []string{"role", role})
+	callData := wasmx.GetCallData()
+	if len(callData) == 0 {
+		return MarshalJSON(map[string]bool{"success": true})
+	}
+	var hook struct {
+		RoleChanged *wasmx.RolesChangedHook `json:"RoleChanged"`
+	}
+	if err := json.Unmarshal(callData, &hook); err != nil {
+		LoggerError("Failed to unmarshal RoleChanged hook", []string{"error", err.Error()})
+		return MarshalJSON(map[string]bool{"success": true})
+	}
+	if hook.RoleChanged == nil || hook.RoleChanged.RoleChanged == nil {
+		return MarshalJSON(map[string]bool{"success": true})
+	}
+	role := hook.RoleChanged.RoleChanged.Role
+	LoggerInfo("Role changed", []string{"role", role, "label", hook.RoleChanged.RoleChanged.Label})
 
 	// OAuth2 Keys contract can be notified when assigned ROLE_OAUTH2_KEYS
 	if role == wasmx.ROLE_OAUTH2_KEYS {

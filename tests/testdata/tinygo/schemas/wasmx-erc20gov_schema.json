@@ -172,9 +172,36 @@
       "required": [
         "setAdmins"
       ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        }
+      },
+      "required": [
+        "RoleChanged"
+      ]
     }
   ],
   "definitions": {
+    "InitialBalance": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "amount"
+      ]
+    },
     "InstantiateMsg": {
       "type": "object",
       "properties": {
@@ -189,6 +216,12 @@
         },
         "governance_address": {
           "type": "string"
+        },
+        "initial_balances": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InitialBalance"
+          }
         },
         "name": {
           "type": "string"
@@ -342,6 +375,70 @@
     "MsgTransferResponse": {
       "type": "object"
     },
+    "denomMetadata": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string"
+        },
+        "denom_units": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/denomUnit"
+          }
+        },
+        "description": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        },
+        "uri_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "description",
+        "denom_units",
+        "base",
+        "display",
+        "name",
+        "symbol",
+        "uri",
+        "uri_hash"
+      ]
+    },
+    "denomUnit": {
+      "type": "object",
+      "properties": {
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "denom": {
+          "type": "string"
+        },
+        "exponent": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "denom",
+        "exponent",
+        "aliases"
+      ]
+    },
     "instantiate": {
       "type": "object",
       "properties": {
@@ -356,6 +453,12 @@
         },
         "governance_address": {
           "type": "string"
+        },
+        "initial_balances": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InitialBalance"
+          }
         },
         "name": {
           "type": "string"
@@ -375,6 +478,10 @@
     "main": {
       "type": "object",
       "properties": {
+        "RoleChanged": {
+          "type": "string",
+          "x-go-type": "wasmx.RolesChangedHook"
+        },
         "balanceOf": {
           "type": "string",
           "x-go-type": "MsgBalanceOf"

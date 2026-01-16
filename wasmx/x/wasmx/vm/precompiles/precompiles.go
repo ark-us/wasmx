@@ -198,6 +198,12 @@ var (
 	//go:embed 74.erc20govjson_go_0.0.1.wasm
 	wasmx_erc20gov []byte
 
+	//go:embed 75.gov_group_0.0.1.wasm
+	wasmx_gov_group []byte
+
+	//go:embed 76.gov_group_cont_0.0.1.wasm
+	wasmx_gov_group_cont []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -406,6 +412,10 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 		wasmbin = wasmx_groups
 	case "erc20gov_0.0.1":
 		wasmbin = wasmx_erc20gov
+	case "gov-group_0.0.1":
+		wasmbin = wasmx_gov_group
+	case "gov-group-cont_0.0.1":
+		wasmbin = wasmx_gov_group_cont
 	}
 	return wasmbin
 }

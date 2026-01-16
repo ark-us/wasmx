@@ -90,6 +90,9 @@ var ADDR_MCP_REGISTRY = "0x0000000000000000000000000000000000000067"
 var ADDR_HTTPSERVER_REGISTRY = "0x0000000000000000000000000000000000000068"
 var ADDR_ACCOUNT_IDENTITY = "0x0000000000000000000000000000000000000069"
 var ADDR_OAUTH2_KEYS = "0x000000000000000000000000000000000000006a"
+var ADDR_GROUPS = "0x000000000000000000000000000000000000006b"
+var ADDR_GOV_GROUP = "0x000000000000000000000000000000000000006c"
+var ADDR_GOV_GROUP_CONT = "0x000000000000000000000000000000000000006d"
 
 var ADDR_CONSENSUS_KAYROSP2P_LIBRARY = "0x0000000000000000000000000000000000000071"
 var ADDR_CONSENSUS_KAYROSP2P = "0x0000000000000000000000000000000000000072"
@@ -101,7 +104,7 @@ var ADDR_KAYROS_VERIFIER = "0x0000000000000000000000000000000000000075"
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
 //go:embed kayros_verifier_schema.json
-var kayrosVerifierSchema string
+var kayrosVerifierSchema []byte
 
 func mcpRegistryInitMsg() []byte {
 	initGenesis := map[string]interface{}{
@@ -1068,6 +1071,66 @@ func SpecialPrecompiles() SystemContracts {
 	}
 }
 
+func GroupPrecompiles(accBech32Codec mcodec.AccBech32Codec, bondBaseDenom string) SystemContracts {
+	groupsInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"groups":[]}`)})
+	if err != nil {
+		panic("GroupPrecompiles: cannot marshal groups init message")
+	}
+
+	govGroupInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(fmt.Sprintf(`{"bond_base_denom":"%s"}`, bondBaseDenom))})
+	if err != nil {
+		panic("GroupPrecompiles: cannot marshal gov-group init message")
+	}
+
+	govGroupContParams := map[string]interface{}{
+		"arbitrationDenom": bondBaseDenom,
+		"coefs":            []uint64{1000000, 100, 150, 1, 1, 1000000, 100, 100},
+		"defaultX":         100,
+		"defaultY":         100,
+	}
+	govGroupContParamsBz, err := json.Marshal(govGroupContParams)
+	if err != nil {
+		panic("GroupPrecompiles: cannot marshal gov-group-cont params")
+	}
+	govGroupContInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: govGroupContParamsBz})
+	if err != nil {
+		panic("GroupPrecompiles: cannot marshal gov-group-cont init message")
+	}
+
+	return []SystemContract{
+		{
+			Address:     ADDR_GROUPS,
+			Label:       GROUPS_v001,
+			InitMessage: groupsInitMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        &SystemContractRole{Role: ROLE_GROUP, Label: GROUPS_v001, Primary: true},
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_GOV_GROUP,
+			Label:       GOV_GROUP_v001,
+			InitMessage: govGroupInitMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        &SystemContractRole{Role: ROLE_GOVERNANCE, Label: GOV_GROUP_v001},
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+		{
+			Address:     ADDR_GOV_GROUP_CONT,
+			Label:       GOV_GROUP_CONT_v001,
+			InitMessage: govGroupContInitMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        &SystemContractRole{Role: ROLE_GOVERNANCE, Label: GOV_GROUP_CONT_v001},
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+		},
+	}
+}
+
 func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBech32 string, mintBech32 string, minValidatorCount int32, enableEIDCheck bool, initialPortValues string, bondBaseDenom string) SystemContracts {
 
 	precompiles := StarterPrecompiles()
@@ -1104,6 +1167,7 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	precompiles = append(precompiles, VerifierPrecompiles()...)
+	precompiles = append(precompiles, GroupPrecompiles(accBech32Codec, bondBaseDenom)...)
 	precompiles = append(precompiles, SpecialPrecompiles()...)
 
 	precompiles, err := FillRoles(precompiles, accBech32Codec, feeCollectorBech32)

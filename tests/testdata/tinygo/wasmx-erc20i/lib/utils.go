@@ -67,6 +67,16 @@ func QueryUserByAddress(address string) (string, error) {
 	return resp.UserID, nil
 }
 
+func ResolveUserIDOrAddress(value string) string {
+	if value == "" {
+		return value
+	}
+	if userID, _ := QueryUserByAddress(value); userID != "" {
+		return userID
+	}
+	return value
+}
+
 func GetCallerUserID() string {
 	caller := wasmx.GetCaller()
 	userID, _ := QueryUserByAddress(string(caller))

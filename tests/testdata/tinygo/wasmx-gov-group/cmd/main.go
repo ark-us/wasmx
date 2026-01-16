@@ -23,6 +23,8 @@ func Instantiate() {
 	if err := json.Unmarshal(databz, calld); err != nil {
 		gov.Revert("invalid call data: " + err.Error() + ": " + string(databz))
 	}
+	params := gov.GetDefaultParams(calld.BondBaseDenom)
+	gov.SetParams(params)
 	gov.SetVotingDenom(calld.BondBaseDenom)
 }
 

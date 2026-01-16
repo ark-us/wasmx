@@ -114,31 +114,23 @@ type VotingProtocolReference struct {
 // GROUP TYPES
 // =============================================================================
 
-// GroupMember represents a member of a group
-type GroupMember struct {
-	UserID   string `json:"user_id"`   // Identity from wasmx-identity
-	JoinedAt int64  `json:"joined_at"` // Timestamp when joined
-	Metadata string `json:"metadata"`  // Optional metadata (e.g., role, title)
-}
-
 // Group represents a group of members
 type Group struct {
-	ID          string               `json:"id"`
-	Name        string               `json:"name"`
-	Description string               `json:"description"`
-	CreatedAt   int64                `json:"created_at"`
-	UpdatedAt   int64                `json:"updated_at"`
-	MemberCount uint64               `json:"member_count"`
-	Admins      []string             `json:"admins"` // user_ids that can manage directly (for bootstrap)
+	ID          string                  `json:"id"`
+	Name        string                  `json:"name"`
+	Description string                  `json:"description"`
+	CreatedAt   int64                   `json:"created_at"`
+	UpdatedAt   int64                   `json:"updated_at"`
+	Admins      []string                `json:"admins"` // user_ids that can manage directly (for bootstrap)
 	Metadata    string                  `json:"metadata"`
 	Protocol    VotingProtocolReference `json:"protocol"` // Governance protocol for membership changes
-	TokenDenom  string                  `json:"token_denom,omitempty"`
-	Token       wasmx.Bech32String      `json:"token,omitempty"`
+	Token       wasmx.Bech32String      `json:"token"`
+	TokenDenom  string                  `json:"token_denom"`
+	MinBalance  string                  `json:"min_balance"`
 }
 
 // GroupConfig stores initialization parameters
 type GroupConfig struct {
-	IdentityContract wasmx.Bech32String `json:"identity_contract"` // wasmx-identity contract address
 }
 
 // =============================================================================
@@ -147,8 +139,7 @@ type GroupConfig struct {
 
 // MsgInitGenesis initializes the contract
 type MsgInitGenesis struct {
-	IdentityContract wasmx.Bech32String `json:"identity_contract"`
-	Groups           []GroupGenesis     `json:"groups,omitempty"`
+	Groups []GroupGenesis `json:"groups,omitempty"`
 }
 
 // GroupGenesis for genesis initialization
@@ -156,17 +147,10 @@ type GroupGenesis struct {
 	Name        string                  `json:"name"`
 	Description string                  `json:"description"`
 	Admins      []string                `json:"admins"` // user_ids
-	Members     []GroupMemberGenesis    `json:"members"`
 	Protocol    VotingProtocolReference `json:"protocol"`
-	TokenDenom  string                  `json:"token_denom,omitempty"`
-	Token       wasmx.Bech32String      `json:"token,omitempty"`
+	Token       wasmx.Bech32String      `json:"token"`
+	MinBalance  string                  `json:"min_balance"`
 	Metadata    string                  `json:"metadata,omitempty"`
-}
-
-// GroupMemberGenesis for genesis member initialization
-type GroupMemberGenesis struct {
-	UserID   string `json:"user_id"`
-	Metadata string `json:"metadata,omitempty"`
 }
 
 // MsgCreateGroup creates a new group
@@ -175,34 +159,13 @@ type MsgCreateGroup struct {
 	Description string                  `json:"description"`
 	Admins      []string                `json:"admins"` // Initial admins (user_ids)
 	Protocol    VotingProtocolReference `json:"protocol"`
-	TokenDenom  string                  `json:"token_denom,omitempty"`
-	Token       wasmx.Bech32String      `json:"token,omitempty"`
+	Token       wasmx.Bech32String      `json:"token"`
+	MinBalance  string                  `json:"min_balance"`
 	Metadata    string                  `json:"metadata,omitempty"`
 }
 
 type MsgCreateGroupResponse struct {
 	GroupID string `json:"group_id"`
-}
-
-// MsgAddMember adds a member to a group (must be called by governance contract)
-type MsgAddMember struct {
-	GroupID  string `json:"group_id"`
-	UserID   string `json:"user_id"`
-	Metadata string `json:"metadata,omitempty"`
-}
-
-type MsgAddMemberResponse struct {
-	Success bool `json:"success"`
-}
-
-// MsgRemoveMember removes a member from a group (must be called by governance contract)
-type MsgRemoveMember struct {
-	GroupID string `json:"group_id"`
-	UserID  string `json:"user_id"`
-}
-
-type MsgRemoveMemberResponse struct {
-	Success bool `json:"success"`
 }
 
 // MsgUpdateProtocol updates the governance protocol for a group
@@ -269,12 +232,12 @@ type MsgVoteGroupProposalWeighted struct {
 }
 
 type MsgDepositVoteGroupProposal struct {
-	GroupID            string `json:"group_id"`
-	ProposalID         string `json:"proposal_id"`
-	OptionID           int32  `json:"option_id"`
-	Amount             string `json:"amount"`
-	ArbitrationAmount  string `json:"arbitration_amount"`
-	Metadata           string `json:"metadata"`
+	GroupID           string `json:"group_id"`
+	ProposalID        string `json:"proposal_id"`
+	OptionID          int32  `json:"option_id"`
+	Amount            string `json:"amount"`
+	ArbitrationAmount string `json:"arbitration_amount"`
+	Metadata          string `json:"metadata"`
 }
 
 // =============================================================================
@@ -288,19 +251,7 @@ type MsgQueryIsMember struct {
 }
 
 type QueryIsMemberResponse struct {
-	IsMember bool         `json:"is_member"`
-	Member   *GroupMember `json:"member,omitempty"` // Present if is_member is true
-}
-
-// MsgQueryGetAllMembers returns all members of a group
-type MsgQueryGetAllMembers struct {
-	GroupID    string `json:"group_id"`
-	Pagination PageRequest `json:"pagination,omitempty"`
-}
-
-type QueryGetAllMembersResponse struct {
-	Members    []GroupMember `json:"members"`
-	Pagination PageResponse  `json:"pagination"`
+	IsMember bool `json:"is_member"`
 }
 
 // MsgQueryGetGroup returns group info
@@ -333,7 +284,7 @@ type QueryGetVotingProtocolResponse struct {
 
 // MsgQueryGetUserGroups returns all groups a user belongs to
 type MsgQueryGetUserGroups struct {
-	UserID     string `json:"user_id"`
+	UserID     string      `json:"user_id"`
 	Pagination PageRequest `json:"pagination,omitempty"`
 }
 
@@ -395,12 +346,10 @@ type CallData struct {
 	InitGenesis *MsgInitGenesis `json:"init_genesis,omitempty"`
 
 	// Group management
-	CreateGroup    *MsgCreateGroup    `json:"create_group,omitempty"`
-	AddMember      *MsgAddMember      `json:"add_member,omitempty"`
-	RemoveMember   *MsgRemoveMember   `json:"remove_member,omitempty"`
-	UpdateProtocol *MsgUpdateProtocol `json:"update_protocol,omitempty"`
-	AddAdmin       *MsgAddAdmin       `json:"add_admin,omitempty"`
-	RemoveAdmin    *MsgRemoveAdmin    `json:"remove_admin,omitempty"`
+	CreateGroup               *MsgCreateGroup               `json:"create_group,omitempty"`
+	UpdateProtocol            *MsgUpdateProtocol            `json:"update_protocol,omitempty"`
+	AddAdmin                  *MsgAddAdmin                  `json:"add_admin,omitempty"`
+	RemoveAdmin               *MsgRemoveAdmin               `json:"remove_admin,omitempty"`
 	SubmitGroupProposal       *MsgSubmitGroupProposal       `json:"submit_group_proposal,omitempty"`
 	VoteGroupProposal         *MsgVoteGroupProposal         `json:"vote_group_proposal,omitempty"`
 	VoteGroupProposalWeighted *MsgVoteGroupProposalWeighted `json:"vote_group_proposal_weighted,omitempty"`
@@ -408,7 +357,6 @@ type CallData struct {
 
 	// Queries
 	QueryIsMember          *MsgQueryIsMember          `json:"query_is_member,omitempty"`
-	QueryGetAllMembers     *MsgQueryGetAllMembers     `json:"query_get_all_members,omitempty"`
 	QueryGetGroup          *MsgQueryGetGroup          `json:"query_get_group,omitempty"`
 	QueryGetGroups         *MsgQueryGetGroups         `json:"query_get_groups,omitempty"`
 	QueryGetVotingProtocol *MsgQueryGetVotingProtocol `json:"query_get_voting_protocol,omitempty"`

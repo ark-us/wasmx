@@ -1,0 +1,959 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-groups",
+  "description": "JSON Schema for wasmx-groups TinyGo contract",
+  "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "init_genesis": {
+          "$ref": "#/definitions/MsgInitGenesis"
+        }
+      },
+      "required": [
+        "init_genesis"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "create_group": {
+          "$ref": "#/definitions/MsgCreateGroup"
+        }
+      },
+      "required": [
+        "create_group"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "update_protocol": {
+          "$ref": "#/definitions/MsgUpdateProtocol"
+        }
+      },
+      "required": [
+        "update_protocol"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "add_admin": {
+          "$ref": "#/definitions/MsgAddAdmin"
+        }
+      },
+      "required": [
+        "add_admin"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "remove_admin": {
+          "$ref": "#/definitions/MsgRemoveAdmin"
+        }
+      },
+      "required": [
+        "remove_admin"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "submit_group_proposal": {
+          "$ref": "#/definitions/MsgSubmitGroupProposal"
+        }
+      },
+      "required": [
+        "submit_group_proposal"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "vote_group_proposal": {
+          "$ref": "#/definitions/MsgVoteGroupProposal"
+        }
+      },
+      "required": [
+        "vote_group_proposal"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "vote_group_proposal_weighted": {
+          "$ref": "#/definitions/MsgVoteGroupProposalWeighted"
+        }
+      },
+      "required": [
+        "vote_group_proposal_weighted"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "deposit_vote_group_proposal": {
+          "$ref": "#/definitions/MsgDepositVoteGroupProposal"
+        }
+      },
+      "required": [
+        "deposit_vote_group_proposal"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_is_member": {
+          "$ref": "#/definitions/MsgQueryIsMember"
+        }
+      },
+      "required": [
+        "query_is_member"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_get_group": {
+          "$ref": "#/definitions/MsgQueryGetGroup"
+        }
+      },
+      "required": [
+        "query_get_group"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_get_groups": {
+          "$ref": "#/definitions/MsgQueryGetGroups"
+        }
+      },
+      "required": [
+        "query_get_groups"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_get_voting_protocol": {
+          "$ref": "#/definitions/MsgQueryGetVotingProtocol"
+        }
+      },
+      "required": [
+        "query_get_voting_protocol"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_get_user_groups": {
+          "$ref": "#/definitions/MsgQueryGetUserGroups"
+        }
+      },
+      "required": [
+        "query_get_user_groups"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_is_admin": {
+          "$ref": "#/definitions/MsgQueryIsAdmin"
+        }
+      },
+      "required": [
+        "query_is_admin"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_get_voter_power": {
+          "$ref": "#/definitions/MsgQueryGetVoterPower"
+        }
+      },
+      "required": [
+        "query_get_voter_power"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "query_get_config": {
+          "$ref": "#/definitions/MsgQueryGetConfig"
+        }
+      },
+      "required": [
+        "query_get_config"
+      ]
+    }
+  ],
+  "definitions": {
+    "Group": {
+      "type": "object",
+      "properties": {
+        "admins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "min_balance": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "protocol": {
+          "$ref": "#/definitions/VotingProtocolReference"
+        },
+        "token": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "token_denom": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "created_at",
+        "updated_at",
+        "admins",
+        "metadata",
+        "protocol",
+        "token",
+        "token_denom",
+        "min_balance"
+      ]
+    },
+    "GroupConfig": {
+      "type": "object"
+    },
+    "GroupGenesis": {
+      "type": "object",
+      "properties": {
+        "admins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "min_balance": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "protocol": {
+          "$ref": "#/definitions/VotingProtocolReference"
+        },
+        "token": {
+          "type": "string",
+          "format": "bech32"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "admins",
+        "protocol",
+        "token",
+        "min_balance"
+      ]
+    },
+    "GroupWeightedVoteOption": {
+      "type": "object",
+      "properties": {
+        "option": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "option",
+        "weight"
+      ]
+    },
+    "MsgAddAdmin": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "user_id"
+      ]
+    },
+    "MsgAddAdminResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgCreateGroup": {
+      "type": "object",
+      "properties": {
+        "admins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "min_balance": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "protocol": {
+          "$ref": "#/definitions/VotingProtocolReference"
+        },
+        "token": {
+          "type": "string",
+          "format": "bech32"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "admins",
+        "protocol",
+        "token",
+        "min_balance"
+      ]
+    },
+    "MsgCreateGroupResponse": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id"
+      ]
+    },
+    "MsgDepositVoteGroupProposal": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string"
+        },
+        "arbitration_amount": {
+          "type": "string"
+        },
+        "group_id": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "option_id": {
+          "type": "integer"
+        },
+        "proposal_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "proposal_id",
+        "option_id",
+        "amount",
+        "arbitration_amount",
+        "metadata"
+      ]
+    },
+    "MsgInitGenesis": {
+      "type": "object",
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GroupGenesis"
+          }
+        }
+      }
+    },
+    "MsgQueryGetConfig": {
+      "type": "object"
+    },
+    "MsgQueryGetGroup": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id"
+      ]
+    },
+    "MsgQueryGetGroups": {
+      "type": "object",
+      "properties": {
+        "pagination": {
+          "$ref": "#/definitions/PageRequest"
+        }
+      }
+    },
+    "MsgQueryGetUserGroups": {
+      "type": "object",
+      "properties": {
+        "pagination": {
+          "$ref": "#/definitions/PageRequest"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id"
+      ]
+    },
+    "MsgQueryGetVoterPower": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        },
+        "voter": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "voter"
+      ]
+    },
+    "MsgQueryGetVotingProtocol": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id"
+      ]
+    },
+    "MsgQueryIsAdmin": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "user_id"
+      ]
+    },
+    "MsgQueryIsMember": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "user_id"
+      ]
+    },
+    "MsgRemoveAdmin": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "user_id"
+      ]
+    },
+    "MsgRemoveAdminResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgSubmitGroupProposal": {
+      "type": "object",
+      "properties": {
+        "expedited": {
+          "type": "boolean"
+        },
+        "group_id": {
+          "type": "string"
+        },
+        "initial_deposit": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "messages",
+        "initial_deposit",
+        "metadata",
+        "title",
+        "summary",
+        "expedited"
+      ]
+    },
+    "MsgUpdateProtocol": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        },
+        "protocol": {
+          "$ref": "#/definitions/VotingProtocolReference"
+        }
+      },
+      "required": [
+        "group_id",
+        "protocol"
+      ]
+    },
+    "MsgUpdateProtocolResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "MsgVoteGroupProposal": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "option": {
+          "type": "string"
+        },
+        "proposal_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "proposal_id",
+        "option",
+        "metadata"
+      ]
+    },
+    "MsgVoteGroupProposalWeighted": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "option": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GroupWeightedVoteOption"
+          }
+        },
+        "proposal_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "proposal_id",
+        "option",
+        "metadata"
+      ]
+    },
+    "PageRequest": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        },
+        "offset": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      }
+    },
+    "PageResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "string",
+          "x-go-type": "utils.StringUint64"
+        }
+      },
+      "required": [
+        "total"
+      ]
+    },
+    "QueryGetConfigResponse": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/GroupConfig"
+        }
+      },
+      "required": [
+        "config"
+      ]
+    },
+    "QueryGetGroupResponse": {
+      "type": "object",
+      "properties": {
+        "group": {
+          "$ref": "#/definitions/Group"
+        }
+      }
+    },
+    "QueryGetGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Group"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/PageResponse"
+        }
+      },
+      "required": [
+        "groups",
+        "pagination"
+      ]
+    },
+    "QueryGetUserGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "group_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/PageResponse"
+        }
+      },
+      "required": [
+        "group_ids",
+        "pagination"
+      ]
+    },
+    "QueryGetVoterPowerResponse": {
+      "type": "object",
+      "properties": {
+        "denom": {
+          "type": "string"
+        },
+        "is_member": {
+          "type": "boolean"
+        },
+        "power": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "is_member",
+        "power"
+      ]
+    },
+    "QueryGetVotingProtocolResponse": {
+      "type": "object",
+      "properties": {
+        "protocol": {
+          "$ref": "#/definitions/VotingProtocolReference"
+        }
+      },
+      "required": [
+        "protocol"
+      ]
+    },
+    "QueryIsAdminResponse": {
+      "type": "object",
+      "properties": {
+        "is_admin": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "is_admin"
+      ]
+    },
+    "QueryIsMemberResponse": {
+      "type": "object",
+      "properties": {
+        "is_member": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "is_member"
+      ]
+    },
+    "VotingProtocol": {
+      "type": "object",
+      "properties": {
+        "arbitration_coef": {
+          "type": "integer"
+        },
+        "curve_x": {
+          "type": "integer"
+        },
+        "curve_y": {
+          "type": "integer"
+        },
+        "deposit_period": {
+          "type": "integer"
+        },
+        "description": {
+          "type": "string"
+        },
+        "eligibility": {
+          "type": "string",
+          "x-go-type": "EligibilityType"
+        },
+        "eligibility_denom": {
+          "type": "string"
+        },
+        "eligibility_group_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "options_type": {
+          "type": "string",
+          "x-go-type": "VoteOptionsType"
+        },
+        "quorum": {
+          "type": "string"
+        },
+        "result_algorithm": {
+          "type": "string",
+          "x-go-type": "ResultAlgorithm"
+        },
+        "threshold": {
+          "type": "string"
+        },
+        "timing_type": {
+          "type": "string",
+          "x-go-type": "TimingType"
+        },
+        "veto_threshold": {
+          "type": "string"
+        },
+        "voting_period": {
+          "type": "integer"
+        },
+        "weight_algorithm": {
+          "type": "string",
+          "x-go-type": "WeightAlgorithm"
+        },
+        "weight_denom": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "eligibility",
+        "weight_algorithm",
+        "options_type",
+        "result_algorithm",
+        "timing_type"
+      ]
+    },
+    "VotingProtocolReference": {
+      "type": "object",
+      "properties": {
+        "governance_contract": {
+          "type": "string",
+          "format": "bech32"
+        },
+        "protocol_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "governance_contract"
+      ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "add_admin": {
+          "$ref": "#/definitions/MsgAddAdmin"
+        },
+        "create_group": {
+          "$ref": "#/definitions/MsgCreateGroup"
+        },
+        "deposit_vote_group_proposal": {
+          "$ref": "#/definitions/MsgDepositVoteGroupProposal"
+        },
+        "init_genesis": {
+          "$ref": "#/definitions/MsgInitGenesis"
+        },
+        "query_get_config": {
+          "$ref": "#/definitions/MsgQueryGetConfig"
+        },
+        "query_get_group": {
+          "$ref": "#/definitions/MsgQueryGetGroup"
+        },
+        "query_get_groups": {
+          "$ref": "#/definitions/MsgQueryGetGroups"
+        },
+        "query_get_user_groups": {
+          "$ref": "#/definitions/MsgQueryGetUserGroups"
+        },
+        "query_get_voter_power": {
+          "$ref": "#/definitions/MsgQueryGetVoterPower"
+        },
+        "query_get_voting_protocol": {
+          "$ref": "#/definitions/MsgQueryGetVotingProtocol"
+        },
+        "query_is_admin": {
+          "$ref": "#/definitions/MsgQueryIsAdmin"
+        },
+        "query_is_member": {
+          "$ref": "#/definitions/MsgQueryIsMember"
+        },
+        "remove_admin": {
+          "$ref": "#/definitions/MsgRemoveAdmin"
+        },
+        "submit_group_proposal": {
+          "$ref": "#/definitions/MsgSubmitGroupProposal"
+        },
+        "update_protocol": {
+          "$ref": "#/definitions/MsgUpdateProtocol"
+        },
+        "vote_group_proposal": {
+          "$ref": "#/definitions/MsgVoteGroupProposal"
+        },
+        "vote_group_proposal_weighted": {
+          "$ref": "#/definitions/MsgVoteGroupProposalWeighted"
+        }
+      }
+    }
+  }
+}

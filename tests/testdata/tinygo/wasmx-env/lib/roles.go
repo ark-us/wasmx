@@ -39,6 +39,7 @@ const (
 	ROLE_MCP                       = "mcp"
 	ROLE_HTTP_SERVER               = "httpserver"
 	ROLE_IDENTITY                  = "identity"
+	ROLE_GROUP                     = "group"
 	ROLE_OAUTH2_KEYS               = "oauth2_keys"
 	ROLE_ACCOUNT_IDENTITY          = "account_identity"
 )

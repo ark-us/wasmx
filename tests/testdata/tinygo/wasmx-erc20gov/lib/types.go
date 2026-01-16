@@ -3,6 +3,7 @@ package lib
 import (
 	sdkmath "cosmossdk.io/math"
 
+	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	erc20i "github.com/loredanacirstea/wasmx/tests/testdata/tinygo/wasmx-erc20i/lib"
 )
 
@@ -36,13 +37,19 @@ type MsgMint = erc20i.MsgMint
 type MsgBurn = erc20i.MsgBurn
 type MsgTransferFromResponse = erc20i.MsgTransferFromResponse
 
+type InitialBalance struct {
+	UserID string `json:"user_id"`
+	Amount string `json:"amount"`
+}
+
 // CallDataInstantiate is the initialization message (different from erc20i)
 type CallDataInstantiate struct {
-	Admins            []string `json:"admins"`
-	Name              string   `json:"name"`
-	Symbol            string   `json:"symbol"`
-	Decimals          int32    `json:"decimals"`
-	GovernanceAddress string   `json:"governance_address"`
+	Admins            []string         `json:"admins"`
+	Name              string           `json:"name"`
+	Symbol            string           `json:"symbol"`
+	Decimals          int32            `json:"decimals"`
+	GovernanceAddress string           `json:"governance_address"`
+	InitialBalances   []InitialBalance `json:"initial_balances,omitempty"`
 }
 
 // MsgMemberCount - unique to erc20gov
@@ -123,4 +130,7 @@ type CallData struct {
 	// Governance-only admin functions
 	SetGovernanceAddress *MsgSetGovernanceAddress `json:"setGovernanceAddress,omitempty"`
 	SetAdmins            *MsgSetAdmins            `json:"setAdmins,omitempty"`
+
+	// Hooks
+	RoleChanged *wasmx.RolesChangedHook `json:"RoleChanged,omitempty"`
 }

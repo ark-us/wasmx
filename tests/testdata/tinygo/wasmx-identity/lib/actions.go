@@ -481,6 +481,16 @@ func QueryUserByID(msg *MsgQueryUserByID) []byte {
 func QueryUserByAddress(msg *MsgQueryUserByAddress) []byte {
 	userID := LoadUserIDByAddress(msg.Address)
 	if userID == "" {
+		role := wasmx.GetRoleName(MODULE_NAME, wasmx.Bech32String(msg.Address))
+		if role != "" {
+			virtualUserID := "role_" + role
+			user := UserIdentity{
+				UserID:         virtualUserID,
+				PrimaryAddress: msg.Address,
+				Addresses:      []string{msg.Address},
+			}
+			return MarshalJSON(QueryUserByAddressResponse{UserID: virtualUserID, User: user})
+		}
 		return MarshalJSON(map[string]string{"error": "address not registered"})
 	}
 

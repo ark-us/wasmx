@@ -75,6 +75,9 @@ func main() {
 	// Admin-controlled actions
 	case calldata.TransferFrom != nil:
 		result = lib.TransferFrom(calldata.TransferFrom)
+	case calldata.RoleChanged != nil:
+		wasmx.OnlyRole(lib.MODULE_NAME, wasmx.ROLE_ROLES, "RoleChanged")
+		result = lib.OnRoleChanged()
 
 	default:
 		lib.Revert("invalid function call data: " + string(databz))

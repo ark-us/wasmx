@@ -41,6 +41,26 @@ func InstantiateToken() []byte {
 		Decimals: calld.Decimals,
 	})
 
+	totalSupply := GetTotalSupply()
+	for _, bal := range calld.InitialBalances {
+		if bal.UserID == "" {
+			continue
+		}
+		amt, ok := sdkmath.NewIntFromString(bal.Amount)
+		if !ok {
+			Revert("invalid initial balance amount: " + bal.Amount)
+		}
+		if amt.IsNegative() {
+			Revert("initial balance must be non-negative")
+		}
+		if amt.IsZero() {
+			continue
+		}
+		SetBalance(bal.UserID, amt)
+		totalSupply = totalSupply.Add(amt)
+	}
+	SetTotalSupply(totalSupply)
+
 	return []byte("{}")
 }
 
@@ -94,6 +114,11 @@ func MemberCount() []byte {
 // BalanceOf returns the balance of an address
 func BalanceOf(req *MsgBalanceOf) []byte {
 	value := GetBalance(req.Owner)
+	if value.IsZero() {
+		if userID, _ := QueryUserByAddress(req.Owner); userID != "" && userID != req.Owner {
+			value = GetBalance(userID)
+		}
+	}
 	info := GetInfo()
 	resp := MsgBalanceOfResponse{
 		Balance: wasmx.Coin{Denom: info.Symbol, Amount: value},
@@ -132,7 +157,9 @@ func Transfer(req *MsgTransfer) []byte {
 		"value", req.Value.String(),
 	})
 
-	Move(req.From, req.To, req.Value)
+	from := ResolveUserIDOrAddress(req.From)
+	to := ResolveUserIDOrAddress(req.To)
+	Move(from, to, req.Value)
 	resp := MsgTransferResponse{}
 	data, _ := json.Marshal(resp)
 	return data
@@ -147,15 +174,16 @@ func Mint(req *MsgMint) []byte {
 		"value", req.Value.String(),
 	})
 
-	balance := GetBalance(req.To)
+	to := ResolveUserIDOrAddress(req.To)
+	balance := GetBalance(to)
 	balance = balance.Add(req.Value)
-	SetBalance(req.To, balance)
+	SetBalance(to, balance)
 
 	supply := GetTotalSupply()
 	supply = supply.Add(req.Value)
 	SetTotalSupply(supply)
 
-	LogTransfer(ZERO_ADDRESS, req.To, req.Value)
+	LogTransfer(ZERO_ADDRESS, to, req.Value)
 
 	return []byte("{}")
 }
@@ -169,19 +197,20 @@ func Burn(req *MsgBurn) []byte {
 		"value", req.Value.String(),
 	})
 
-	balance := GetBalance(req.From)
+	from := ResolveUserIDOrAddress(req.From)
+	balance := GetBalance(from)
 	if balance.LT(req.Value) {
 		Revert(fmt.Sprintf("balance not enough for burning: %s; burning %s", balance.String(), req.Value.String()))
 	}
 
 	balance = balance.Sub(req.Value)
-	SetBalance(req.From, balance)
+	SetBalance(from, balance)
 
 	supply := GetTotalSupply()
 	supply = supply.Sub(req.Value)
 	SetTotalSupply(supply)
 
-	LogTransfer(req.From, ZERO_ADDRESS, req.Value)
+	LogTransfer(from, ZERO_ADDRESS, req.Value)
 
 	return []byte("{}")
 }
@@ -228,18 +257,20 @@ func DoSetAdmins(req *MsgSetAdmins) []byte {
 
 // TransferFrom transfers tokens on behalf of another address - ONLY admins can call this
 func TransferFrom(req *MsgTransferFrom) []byte {
-	RequireAdmin()
+	RequireAdminOrGovernance()
 
 	callerUserID := GetCallerUserID()
 
-	LoggerDebug("transferFrom (admin)", []string{
+	LoggerDebug("transferFrom", []string{
 		"from", req.From,
 		"to", req.To,
 		"value", req.Value.String(),
 		"caller", callerUserID,
 	})
 
-	Move(req.From, req.To, req.Value)
+	from := ResolveUserIDOrAddress(req.From)
+	to := ResolveUserIDOrAddress(req.To)
+	Move(from, to, req.Value)
 
 	resp := MsgTransferFromResponse{}
 	data, _ := json.Marshal(resp)

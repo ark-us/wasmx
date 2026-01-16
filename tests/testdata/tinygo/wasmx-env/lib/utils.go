@@ -2,6 +2,7 @@ package wasmx
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 )
@@ -49,6 +50,27 @@ func GetRoleName(moduleName string, addr Bech32String) string {
 		Revert([]byte(msg))
 	}
 	return string(data)
+}
+
+// GetRoleAddressInfo returns the role info for an address, or empty string.
+func GetRoleAddressInfo(moduleName string, addr Bech32String) *RoleAddress {
+	resp := &RoleAddress{}
+	calldata := fmt.Sprintf("{\"GetRoleAddressInfo\":{\"address\":\"%s\"}}", addr)
+	ok, data := QueryRoleContract(calldata, moduleName)
+	if !ok {
+		msg := "role name by address failed: " + string(data)
+		LoggerDebug(moduleName, "revert", []string{"err", msg, "module", moduleName})
+		Revert([]byte(msg))
+	}
+	if data == nil {
+		return resp
+	}
+	err := json.Unmarshal(data, resp)
+	if err != nil {
+		LoggerDebug(moduleName, "unmarshaling GetRoleAddressInfo response failed", []string{"err", err.Error(), "module", moduleName})
+		Revert([]byte(moduleName + ": unmarshaling GetRoleAddressInfo response failed: " + err.Error()))
+	}
+	return resp
 }
 
 // CallerHasRole returns true if caller has any role under moduleName.

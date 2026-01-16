@@ -36,6 +36,15 @@ func StringInList(value string, list []string) bool {
 	return false
 }
 
+func MarshalJSON(v interface{}) []byte {
+	data, err := json.Marshal(v)
+	if err != nil {
+		LoggerError("Failed to marshal JSON", []string{"error", err.Error()})
+		return []byte("{}")
+	}
+	return data
+}
+
 // QueryUserByAddress queries the identity contract (by role) to get user_id from an address.
 func QueryUserByAddress(address string) (string, error) {
 	identityContract := wasmx.GetAddressByRole(wasmx.ROLE_ACCOUNT_IDENTITY)
@@ -65,6 +74,16 @@ func QueryUserByAddress(address string) (string, error) {
 		return "", nil
 	}
 	return resp.UserID, nil
+}
+
+func ResolveUserIDOrAddress(value string) string {
+	if value == "" {
+		return value
+	}
+	if userID, _ := QueryUserByAddress(value); userID != "" {
+		return userID
+	}
+	return value
 }
 
 // GetCallerUserID returns the user_id for the current caller address
@@ -105,6 +124,22 @@ func RequireGovernance() {
 
 // RequireAdmin reverts if the caller is not an admin
 func RequireAdmin() {
+	if !IsCallerAdmin() {
+		Revert("caller is not admin")
+	}
+}
+
+// RequireAdminOrGovernance reverts if the caller is neither admin nor governance
+func RequireAdminOrGovernance() {
+	if IsCallerGovernance() {
+		return
+	}
+	if wasmx.HasRole(wasmx.GetCaller(), MODULE_NAME) {
+		callerRole := wasmx.GetRoleName(MODULE_NAME, wasmx.GetCaller())
+		if callerRole == wasmx.ROLE_BANK {
+			return
+		}
+	}
 	if !IsCallerAdmin() {
 		Revert("caller is not admin")
 	}

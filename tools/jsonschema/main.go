@@ -205,6 +205,8 @@ func parseGoFiles(dirPath string) (map[string]*TypeInfo, *TypeInfo, *TypeInfo, e
 
 	var callDataType *TypeInfo
 	var instantiateType *TypeInfo
+	importDirs := map[string]struct{}{}
+	aliasTypes := map[string]string{}
 
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
@@ -223,7 +225,96 @@ func parseGoFiles(dirPath string) (map[string]*TypeInfo, *TypeInfo, *TypeInfo, e
 			continue
 		}
 
+		for _, imp := range file.Imports {
+			path := strings.Trim(imp.Path.Value, `"`)
+			if localDir, ok := resolveTinyGoImport(dirPath, path); ok {
+				importDirs[localDir] = struct{}{}
+			}
+		}
+
 		// Extract types from AST
+		for _, decl := range file.Decls {
+			genDecl, ok := decl.(*ast.GenDecl)
+			if !ok || genDecl.Tok != token.TYPE {
+				continue
+			}
+
+			for _, spec := range genDecl.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					continue
+				}
+
+				if structType, ok := typeSpec.Type.(*ast.StructType); ok {
+					typeInfo := parseStructType(typeSpec.Name.Name, structType)
+					types[typeSpec.Name.Name] = typeInfo
+
+					// Check for special types
+					if typeSpec.Name.Name == "CallData" || typeSpec.Name.Name == "Calldata" {
+						callDataType = typeInfo
+					}
+					if typeSpec.Name.Name == "CallDataInstantiate" || typeSpec.Name.Name == "CalldataInstantiate" || typeSpec.Name.Name == "InstantiateMsg" {
+						instantiateType = typeInfo
+					}
+					continue
+				}
+
+				aliasTypes[typeSpec.Name.Name] = typeToString(typeSpec.Type)
+			}
+		}
+	}
+
+	for importDir := range importDirs {
+		extraTypes, err := parseGoTypes(importDir)
+		if err != nil {
+			continue
+		}
+		for name, typeInfo := range extraTypes {
+			if _, exists := types[name]; !exists {
+				types[name] = typeInfo
+			}
+		}
+	}
+
+	for aliasName, targetType := range aliasTypes {
+		targetName := targetType
+		if strings.Contains(targetName, ".") {
+			parts := strings.Split(targetName, ".")
+			targetName = parts[len(parts)-1]
+		}
+		if target, ok := types[targetName]; ok {
+			if _, exists := types[aliasName]; !exists {
+				clone := *target
+				clone.Name = aliasName
+				clone.Fields = append([]FieldInfo(nil), target.Fields...)
+				types[aliasName] = &clone
+			}
+		}
+	}
+
+	return types, callDataType, instantiateType, nil
+}
+
+func parseGoTypes(dirPath string) (map[string]*TypeInfo, error) {
+	fset := token.NewFileSet()
+	types := make(map[string]*TypeInfo)
+
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !strings.HasSuffix(entry.Name(), ".go") {
+			continue
+		}
+
+		filePath := filepath.Join(dirPath, entry.Name())
+		file, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
+		if err != nil {
+			continue
+		}
+
 		for _, decl := range file.Decls {
 			genDecl, ok := decl.(*ast.GenDecl)
 			if !ok || genDecl.Tok != token.TYPE {
@@ -243,19 +334,32 @@ func parseGoFiles(dirPath string) (map[string]*TypeInfo, *TypeInfo, *TypeInfo, e
 
 				typeInfo := parseStructType(typeSpec.Name.Name, structType)
 				types[typeSpec.Name.Name] = typeInfo
-
-				// Check for special types
-				if typeSpec.Name.Name == "CallData" || typeSpec.Name.Name == "Calldata" {
-					callDataType = typeInfo
-				}
-				if typeSpec.Name.Name == "CallDataInstantiate" || typeSpec.Name.Name == "CalldataInstantiate" || typeSpec.Name.Name == "InstantiateMsg" {
-					instantiateType = typeInfo
-				}
 			}
 		}
 	}
 
-	return types, callDataType, instantiateType, nil
+	return types, nil
+}
+
+func resolveTinyGoImport(moduleDir, importPath string) (string, bool) {
+	const marker = "/tests/testdata/tinygo/"
+	moduleDir = filepath.ToSlash(moduleDir)
+	idx := strings.Index(moduleDir, marker)
+	if idx == -1 {
+		return "", false
+	}
+
+	root := moduleDir[:idx+len(marker)]
+	impIdx := strings.Index(importPath, marker)
+	if impIdx == -1 {
+		return "", false
+	}
+	subpath := importPath[impIdx+len(marker):]
+	localDir := filepath.Join(filepath.FromSlash(root), filepath.FromSlash(subpath))
+	if _, err := os.Stat(localDir); err != nil {
+		return "", false
+	}
+	return localDir, true
 }
 
 func parseStructType(name string, structType *ast.StructType) *TypeInfo {

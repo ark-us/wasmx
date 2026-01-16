@@ -4,7 +4,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
-gov "github.com/loredanacirstea/wasmx-gov-group/gov"
+	gov "github.com/loredanacirstea/wasmx-gov-group/gov"
 	utils "github.com/loredanacirstea/wasmx-utils"
 )
 
@@ -80,15 +80,15 @@ type Proposal struct {
 	FailedReason    string             `json:"failed_reason"`
 
 	// Continuous voting specific fields
-	X          uint64             `json:"x"`           // curve parameter
-	Y          uint64             `json:"y"`           // curve parameter
-	Denom      string             `json:"denom"`       // denomination for voting
-	Options    []ProposalOption   `json:"options"`     // voting options
-	VoteStatus ProposalVoteStatus `json:"vote_status"` // current vote status
-	Winner     uint32             `json:"winner"`      // current winner (may differ from vote_status)
-	GroupID    string             `json:"group_id"`
+	X             uint64             `json:"x"`           // curve parameter
+	Y             uint64             `json:"y"`           // curve parameter
+	Denom         string             `json:"denom"`       // denomination for voting
+	Options       []ProposalOption   `json:"options"`     // voting options
+	VoteStatus    ProposalVoteStatus `json:"vote_status"` // current vote status
+	Winner        uint32             `json:"winner"`      // current winner (may differ from vote_status)
+	GroupID       string             `json:"group_id"`
 	GroupContract wasmx.Bech32String `json:"group_contract"`
-	GroupDenom string             `json:"group_denom"`
+	GroupDenom    string             `json:"group_denom"`
 }
 
 // CoefProposal for coefficient proposals
@@ -246,6 +246,8 @@ type MsgSubmitProposal struct {
 	Title          string             `json:"title"`
 	Summary        string             `json:"summary"`
 	Expedited      bool               `json:"expedited"`
+	GroupID        string             `json:"group_id"`
+	GroupContract  wasmx.Bech32String `json:"group_contract"`
 }
 
 type MsgVote struct {
