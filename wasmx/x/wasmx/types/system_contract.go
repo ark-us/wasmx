@@ -1280,6 +1280,7 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
 	precompiles = append(precompiles, VerifierPrecompiles()...)
+	precompiles = append(precompiles, GroupPrecompiles(accBech32Codec, bondBaseDenom)...)
 	precompiles = append(precompiles, SpecialPrecompiles()...)
 
 	precompiles, err = FillRoles(precompiles, accBech32Codec, feeCollectorBech32)

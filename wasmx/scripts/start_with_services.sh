@@ -267,6 +267,7 @@ mkdir -p "$OUTPUT_DIR"
 mkdir -p "$SCRIPTS_FOLDER"
 
 log "Using mythosd at $MYTHOSD_BIN"
+"$MYTHOSD_BIN" version
 log "Chain home: $NODE_HOME"
 log "RPC: $RPC_ADDRESS"
 
