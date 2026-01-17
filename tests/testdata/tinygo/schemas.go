@@ -17,6 +17,9 @@ var SchemaERC20X string
 //go:embed schemas/wasmx-erc20i_schema.json
 var SchemaERC20I string
 
+//go:embed schemas/wasmx-erc20gov_schema.json
+var SchemaERC20Gov string
+
 //go:embed schemas/wasmx-fsm_schema.json
 var SchemaFSM string
 
@@ -34,6 +37,12 @@ var SchemaGov string
 
 //go:embed schemas/wasmx-gov-continuous_schema.json
 var SchemaGovContinuous string
+
+//go:embed schemas/wasmx-gov-group_schema.json
+var SchemaGovGroup string
+
+//go:embed schemas/wasmx-gov-group-continuous_schema.json
+var SchemaGovGroupContinuous string
 
 //go:embed schemas/wasmx-lobby_schema.json
 var SchemaLobby string
@@ -59,6 +68,9 @@ var SchemaIdentity string
 //go:embed schemas/wasmx-oauth2-keys_schema.json
 var SchemaOAuth2Keys string
 
+//go:embed schemas/wasmx-groups_schema.json
+var SchemaGroups string
+
 //go:embed schemas/wasmx-slashing_schema.json
 var SchemaSlashing string
 
@@ -72,9 +84,10 @@ var SchemaEmailChain string
 // Labels match those defined in wasmx/x/wasmx/types/vm.go
 var Schemas = map[string]string{
 	// ERC20 tokens
-	"erc20json":  SchemaERC20,
-	"derc20json": SchemaERC20X,
-	"erc20ijson": SchemaERC20I,
+	"erc20json":    SchemaERC20,
+	"derc20json":   SchemaERC20X,
+	"erc20ijson":   SchemaERC20I,
+	"erc20govjson": SchemaERC20Gov,
 
 	// Interpreters
 	"28.finite_state_machine": SchemaFSM,
@@ -85,10 +98,12 @@ var Schemas = map[string]string{
 	"65.wasmx_ondemand_single_library": SchemaOnDemandSingleLib,
 
 	// Governance / staking
-	"gov_0.0.1":      SchemaGov,
-	"gov_cont_0.0.1": SchemaGovContinuous,
-	"staking_0.0.1":  SchemaStaking,
-	"slashing_0.0.1": SchemaSlashing,
+	"gov_0.0.1":            SchemaGov,
+	"gov_cont_0.0.1":       SchemaGovContinuous,
+	"gov-group_0.0.1":      SchemaGovGroup,
+	"gov-group-cont_0.0.1": SchemaGovGroupContinuous,
+	"staking_0.0.1":        SchemaStaking,
+	"slashing_0.0.1":       SchemaSlashing,
 
 	// Multichain / lobby
 	"multichain_registry_0.0.1": SchemaMultichainRegistry,
@@ -105,6 +120,7 @@ var Schemas = map[string]string{
 	"account_identity_0.0.1":    SchemaIdentity,
 	"oauth2_keys_0.0.1":         SchemaOAuth2Keys,
 	"63.wasmx_email_0.0.1":      SchemaEmailChain,
+	"groups_0.0.1":              SchemaGroups,
 }
 
 // GetSchema returns the JSON schema for a contract label, or empty string if not found
