@@ -579,7 +579,11 @@ func StartInProcess(wasmVmMeta memc.IWasmVmMeta, svrCtx *server.Context, clientC
 		// start the node
 		// TODO send the configs to the smart contract
 		// TODO send cmsrvconfig, ctndcfg with StartNode hook
-		err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
+
+		// Read environment variables to pass to consensus
+		env := msrvconfig.Network.StartEnv
+
+		err = networkserver.StartNode(app, logger, app.GetNetworkKeeper(), env)
 		if err != nil {
 			return err
 		}

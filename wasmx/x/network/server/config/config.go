@@ -25,8 +25,9 @@ type NetworkConfig struct {
 	// comma separated list of values
 	Ips string `mapstructure:"ips"`
 	// comma separated list of values for each initialized chain
-	Id            string   `mapstructure:"id"`
-	InitialChains []string `mapstructure:"initial-chains"`
+	Id            string            `mapstructure:"id"`
+	InitialChains []string          `mapstructure:"initial-chains"`
+	StartEnv      map[string]string `mapstructure:"start-env"`
 }
 
 // DefaultEVMConfig returns the default EVM configuration
@@ -39,6 +40,7 @@ func DefaultNetworkConfigConfig() *NetworkConfig {
 		Ips:                DefaultNetworkIps,
 		Id:                 DefaultNodeId,
 		InitialChains:      DefaultInitialChains,
+		StartEnv:           map[string]string{},
 	}
 }
 

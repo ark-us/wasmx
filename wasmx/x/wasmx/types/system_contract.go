@@ -605,13 +605,13 @@ func ConsensusPrecompiles(minValidatorCount int32, enableEIDCheck bool, currentL
 	}
 
 	// genesis uuid is a valid time-based uuid that should not exist in the kayros database - for a new chain
-	kayrosP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"blockTimeout","value":"timeoutCommit"},{"key":"max_tx_bytes","value":"65536"},{"key":"timeoutCommit","value":"4000"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutMissingTxs","value":"4000"},{"key":"kayros_base_url","value":"https://kayros.provable.dev"},{"key":"kayros_user_key","value":"0x73db4aa00c2519ec5c060af0be9751e2f5f920413db68aa5ca2501b0df9c972e"},{"key":"threshold_commit","value":"51"},{"key":"threshold_finalize","value":"75"},{"key":"genesis_uuid","value":""},{"key":"data_type_id","value":""},{"key":"max_block_tx","value":"30"}],"initialState":"uninitialized"}}`)})
+	kayrosP2PInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"blockTimeout","value":"timeoutCommit"},{"key":"max_tx_bytes","value":"65536"},{"key":"timeoutCommit","value":"4000"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutMissingTxs","value":"4000"},{"key":"kayros_base_url","value":""},{"key":"kayros_user_key","value":""},{"key":"threshold_commit","value":"51"},{"key":"threshold_finalize","value":"75"},{"key":"genesis_uuid","value":""},{"key":"data_type_id","value":""},{"key":"max_block_tx","value":"30"}],"initialState":"uninitialized"}}`)})
 	if err != nil {
 		panic("ConsensusPrecompiles: cannot marshal kayrosP2PInitMsg message")
 	}
 
 	// genesis uuid is a valid time-based uuid that should not exist in the kayros database - for a new chain
-	kayrosP2POnDemandInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"blockTimeout","value":"timeoutCommit"},{"key":"max_tx_bytes","value":"65536"},{"key":"timeoutCommit","value":"100"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutMissingTxs","value":"4000"},{"key":"kayros_base_url","value":"https://kayros.provable.dev"},{"key":"kayros_user_key","value":"0x73db4aa00c2519ec5c060af0be9751e2f5f920413db68aa5ca2501b0df9c972e"},{"key":"threshold_commit","value":"51"},{"key":"threshold_finalize","value":"75"},{"key":"genesis_uuid","value":""},{"key":"data_type_id","value":""},{"key":"max_block_tx","value":"30"},{"key":"batchTimeout","value":"1000"}],"initialState":"uninitialized"}}`)})
+	kayrosP2POnDemandInitMsg, err := json.Marshal(WasmxExecutionMessage{Data: []byte(`{"instantiate":{"context":[{"key":"blockTimeout","value":"timeoutCommit"},{"key":"max_tx_bytes","value":"65536"},{"key":"timeoutCommit","value":"100"},{"key":"max_block_gas","value":"20000000"},{"key":"timeoutMissingTxs","value":"4000"},{"key":"kayros_base_url","value":""},{"key":"kayros_user_key","value":""},{"key":"threshold_commit","value":"51"},{"key":"threshold_finalize","value":"75"},{"key":"genesis_uuid","value":""},{"key":"data_type_id","value":""},{"key":"max_block_tx","value":"30"},{"key":"batchTimeout","value":"1000"}],"initialState":"uninitialized"}}`)})
 
 	if err != nil {
 		panic("ConsensusPrecompiles: cannot marshal kayrosP2PInitMsg message")
@@ -968,8 +968,7 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 
 	consensusPrecompiles := ConsensusPrecompiles(minValidatorCount, enableEIDCheck, 0, initialPortValues, erc20CodeId, derc20CodeId)
 	for i, val := range consensusPrecompiles {
-		// if val.Label == CONSENSUS_TENDERMINTP2P {
-		if val.Label == CONSENSUS_KAYROSP2P_ONDEMAND {
+		if val.Label == CONSENSUS_TENDERMINTP2P {
 			consensusPrecompiles[i].Role.Primary = true
 		}
 	}

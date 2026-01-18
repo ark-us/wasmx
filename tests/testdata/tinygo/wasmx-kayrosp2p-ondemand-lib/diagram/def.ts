@@ -9,7 +9,7 @@ export const machine = createMachine({
     max_tx_bytes: 65536,
     max_block_gas: "20000000",
     timeoutCommit: 4000,
-    kayros_base_url: "https://kayros.provable.dev",
+    kayros_base_url: "",
     kayros_user_key: "",
     threshold_commit: 51,
     timeoutMissingTxs: 4000,

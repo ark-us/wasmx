@@ -148,6 +148,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 		Ips:                v.GetString("network.ips"),
 		Id:                 v.GetString("network.id"),
 		InitialChains:      v.GetStringSlice(networkflags.NetworkInitialChains),
+		StartEnv:           v.GetStringMapString("network.start-env"),
 	}
 
 	return Config{

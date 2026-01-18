@@ -31,12 +31,12 @@ type StateSyncResponse struct {
 
 // KayrosConfig holds the configuration for Kayros API client
 type KayrosConfig struct {
-	ApiBaseUrl string `json:"api_base_url"` // e.g., "https://kayros.provable.dev"
+	ApiBaseUrl string `json:"api_base_url"`
 }
 
 // InstantiateMsg is the message passed during contract instantiation
 type InstantiateMsg struct {
-	KayrosApiUrl      string `json:"kayros_api_url"`     // e.g., "https://kayros.provable.dev"
+	KayrosApiUrl      string `json:"kayros_api_url"`
 	GenesisUUID       string `json:"genesis_uuid"`       // First UUID to start from on genesis
 	ThresholdCommit   int    `json:"threshold_commit"`   // Percentage threshold for commit (e.g., 51) - determines when to rollback
 	ThresholdFinalize int    `json:"threshold_finalize"` // Percentage threshold for finalization (e.g., 75) - determines when block is finalized

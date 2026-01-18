@@ -270,7 +270,10 @@ func (s StateStore) Bootstrap(state sm.State) error {
 
 	// TODO send a message to provider to stop state sync
 
-	err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
+	// Read environment variables to pass to consensus
+	env := networkserver.ReadStartNodeEnv()
+
+	err = networkserver.StartNode(app, logger, app.GetNetworkKeeper(), env)
 	if err != nil {
 		return err
 	}
