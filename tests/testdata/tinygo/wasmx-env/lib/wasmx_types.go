@@ -6,6 +6,11 @@ import (
 
 const TypeUrl_MsgExecuteContract = "/mythos.wasmx.v1.MsgExecuteContract"
 
+type AnyWrapBz struct {
+	TypeURL string `json:"type_url"`
+	Value   []byte `json:"value"`
+}
+
 // AnyWrap is a type_url + base64-encoded value
 type AnyWrap struct {
 	TypeURL string `json:"type_url"`
@@ -31,4 +36,9 @@ func (MsgExecuteContract) TypeUrl() string { return TypeUrl_MsgExecuteContract }
 type PrefixedAddress struct {
 	Bz     string `json:"bz"` // base64 bytes
 	Prefix string `json:"prefix"`
+}
+
+type DefaultResponse struct {
+	Data  []byte `json:"data"`
+	Error string `json:"error"`
 }

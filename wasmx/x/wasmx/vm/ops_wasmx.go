@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	sdkmath "cosmossdk.io/math"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	ed25519 "github.com/cometbft/cometbft/crypto/ed25519"
@@ -283,6 +284,35 @@ func wasmxExecuteCosmosMsg(_context interface{}, rnh memc.RuntimeHandler, params
 		return nil, err
 	}
 	return rnh.AllocateWriteMem(responsebz)
+}
+
+func wasmxEncodeCosmosProto(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {
+	ctx := _context.(*Context)
+	keyptr, _ := memc.GetPointerFromParams(rnh, params, 0)
+	reqbz, err := rnh.ReadMemFromPtr(keyptr)
+	if err != nil {
+		return nil, err
+	}
+	resp := DefaultResponse{Error: ""}
+
+	var msg sdk.Msg
+	if err := ctx.CosmosHandler.Codec().UnmarshalInterfaceJSON(reqbz, &msg); err != nil {
+		resp.Error = err.Error()
+	} else {
+		anyMsg, err := cdctypes.NewAnyWithValue(msg)
+		out, err := ctx.CosmosHandler.JSONCodec().MarshalJSON(anyMsg)
+		if err != nil {
+			resp.Error = err.Error()
+		} else {
+			resp.Data = out
+		}
+	}
+
+	respbz, err := json.Marshal(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return rnh.AllocateWriteMem(respbz)
 }
 
 func wasmxDecodeCosmosTxToJson(_context interface{}, rnh memc.RuntimeHandler, params []interface{}) ([]interface{}, error) {

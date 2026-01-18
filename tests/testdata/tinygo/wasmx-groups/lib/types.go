@@ -212,6 +212,21 @@ type MsgSubmitGroupProposal struct {
 	Expedited      bool         `json:"expedited"`
 }
 
+// MsgSubmitGroupProposalExecute submits a single MsgExecuteContract proposal.
+type MsgSubmitGroupProposalExecute struct {
+	GroupID        string       `json:"group_id"`
+	Sender         string       `json:"sender"`
+	Contract       string       `json:"contract"`
+	Msg            string       `json:"msg"`
+	Funds          []wasmx.Coin `json:"funds"`
+	Dependencies   []string     `json:"dependencies"`
+	InitialDeposit []wasmx.Coin `json:"initial_deposit"`
+	Metadata       string       `json:"metadata"`
+	Title          string       `json:"title"`
+	Summary        string       `json:"summary"`
+	Expedited      bool         `json:"expedited"`
+}
+
 type MsgVoteGroupProposal struct {
 	GroupID    string `json:"group_id"`
 	ProposalID string `json:"proposal_id"`
@@ -351,6 +366,7 @@ type CallData struct {
 	AddAdmin                  *MsgAddAdmin                  `json:"add_admin,omitempty"`
 	RemoveAdmin               *MsgRemoveAdmin               `json:"remove_admin,omitempty"`
 	SubmitGroupProposal       *MsgSubmitGroupProposal       `json:"submit_group_proposal,omitempty"`
+	SubmitGroupProposalExecute *MsgSubmitGroupProposalExecute `json:"submit_group_proposal_execute,omitempty"`
 	VoteGroupProposal         *MsgVoteGroupProposal         `json:"vote_group_proposal,omitempty"`
 	VoteGroupProposalWeighted *MsgVoteGroupProposalWeighted `json:"vote_group_proposal_weighted,omitempty"`
 	DepositVoteGroupProposal  *MsgDepositVoteGroupProposal  `json:"deposit_vote_group_proposal,omitempty"`

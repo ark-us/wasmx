@@ -327,6 +327,80 @@ func SubmitGroupProposal(msg *MsgSubmitGroupProposal) []byte {
 	return resp
 }
 
+func SubmitGroupProposalExecute(msg *MsgSubmitGroupProposalExecute) []byte {
+	config := LoadConfig()
+	if config == nil {
+		Revert("contract not initialized")
+	}
+
+	group, _ := LoadGroup(msg.GroupID)
+	if group == nil {
+		Revert("group not found: " + msg.GroupID)
+	}
+
+	caller := wasmx.GetCaller()
+	respBz := QueryGetVoterPower(&MsgQueryGetVoterPower{GroupID: msg.GroupID, Voter: string(caller)})
+	var powerResp QueryGetVoterPowerResponse
+	if err := json.Unmarshal(respBz, &powerResp); err != nil || !powerResp.IsMember {
+		Revert("caller is not a group member")
+	}
+
+	msgbz, err := json.Marshal(&wasmx.WasmxExecutionMessage{Data: []byte(msg.Msg)})
+	if err != nil {
+		Revert(`submit gov proposal: cannot marshal WasmxExecutionMessage`)
+	}
+
+	execMsg := struct {
+		Sender       string       `json:"sender"`
+		Contract     string       `json:"contract"`
+		Msg          []byte       `json:"msg"`
+		Funds        []wasmx.Coin `json:"funds"`
+		Dependencies []string     `json:"dependencies"`
+	}{
+		Sender:       msg.Sender,
+		Contract:     msg.Contract,
+		Msg:          msgbz,
+		Funds:        msg.Funds,
+		Dependencies: msg.Dependencies,
+	}
+	msgBz, err := json.Marshal(execMsg)
+	if err != nil {
+		Revert("failed to marshal execute message: " + err.Error())
+	}
+	execMsgAny := &wasmx.AnyWrapBz{
+		TypeURL: wasmx.TypeUrl_MsgExecuteContract,
+		Value:   msgBz,
+	}
+	execMsgAnyBz, err := json.Marshal(execMsgAny)
+	if err != nil {
+		Revert("failed to marshal any message: " + err.Error())
+	}
+	protoAnyBz, err := wasmx.EncodeCosmosProto(execMsgAnyBz)
+	if err != nil {
+		Revert("failed to encode cosmos message: " + err.Error())
+	}
+
+	payload := map[string]interface{}{
+		"SubmitProposal": map[string]interface{}{
+			"messages":        [][]byte{protoAnyBz},
+			"initial_deposit": msg.InitialDeposit,
+			"proposer":        string(caller),
+			"metadata":        msg.Metadata,
+			"title":           msg.Title,
+			"summary":         msg.Summary,
+			"expedited":       msg.Expedited,
+			"group_id":        msg.GroupID,
+			"group_contract":  string(group.Protocol.GovernanceContract),
+		},
+	}
+	bz, _ := json.Marshal(payload)
+	ok, resp := CallInternal(group.Protocol.GovernanceContract, bz, false)
+	if !ok {
+		Revert("gov submit failed: " + string(resp))
+	}
+	return resp
+}
+
 func VoteGroupProposal(msg *MsgVoteGroupProposal) []byte {
 	group, _ := LoadGroup(msg.GroupID)
 	if group == nil {

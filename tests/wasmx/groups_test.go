@@ -14,12 +14,12 @@ import (
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
+	wasmxtest "github.com/loredanacirstea/mythos-tests/testdata/wasmx"
 	mcodec "github.com/loredanacirstea/wasmx/codec"
 	ut "github.com/loredanacirstea/wasmx/testutil/wasmx"
 	cosmosmodtypes "github.com/loredanacirstea/wasmx/x/cosmosmod/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 	"github.com/loredanacirstea/wasmx/x/wasmx/vm/precompiles"
-	wasmxtest "github.com/loredanacirstea/mythos-tests/testdata/wasmx"
 )
 
 // =============================================================================
@@ -639,7 +639,7 @@ func (suite *KeeperTestSuite) TestGovGroupWithERC20Gov() {
 	}
 	nonMemberVoteRes, err := appA.ExecuteContractNoCheck(setup.Sender, govGroupContract, nonMemberVotePayload, nil, nil, 1000000000, nil)
 	s.Require().NoError(err)
-	s.Require().False(nonMemberVoteRes.IsOK(), "voting should fail, oter should be not eligible for group")
+	s.Require().False(nonMemberVoteRes.IsOK(), "voting should fail, voter should not be eligible for group")
 	s.Require().Contains(nonMemberVoteRes.GetLog(), "failed to execute message", nonMemberVoteRes.GetEvents())
 
 	appA.WaitForVotingPeriodEnd()
@@ -695,6 +695,33 @@ func (suite *KeeperTestSuite) TestGovGroupWithERC20Gov() {
 
 	storageQuery := appA.App.WasmxKeeper.QueryRaw(appA.Context(), storageContract, []byte("govkey"))
 	s.Require().Equal("govval", string(storageQuery))
+
+	// submit_group_proposal_execute for contract execution
+	execMsgData := `{"set":{"key":"govkey_exec","value":"govval_exec"}}`
+	execSubmit := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"submit_group_proposal_execute":{"group_id":"%s","sender":"%s","contract":"%s","msg":%s,"funds":[],"dependencies":[],"initial_deposit":[{"denom":"%s","amount":"10000001"}],"metadata":"","title":"Set storage via gov-group exec","summary":"simple storage","expedited":false}}`,
+			createResp.GroupID, govGroupContract.String(), storageContract.String(), strconv.Quote(execMsgData), erc20govDenom)),
+	}
+	execSubmitRes := appA.ExecuteContract(setup.Sender, setup.GroupsContract, execSubmit, nil, nil)
+	s.Require().True(execSubmitRes.IsOK(), "submit execute proposal failed: %s", execSubmitRes.Log)
+	var execSubmitResp struct {
+		ProposalID string `json:"proposal_id"`
+	}
+	err = appA.DecodeExecuteResponse(execSubmitRes, &execSubmitResp)
+	s.Require().NoError(err)
+	execProposalID, err := strconv.ParseInt(execSubmitResp.ProposalID, 10, 64)
+	s.Require().NoError(err)
+	s.Require().NotZero(execProposalID)
+
+	execVote := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"Vote":{"proposal_id":%d,"voter":"%s","option":"VOTE_OPTION_YES","metadata":"vote"}}`, execProposalID, senderAddr)),
+	}
+	execVoteRes := appA.ExecuteContract(setup.Sender, govGroupContract, execVote, nil, nil)
+	s.Require().True(execVoteRes.IsOK(), "exec vote failed: %s", execVoteRes.Log)
+	appA.WaitForVotingPeriodEnd()
+
+	execQuery := appA.App.WasmxKeeper.QueryRaw(appA.Context(), storageContract, []byte("govkey_exec"))
+	s.Require().Equal("govval_exec", string(execQuery))
 }
 
 func (suite *KeeperTestSuite) TestGovGroupContinuousWithERC20Gov() {
@@ -833,6 +860,32 @@ func (suite *KeeperTestSuite) TestGovGroupContinuousWithERC20Gov() {
 
 	storageQuery := appA.App.WasmxKeeper.QueryRaw(appA.Context(), storageContract, []byte("govkey"))
 	s.Require().Equal("govval", string(storageQuery))
+
+	// submit_group_proposal_execute for contract execution
+	execMsgData := `{"set":{"key":"govkey_exec","value":"govval_exec"}}`
+	execSubmit := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"submit_group_proposal_execute":{"group_id":"%s","sender":"%s","contract":"%s","msg":%s,"funds":[],"dependencies":[],"initial_deposit":[{"denom":"%s","amount":"100"}],"metadata":"","title":"Set storage via gov-group-cont exec","summary":"simple storage","expedited":false}}`,
+			createResp.GroupID, govGroupContContract.String(), storageContract.String(), strconv.Quote(execMsgData), erc20denom)),
+	}
+	execSubmitRes := appA.ExecuteContract(setup.Sender, setup.GroupsContract, execSubmit, nil, nil)
+	s.Require().True(execSubmitRes.IsOK(), "submit execute proposal failed: %s", execSubmitRes.Log)
+	var execSubmitResp struct {
+		ProposalID string `json:"proposal_id"`
+	}
+	err = appA.DecodeExecuteResponse(execSubmitRes, &execSubmitResp)
+	s.Require().NoError(err)
+	execProposalID, err := strconv.ParseUint(execSubmitResp.ProposalID, 10, 64)
+	s.Require().NoError(err)
+	s.Require().NotZero(execProposalID)
+
+	execVote := types.WasmxExecutionMessage{
+		Data: []byte(fmt.Sprintf(`{"DepositVote":{"proposal_id":%d,"option_id":2,"voter":"%s","amount":"100","arbitration_amount":"0","metadata":"vote"}}`, execProposalID, senderAddr)),
+	}
+	execVoteRes := appA.ExecuteContract(setup.Sender, govGroupContContract, execVote, nil, nil)
+	s.Require().True(execVoteRes.IsOK(), "exec deposit vote failed: %s", execVoteRes.Log)
+
+	execQuery := appA.App.WasmxKeeper.QueryRaw(appA.Context(), storageContract, []byte("govkey_exec"))
+	s.Require().Equal("govval_exec", string(execQuery))
 }
 
 func (suite *KeeperTestSuite) RegisterErc20GovDenomRole(setup *GroupsTestSetup, contract mcodec.AccAddressPrefixed, label string) {

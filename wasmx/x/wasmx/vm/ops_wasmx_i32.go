@@ -57,6 +57,7 @@ func BuildWasmxEnvi32(context *Context, rnh memc.RuntimeHandler) (interface{}, e
 		vm.BuildFn("getRoleByAddress", wasmxGetRoleByAddress, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 
 		vm.BuildFn("executeCosmosMsg", wasmxExecuteCosmosMsg, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
+		vm.BuildFn("encodeCosmosProto", wasmxEncodeCosmosProto, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("decodeCosmosTxToJson", wasmxDecodeCosmosTxToJson, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 		vm.BuildFn("verifyCosmosTx", wasmxVerifyCosmosTx, []interface{}{vm.ValType_I32()}, []interface{}{vm.ValType_I32()}, 0),
 

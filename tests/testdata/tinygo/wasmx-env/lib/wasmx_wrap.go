@@ -274,6 +274,25 @@ func ExecuteCosmosMsg(msg string, moduleName ...string) CallResponse {
 	return resp
 }
 
+func EncodeCosmosProto(msg []byte, moduleName ...string) ([]byte, error) {
+	module := ""
+	if len(moduleName) > 0 {
+		module = moduleName[0]
+	}
+	LoggerDebugExtended(module+":wasmx_env", "encodeCosmosProto", []string{"msg", string(msg)})
+	out := utils.PackedPtrToBytes(EncodeCosmosProto_(utils.BytesToPackedPtr(msg)))
+	LoggerDebugExtended(module+":wasmx_env", "encodeCosmosProto", []string{"response", string(out)})
+
+	var resp DefaultResponse
+	if err := json.Unmarshal(out, &resp); err != nil {
+		RevertWithModule(module+":EncodeCosmosProto", err.Error())
+	}
+	if resp.Error != "" {
+		return nil, fmt.Errorf("%s", resp.Error)
+	}
+	return resp.Data, nil
+}
+
 // CallEvm mirrors AS callEvm: do not base64-encode calldata, send as-is
 func CallEvm(req CallRequest, moduleName ...string) CallResponse {
 	mod := ""

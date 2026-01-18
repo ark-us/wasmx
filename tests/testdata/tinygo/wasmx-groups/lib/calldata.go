@@ -44,6 +44,10 @@ func RouteCallData(data []byte) []byte {
 		return SubmitGroupProposal(callData.SubmitGroupProposal)
 	}
 
+	if callData.SubmitGroupProposalExecute != nil {
+		return SubmitGroupProposalExecute(callData.SubmitGroupProposalExecute)
+	}
+
 	if callData.VoteGroupProposal != nil {
 		return VoteGroupProposal(callData.VoteGroupProposal)
 	}

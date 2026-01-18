@@ -78,6 +78,17 @@
     {
       "type": "object",
       "properties": {
+        "submit_group_proposal_execute": {
+          "$ref": "#/definitions/MsgSubmitGroupProposalExecute"
+        }
+      },
+      "required": [
+        "submit_group_proposal_execute"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
         "vote_group_proposal": {
           "$ref": "#/definitions/MsgVoteGroupProposal"
         }
@@ -599,6 +610,94 @@
         "expedited"
       ]
     },
+    "MsgSubmitGroupProposalExecute": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "type": "string"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expedited": {
+          "type": "boolean"
+        },
+        "funds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "group_id": {
+          "type": "string"
+        },
+        "initial_deposit": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "format": "bigint",
+                "x-go-type": "bigint"
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "denom",
+              "amount"
+            ]
+          }
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "msg": {
+          "type": "string"
+        },
+        "sender": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "sender",
+        "contract",
+        "msg",
+        "funds",
+        "dependencies",
+        "initial_deposit",
+        "metadata",
+        "title",
+        "summary",
+        "expedited"
+      ]
+    },
     "MsgUpdateProtocol": {
       "type": "object",
       "properties": {
@@ -943,6 +1042,9 @@
         },
         "submit_group_proposal": {
           "$ref": "#/definitions/MsgSubmitGroupProposal"
+        },
+        "submit_group_proposal_execute": {
+          "$ref": "#/definitions/MsgSubmitGroupProposalExecute"
         },
         "update_protocol": {
           "$ref": "#/definitions/MsgUpdateProtocol"

@@ -168,6 +168,11 @@ type VerifyCosmosTxResponse struct {
 	Error string `json:"error"`
 }
 
+type DefaultResponse struct {
+	Data  []byte `json:"data"`
+	Error string `json:"error"`
+}
+
 type AppWithSubCallHook interface {
 	BeginSubCall(ctx context.Context, level uint32, index uint32, isquery bool) error
 	EndSubCall(ctx context.Context, level uint32, index uint32, isquery bool, err error) error

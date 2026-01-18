@@ -146,6 +146,9 @@ func GetRoleByAddress_(addrPtr int64) int64
 //go:wasmimport wasmx executeCosmosMsg
 func ExecuteCosmosMsg_(ptr int64) int64
 
+//go:wasmimport wasmx encodeCosmosProto
+func EncodeCosmosProto_(ptr int64) int64
+
 //go:wasmimport wasmx decodeCosmosTxToJson
 func DecodeCosmosTxToJson_(ptr int64) int64
 
