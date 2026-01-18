@@ -681,7 +681,6 @@ func BuildWasmxEnvRusti64(context *Context, rnh memc.RuntimeHandler) (interface{
 func ExecuteWasiCommand(context *Context, contractVm memc.IVm, funcName string, args []interface{}, interpreted bool) ([]int32, error) {
 	var res []int32
 	var err error
-	fmt.Println("--ExecuteWasiCommand--", funcName)
 
 	// wasi command style has only one entry point `_start`,
 	// so we just pass our entry point as an ENV variable

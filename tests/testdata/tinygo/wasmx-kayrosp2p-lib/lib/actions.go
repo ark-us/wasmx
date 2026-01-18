@@ -282,6 +282,7 @@ func RegisterWithKayros(params []fsm.ActionParam, event fsm.EventObject) (*Kayro
 	LoggerInfo("transaction registered with Kayros", []string{
 		"txHash", txHash,
 		"uuid", string(resp.TimeUUID),
+		"kayros_hash", string(resp.ComputedHash),
 	})
 
 	return resp, nil

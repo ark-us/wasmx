@@ -50,7 +50,7 @@ func SystemContractsModify(wasmRuntime string) func([]wasmxtypes.SystemContract)
 			}
 		}
 		for i := range contracts {
-			if contracts[i].Label == wasmxtypes.CONSENSUS_KAYROSP2P {
+			if strings.Contains(contracts[i].Label, "kayrosp2p") {
 				execmsg := &wasmxtypes.WasmxExecutionMessage{}
 				json.Unmarshal(contracts[i].InitMessage, execmsg)
 

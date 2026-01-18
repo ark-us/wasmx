@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	httpclient "github.com/loredanacirstea/wasmx-env-httpclient"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
@@ -342,19 +343,25 @@ func (kc *KayrosClient) RegisterData(reqBody KayrosRegistrationRequest) (*Kayros
 		return nil, fmt.Errorf("failed to marshal registration request: %w", err)
 	}
 
+	LoggerDebugExtended(`Kayros registration`, []string{"endpoint", endpoint})
+
 	respData, err := kc.makePostRequest(endpoint, bodyBytes)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("--RegisterData.resp--", string(respData))
 
 	var kayrosResp KayrosRegistrationResponseWrap
 	if err := json.Unmarshal(respData, &kayrosResp); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal Kayros registration response: %w", err)
 	}
+
+	LoggerDebugExtended(`Kayros registration`, []string{"endpoint", endpoint, "success", strconv.FormatBool(kayrosResp.Success), "kayros_hash", string(kayrosResp.Data.ComputedHash), "timeuuid", string(kayrosResp.Data.TimeUUID)})
+
 	if !kayrosResp.Success {
-		return nil, fmt.Errorf("Failed Kayros registration: %s", kayrosResp.Message)
+		return nil, fmt.Errorf("Failed Kayros registration request: %s", kayrosResp.Message)
 	}
-	fmt.Println("--RegisterData.resp2--", kayrosResp.Data)
+	if !kayrosResp.Data.Success {
+		return nil, fmt.Errorf("Failed Kayros registration: %s; %s", kayrosResp.Message, kayrosResp.Data.Message)
+	}
 	return &kayrosResp.Data, nil
 }
