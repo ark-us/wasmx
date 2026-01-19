@@ -581,7 +581,7 @@ func StartInProcess(wasmVmMeta memc.IWasmVmMeta, svrCtx *server.Context, clientC
 		// TODO send cmsrvconfig, ctndcfg with StartNode hook
 
 		// Read environment variables to pass to consensus
-		env := msrvconfig.Network.StartEnv
+		env := networkconfig.ParseStartEnv(msrvconfig.Network.StartEnv)
 
 		err = networkserver.StartNode(app, logger, app.GetNetworkKeeper(), env)
 		if err != nil {

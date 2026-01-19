@@ -1,5 +1,7 @@
 package config
 
+import "strings"
+
 const (
 	DefaultNetworkEnable  = true
 	DefaultNetworkLeader  = false
@@ -25,9 +27,9 @@ type NetworkConfig struct {
 	// comma separated list of values
 	Ips string `mapstructure:"ips"`
 	// comma separated list of values for each initialized chain
-	Id            string            `mapstructure:"id"`
-	InitialChains []string          `mapstructure:"initial-chains"`
-	StartEnv      map[string]string `mapstructure:"start-env"`
+	Id            string   `mapstructure:"id"`
+	InitialChains []string `mapstructure:"initial-chains"`
+	StartEnv      string   `mapstructure:"start-env"`
 }
 
 // DefaultEVMConfig returns the default EVM configuration
@@ -40,11 +42,32 @@ func DefaultNetworkConfigConfig() *NetworkConfig {
 		Ips:                DefaultNetworkIps,
 		Id:                 DefaultNodeId,
 		InitialChains:      DefaultInitialChains,
-		StartEnv:           map[string]string{},
+		StartEnv:           "",
 	}
 }
 
 func (c NetworkConfig) Validate() error {
 	// TODO
 	return nil
+}
+
+func ParseStartEnv(raw string) map[string]string {
+	env := map[string]string{}
+	for _, pair := range strings.Split(raw, ";") {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
+		parts := strings.SplitN(pair, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		if key == "" {
+			continue
+		}
+		env[key] = value
+	}
+	return env
 }

@@ -6,7 +6,7 @@
 * on-demand blocks
 
 ```bash
-mythosd testnet init-files --network.initial-chains=ondemand_single --v 1 --output-dir=$(pwd)/testnet --minimum-gas-prices="1000amyt" --nocors --libp2p --enable-eid=false --chain-id=mythos_7000-14
+mythosd testnet init-files --network.initial-chains=mythos --consensus-label=ondemand_single_0.0.1 --v 1 --output-dir=$(pwd)/testnet --minimum-gas-prices="1000amyt" --nocors --libp2p --enable-eid=false --chain-id=mythos_7000-14
 ```
 
 ## Basic chain, 1 validator
