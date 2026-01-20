@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
@@ -90,7 +92,7 @@ func main() {
 		result = []byte{}
 
 	case calldata.StartNode != nil:
-		startNodeInternal(config)
+		startNodeInternal(config, calldata.StartNode.Data)
 		result = []byte{}
 
 	case calldata.SetupNode != nil:
@@ -139,7 +141,7 @@ func eventual() {
 }
 
 func StartNode() {
-	configBz, _, err := lib.GetInterpreterCalldata()
+	configBz, calldBz, err := lib.GetInterpreterCalldata()
 	if err != nil {
 		lib.Revert("failed to get interpreter calldata: " + err.Error())
 		return
@@ -151,7 +153,8 @@ func StartNode() {
 		return
 	}
 
-	startNodeInternal(config)
+	envData := string(calldBz)
+	startNodeInternal(config, envData)
 
 	// Handle finish data
 	result := wasmx.GetFinishData()
@@ -236,8 +239,28 @@ func setupNodeInternal(config lib.MachineExternal, data string) {
 	lib.RunInternal(config, event)
 }
 
-func startNodeInternal(config lib.MachineExternal) {
+func startNodeInternal(config lib.MachineExternal, envData string) {
 	lib.LoggerInfo("emit start event", []string{"module", lib.MODULE_NAME})
+
+	// Parse and store env variables in context
+	if envData != "" {
+		envBz, err := base64.StdEncoding.DecodeString(envData)
+		if err == nil {
+			var env map[string]string
+			if err := json.Unmarshal(envBz, &env); err == nil {
+				lib.LoggerInfo("storing env variables in context", []string{"count", fmt.Sprintf("%d", len(env))})
+				for key, value := range env {
+					lib.SetContextValue(key, value)
+					lib.LoggerDebug("set env variable in context", []string{"key", key})
+				}
+			} else {
+				lib.LoggerError("failed to unmarshal env data", []string{"error", err.Error()})
+			}
+		} else {
+			lib.LoggerError("failed to decode env data", []string{"error", err.Error()})
+		}
+	}
+
 	event := lib.EventObject{
 		Type:   "start",
 		Params: []lib.ActionParam{},

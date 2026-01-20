@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 
 	"cosmossdk.io/log"
 
@@ -27,6 +29,24 @@ import (
 	"github.com/loredanacirstea/wasmx/x/network/types"
 	wasmxtypes "github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
+
+const StartNodeEnvPrefix = "WASMX_STARTNODE_ENV_"
+
+func ReadStartNodeEnv() map[string]string {
+	env := make(map[string]string)
+	for _, entry := range os.Environ() {
+		key, value, ok := strings.Cut(entry, "=")
+		if !ok || !strings.HasPrefix(key, StartNodeEnvPrefix) {
+			continue
+		}
+		name := strings.ToLower(strings.TrimPrefix(key, StartNodeEnvPrefix))
+		if name == "" {
+			continue
+		}
+		env[name] = value
+	}
+	return env
+}
 
 func InitChainAndCommitBlock(
 	app servertypes.Application,
@@ -130,10 +150,22 @@ func InitConsensusContract(
 	return nil
 }
 
-func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.NetworkKeeper) error {
+func StartNode(mythosapp mcfg.MythosApp, logger log.Logger, networkServer mcfg.NetworkKeeper, env map[string]string) error {
 	cb := func(goctx context.Context) (any, error) {
 		ctx := sdk.UnwrapSDKContext(goctx)
-		msg := []byte(fmt.Sprintf(`{"RunHook":{"hook":"%s","data":""}}`, wasmxtypes.HOOK_START_NODE))
+
+		// Encode env variables as JSON data
+		envData := ""
+		if env != nil && len(env) > 0 {
+			envBz, err := json.Marshal(env)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal env: %w", err)
+			}
+			envData = base64.StdEncoding.EncodeToString(envBz)
+			logger.Info("StartNode: passing env variables", "count", len(env))
+		}
+
+		msg := []byte(fmt.Sprintf(`{"RunHook":{"hook":"%s","data":"%s"}}`, wasmxtypes.HOOK_START_NODE, envData))
 		res, err := networkServer.ExecuteContractInternal(ctx, &types.MsgExecuteContract{
 			Sender:   wasmxtypes.ROLE_HOOKS_NONC,
 			Contract: wasmxtypes.ROLE_HOOKS_NONC,

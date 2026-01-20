@@ -6,7 +6,7 @@
 * on-demand blocks
 
 ```bash
-mythosd testnet init-files --network.initial-chains=ondemand_single --v 1 --output-dir=$(pwd)/testnet --minimum-gas-prices="1000amyt" --nocors --libp2p --enable-eid=false --chain-id=mythos_7000-14
+mythosd testnet init-files --network.initial-chains=mythos --consensus-label=ondemand_single_0.0.1 --v 1 --output-dir=$(pwd)/testnet --minimum-gas-prices="1000amyt" --nocors --libp2p --enable-eid=false --chain-id=mythos_7000-14
 ```
 
 ## Basic chain, 1 validator
@@ -39,7 +39,7 @@ mythosd tx wasmx store ./tests/testdata/wasmx/simple_storage.wasm --chain-id=myt
 # mythosd query tx <hash>
 # search code_id
 
-mythosd tx wasmx instantiate 57 '{"crosschain_contract":"metaregistry"}' --label "simple_storage" --chain-id=mythos_7000-14 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000amyt --gas=10000000 --node tcp://localhost:26657 --yes
+mythosd tx wasmx instantiate 61 '{"crosschain_contract":"metaregistry"}' --label "simple_storage" --chain-id=mythos_7000-14 --from=node0 --keyring-backend=test --home=./testnet/node0/mythosd --fees=90000000000amyt --gas=10000000 --node tcp://localhost:26657 --yes
 
 # mythosd query tx <hash>
 # search contract_address

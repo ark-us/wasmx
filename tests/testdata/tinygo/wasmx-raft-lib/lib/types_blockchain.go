@@ -91,6 +91,25 @@ func (m *Mempool) HasSeen(txhash string) bool {
 	return ok
 }
 
+func (m *Mempool) IsRecentlyProcessed(txhash string) bool {
+	if m == nil {
+		return false
+	}
+	_, ok := m.Map[txhash]
+	if m.Temp[txhash] && !ok {
+		return true
+	}
+	return false
+}
+
+func (m *Mempool) IsInMempool(txhash string) bool {
+	if m == nil {
+		return false
+	}
+	_, ok := m.Map[txhash]
+	return ok
+}
+
 func (m *Mempool) Seen(txhash string) {
 	if m == nil {
 		return

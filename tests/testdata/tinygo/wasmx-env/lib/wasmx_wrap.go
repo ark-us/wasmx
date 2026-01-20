@@ -15,7 +15,6 @@ import (
 )
 
 func StorageStore(key, value []byte) {
-	Log([]byte("storagestore"), [][32]byte{})
 	StorageStore_(utils.BytesToPackedPtr(key), utils.BytesToPackedPtr(value))
 }
 
@@ -328,6 +327,11 @@ func Create2Account(req Create2AccountRequest, moduleName ...string) Bech32Strin
 // crypto
 func Sha256(data []byte) []byte {
 	out := utils.PackedPtrToBytes(Sha256_(utils.BytesToPackedPtr(data)))
+	return out
+}
+
+func Keccak256(data []byte) []byte {
+	out := utils.PackedPtrToBytes(Keccak256_(utils.BytesToPackedPtr(data)))
 	return out
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -71,6 +72,18 @@ import (
 	memc "github.com/loredanacirstea/wasmx/x/wasmx/vm/memory/common"
 )
 
+var (
+	kayrosUserKey  string
+	kayrosBaseURL  string
+	consensusLabel string
+)
+
+func init() {
+	flag.StringVar(&kayrosUserKey, "kayros_user_key", "", "Kayros indexer API key")
+	flag.StringVar(&kayrosBaseURL, "kayros_base_url", "", "Kayros base URL")
+	flag.StringVar(&consensusLabel, "consensus-label", "", "Consensus contract label (role consensus primary)")
+}
+
 // KeeperTestSuite is a testing suite to test keeper functions
 type KeeperTestSuite struct {
 	suite.Suite
@@ -80,6 +93,7 @@ type KeeperTestSuite struct {
 	ChainIds              []string
 	CompiledCacheDir      string
 	MaxBlockGas           int64
+	StartNodeEnv          map[string]string
 	SystemContractsModify func([]wasmxtypes.SystemContract) []wasmxtypes.SystemContract
 	GenesisModify         func(genesisState map[string]json.RawMessage, app ibcgotesting.TestingApp) map[string]json.RawMessage
 	GetDB                 func(dbpath string) dbm.DB
@@ -214,6 +228,15 @@ func (suite *KeeperTestSuite) SetupChains() {
 	if suite.MaxBlockGas > 0 {
 		app.DefaultTestingConsensusParams.Block.MaxGas = suite.MaxBlockGas
 	}
+	if suite.StartNodeEnv == nil && (kayrosUserKey != "" || kayrosBaseURL != "") {
+		suite.StartNodeEnv = map[string]string{}
+		if kayrosUserKey != "" {
+			suite.StartNodeEnv["kayros_user_key"] = kayrosUserKey
+		}
+		if kayrosBaseURL != "" {
+			suite.StartNodeEnv["kayros_base_url"] = kayrosBaseURL
+		}
+	}
 
 	suite.Chains = map[string]*TestChain{}
 	mcfg.ChainIdsInit = []string{
@@ -292,6 +315,28 @@ func (suite *KeeperTestSuite) SetupApp(chainId string, chaincfg *menc.ChainConfi
 
 	if suite.GenesisModify != nil {
 		genesisState = suite.GenesisModify(genesisState, testApp)
+	}
+	if consensusLabel != "" && chainId == mcfg.MYTHOS_CHAIN_ID_TEST {
+		testApp.AppCodec().MustUnmarshalJSON(genesisState[wasmxtypes.ModuleName], &wasmxGenState)
+		var found bool
+		for i := range wasmxGenState.SystemContracts {
+			role := wasmxGenState.SystemContracts[i].Role
+			if role == nil || role.Role != wasmxtypes.ROLE_CONSENSUS {
+				continue
+			}
+			if role.Label == consensusLabel {
+				role.Primary = true
+				found = true
+			} else {
+				role.Primary = false
+			}
+		}
+		require.Truef(t, found, "consensus-label not found in system contracts: %s", consensusLabel)
+		feeCollectorBech32, err := addrCodec.BytesToString(authtypes.NewModuleAddress(wasmxtypes.FEE_COLLECTOR))
+		require.NoError(t, err)
+		wasmxGenState.SystemContracts, err = wasmxtypes.FillRoles(wasmxGenState.SystemContracts, addrCodec, feeCollectorBech32)
+		require.NoError(t, err)
+		genesisState[wasmxtypes.ModuleName] = testApp.AppCodec().MustMarshalJSON(&wasmxGenState)
 	}
 
 	testApp, resInit := ibctesting.InitAppChain(t, testApp, genesisState, chainId)
@@ -486,14 +531,17 @@ func (chain TestChain) InitConsensusContract(resInit *abci.ResponseInitChain, no
 	if err != nil {
 		return err
 	}
-	msg := []byte(`{"run":{"event": {"type": "start", "params": []}}}`)
-	appA := chain.suite.GetAppContext(&chain)
-	_, err = chain.GetApp().NetworkKeeper.ExecuteContractInternal(appA.Context(), &types.MsgExecuteContract{
-		Sender:   wasmxtypes.ROLE_CONSENSUS,
-		Contract: wasmxtypes.ROLE_CONSENSUS,
-		Msg:      msg,
-	})
-	chain.raftToLeader()
+	env := chain.suite.StartNodeEnv
+	if env == nil {
+		env = map[string]string{}
+	}
+	err = networkserver.StartNode(chain.GetApp(), chain.GetApp().Logger(), chain.GetApp().GetNetworkKeeper(), env)
+	currentState = chain.GetCurrentState(chain.GetContext())
+	if strings.Contains(currentState, "Kayros-P2P") {
+		chain.kayrosToValidator()
+	} else {
+		chain.raftToLeader()
+	}
 	return err
 }
 
@@ -825,6 +873,63 @@ func (chain TestChain) raftToLeader() {
 		currentState = chain.GetCurrentState(chain.GetContext())
 		chain.suite.Require().Contains(currentState, "Leader")
 	}
+}
+
+// kayrosToValidator transitions Kayros P2P consensus to Validator state
+// Kayros P2P doesn't have leader election - all validators produce blocks based on Kayros ordering
+func (chain TestChain) kayrosToValidator() {
+	currentState := chain.GetCurrentState(chain.GetContext())
+	// Check if we're in Kayros P2P consensus
+	if !strings.Contains(currentState, "Kayros-P2P") {
+		return
+	}
+
+	// If in Node state, send becomeValidator event to transition to Validator
+	if strings.Contains(currentState, "Node") && !strings.Contains(currentState, "Validator") {
+		msg := []byte(`{"run":{"event": {"type": "becomeValidator", "params": []}}}`)
+		_, err := chain.App.NetworkKeeper.ExecuteContractInternal(chain.GetContext(), &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg,
+		})
+		chain.suite.Require().NoError(err)
+	}
+
+	currentState = chain.GetCurrentState(chain.GetContext())
+	chain.suite.Require().Contains(currentState, "Validator")
+}
+
+// KayrosCommitBlock triggers block production for Kayros P2P consensus
+// This simulates the Kayros ordering service providing transaction ordering
+func (chain TestChain) KayrosCommitBlock() (*abci.ResponseFinalizeBlock, error) {
+	currentState := chain.GetCurrentState(chain.GetContext())
+	if !strings.Contains(currentState, "Kayros-P2P") {
+		return nil, fmt.Errorf("not in Kayros P2P consensus mode: %s", currentState)
+	}
+
+	// If in active state, trigger the always transition to propose (if ifAllTransactions guard passes)
+	// The FSM will call getKayrosTxs, then ifAllTransactions, then commitBlock and sendCommit
+	if strings.Contains(currentState, "active") {
+		lastInterval := chain.GetLastInterval(chain.GetContext())
+		blockDelay := chain.GetBlockDelay(chain.GetContext())
+
+		msg1 := []byte(fmt.Sprintf(`{"delay":"%s","state":"%s","intervalId":%s}`, blockDelay, currentState, lastInterval))
+		_, err := chain.App.NetworkKeeper.ExecuteEntryPointInternal(chain.GetContext(), wasmxtypes.ENTRY_POINT_TIMED, &types.MsgExecuteContract{
+			Sender:   wasmxtypes.ROLE_CONSENSUS,
+			Contract: wasmxtypes.ROLE_CONSENSUS,
+			Msg:      msg1,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("kayros commit block failed: %v", err)
+		}
+	}
+
+	lastBlock := chain.App.LastBlockHeight()
+	res, _, _, err := chain.GetBlock(chain.GetContext(), lastBlock)
+	if err != nil {
+		return nil, fmt.Errorf("get new committed block failed: %v", err)
+	}
+	return res, nil
 }
 
 func (suite *KeeperTestSuite) commitBlock(chain *TestChain, res *abci.ResponseFinalizeBlock) {

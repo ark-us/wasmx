@@ -132,7 +132,11 @@ func StartApp(ctx *Context, req *StartSubChainMsg) error {
 	if err != nil {
 		return err
 	}
-	err = networkserver.StartNode(app, logger, app.GetNetworkKeeper())
+
+	// Read environment variables to pass to consensus
+	env := networkserver.ReadStartNodeEnv()
+
+	err = networkserver.StartNode(app, logger, app.GetNetworkKeeper(), env)
 	if err != nil {
 		return err
 	}

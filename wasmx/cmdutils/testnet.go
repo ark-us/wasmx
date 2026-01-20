@@ -93,6 +93,7 @@ var (
 	flagP2P                = "libp2p"
 	flagMinLevelValidators = "min-level-validators"
 	flagEnableEIDCheck     = "enable-eid"
+	flagConsensusLabel     = "consensus-label"
 )
 
 type initArgs struct {
@@ -111,6 +112,7 @@ type initArgs struct {
 	minLevelValidators int
 	enableEIDCheck     bool
 	initialChains      []string
+	consensusLabel     string
 }
 
 type startArgs struct {
@@ -132,7 +134,8 @@ type startArgs struct {
 	jsonRpcAddress   string
 	jsonRpcWsAddress string
 
-	p2p bool
+	p2p            bool
+	consensusLabel string
 }
 
 func addTestnetFlagsToCmd(cmd *cobra.Command) {
@@ -144,6 +147,7 @@ func addTestnetFlagsToCmd(cmd *cobra.Command) {
 	cmd.Flags().Bool(flagP2P, false, "wether the consensus algorithm uses libp2p or not")
 	cmd.Flags().Int(flagMinLevelValidators, 2, "minimum number of validators for chain levels")
 	cmd.Flags().Bool(flagEnableEIDCheck, false, "enable eID checks")
+	cmd.Flags().String(flagConsensusLabel, "", "Consensus contract label (role consensus primary)")
 }
 
 // NewTestnetCmd creates a root testnet command with subcommands to run an in-process testnet or initialize
@@ -181,7 +185,7 @@ Note, strict routability for addresses is turned off in the config file.
 Example:
 	mythosd testnet init-files --network.initial-chains=mythos,level0 --v 4 --output-dir ./.testnets --starting-ip-address 192.168.10.2
 
-	mythosd testnet init-files --network.initial-chains=ondemand_single --v 1 --output-dir=$(pwd)/testnet --minimum-gas-prices="1000amyt" --nocors --libp2p --enable-eid=false --chain-id=mythos_7000-14
+	mythosd testnet init-files --network.initial-chains=mythos --v 1 --output-dir=$(pwd)/testnet --minimum-gas-prices="1000amyt" --nocors --libp2p --enable-eid=false --chain-id=mythos_7000-14
 
 	`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -207,6 +211,7 @@ Example:
 			args.p2p, _ = cmd.Flags().GetBool(flagP2P)
 			args.minLevelValidators, _ = cmd.Flags().GetInt(flagMinLevelValidators)
 			args.enableEIDCheck, _ = cmd.Flags().GetBool(flagEnableEIDCheck)
+			args.consensusLabel, _ = cmd.Flags().GetString(flagConsensusLabel)
 			args.initialChains, _ = cmd.Flags().GetStringSlice(networksrvflags.NetworkInitialChains)
 			return initTestnetFiles(wasmVmMeta, clientCtx, cmd, serverCtx.Config, mbm, genBalIterator, args)
 		},
@@ -219,7 +224,7 @@ Example:
 	cmd.Flags().Bool(flagSameMachine, false, "Starting nodes on the same machine, on different ports")
 	cmd.Flags().Bool(flagNoCors, false, "If present, sets cors to *")
 	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|test)")
-	cmd.Flags().StringSlice(networksrvflags.NetworkInitialChains, []string{"mythos"}, "Initialized chains, separated by comma. E.g. 'mythos', 'mythos,level0', 'ondemand_single'")
+	cmd.Flags().StringSlice(networksrvflags.NetworkInitialChains, []string{"mythos"}, "Initialized chains, separated by comma. E.g. 'mythos', 'mythos,level0'")
 	return cmd
 }
 
@@ -274,7 +279,7 @@ Example:
 	cmd.Flags().Bool(flagSameMachine, false, "Starting nodes on the same machine, on different ports")
 	cmd.Flags().Bool(flagNoCors, false, "If present, sets cors to *")
 	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|test)")
-	cmd.Flags().StringSlice(networksrvflags.NetworkInitialChains, []string{"mythos"}, "Initialized chains, separated by comma. E.g. 'mythos', 'mythos,level0', 'ondemand_single'")
+	cmd.Flags().StringSlice(networksrvflags.NetworkInitialChains, []string{"mythos"}, "Initialized chains, separated by comma. E.g. 'mythos', 'mythos,level0'")
 
 	return cmd
 }
@@ -488,7 +493,6 @@ func initTestnetFilesInternal(
 	mockNodeHome := path.Join(args.outputDir, "tmp")
 	generateMythos := slices.Contains(args.initialChains, "mythos")
 	generateLevel0 := slices.Contains(args.initialChains, "level0")
-	generateOnDemandSingle := slices.Contains(args.initialChains, "ondemand_single")
 	if args.chainID == "" {
 		args.chainID = fmt.Sprintf("mythos_%d-1", tmrand.Int63n(9999999999999)+1)
 	}
@@ -525,9 +529,6 @@ func initTestnetFilesInternal(
 	}
 	if generateLevel0 {
 		initialChainIds = append(initialChainIds, chainId0)
-	}
-	if generateOnDemandSingle {
-		initialChainIds = append(initialChainIds, chainId)
 	}
 	nodeIDs := make([]string, args.numValidators)
 	valPubKeys := make([]cryptotypes.PubKey, args.numValidators)
@@ -749,7 +750,7 @@ func initTestnetFilesInternal(
 
 	if nodeIndexStart == 0 {
 		if generateMythos {
-			if err := initGenFiles(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators, args.minLevelValidators, args.enableEIDCheck); err != nil {
+			if err := initGenFiles(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators, args.minLevelValidators, args.enableEIDCheck, args.consensusLabel); err != nil {
 				return err
 			}
 
@@ -821,7 +822,7 @@ func initTestnetFilesInternal(
 
 			genFile := strings.Replace(genFiles[i], ".json", "_"+chainId0+".json", 1)
 
-			if err := initGenFilesLevel0(clientCtx, mbm, chainId0, genAccount, genBalance, genFile, 1, args.minLevelValidators, args.enableEIDCheck); err != nil {
+			if err := initGenFilesLevel0(clientCtx, mbm, chainId0, genAccount, genBalance, genFile, 1, args.minLevelValidators, args.enableEIDCheck, ""); err != nil {
 				return err
 			}
 			err = collectGenFiles(
@@ -829,26 +830,6 @@ func initTestnetFilesInternal(
 				level0app.TxConfig(),
 				nodeConfig, chainId0, nodeIDs[i], valPubKeys[i], i,
 				args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, genFile, "gentxs_"+chainId0+nodeIDs[i],
-			)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	if generateOnDemandSingle {
-		// initialize on-demand-single chain with same setup as mythos but different system contracts
-		if err := initGenFilesOnDemandSingle(clientCtx, mbm, args.chainID, genAccounts, genBalances, genFiles, args.numValidators, args.minLevelValidators, args.enableEIDCheck); err != nil {
-			return err
-		}
-
-		for i := nodeIndexStart; i < args.numValidators; i++ {
-			err = collectGenFiles(
-				clientCtx,
-				mythosapp.TxConfig(),
-				nodeConfig,
-				args.chainID, nodeIDs[i], valPubKeys[i], i,
-				args.outputDir, args.nodeDirPrefix, args.nodeDaemonHome, genBalIterator, valAddrCodec, args.sameMachine, nodeConfig.GenesisFile(), "gentxs",
 			)
 			if err != nil {
 				return err
@@ -938,6 +919,7 @@ func initGenFiles(
 	numValidators int,
 	minLevelValidators int,
 	enableEIDCheck bool,
+	consensusLabel string,
 ) error {
 	appGenState := mbm.DefaultGenesis(clientCtx.Codec)
 	chaincfg, err := mcfg.GetChainConfig(chainID)
@@ -1006,6 +988,28 @@ func initGenFiles(
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
 	wasmxGenState.SystemContracts = wasmxtypes.DefaultSystemContracts(addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}", mcfg.BondBaseDenom)
 	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
+	if consensusLabel != "" {
+		var found bool
+		for i := range wasmxGenState.SystemContracts {
+			role := wasmxGenState.SystemContracts[i].Role
+			if role == nil || role.Role != wasmxtypes.ROLE_CONSENSUS {
+				continue
+			}
+			if role.Label == consensusLabel {
+				role.Primary = true
+				found = true
+			} else {
+				role.Primary = false
+			}
+		}
+		if !found {
+			return fmt.Errorf("consensus-label not found in system contracts: %s", consensusLabel)
+		}
+		wasmxGenState.SystemContracts, err = wasmxtypes.FillRoles(wasmxGenState.SystemContracts, addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32)
+		if err != nil {
+			return err
+		}
+	}
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
 	appGenStateJSON, err := json.MarshalIndent(appGenState, "", "  ")
@@ -1038,6 +1042,7 @@ func initGenFilesLevel0(
 	numValidators int,
 	minLevelValidators int,
 	enableEIDCheck bool,
+	consensusLabel string,
 ) error {
 	chaincfg, err := mcfg.GetChainConfig(chainID)
 	if err != nil {
@@ -1065,6 +1070,28 @@ func initGenFilesLevel0(
 	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
 	wasmxGenState.SystemContracts = wasmxtypes.DefaultTimeChainContracts(addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}", chaincfg.BondBaseDenom)
 	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
+	if consensusLabel != "" {
+		var found bool
+		for i := range wasmxGenState.SystemContracts {
+			role := wasmxGenState.SystemContracts[i].Role
+			if role == nil || role.Role != wasmxtypes.ROLE_CONSENSUS {
+				continue
+			}
+			if role.Label == consensusLabel {
+				role.Primary = true
+				found = true
+			} else {
+				role.Primary = false
+			}
+		}
+		if !found {
+			return fmt.Errorf("consensus-label not found in system contracts: %s", consensusLabel)
+		}
+		wasmxGenState.SystemContracts, err = wasmxtypes.FillRoles(wasmxGenState.SystemContracts, addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32)
+		if err != nil {
+			return err
+		}
+	}
 	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
 
 	var cosmosmodGenState cosmosmodtypes.GenesisState
@@ -1116,103 +1143,6 @@ func initGenFilesLevel0(
 	// generate empty genesis file
 	if err := genDoc.SaveAs(genFile); err != nil {
 		return err
-	}
-	return nil
-}
-
-func initGenFilesOnDemandSingle(
-	clientCtx client.Context,
-	mbm module.BasicManager,
-	chainID string,
-	genAccounts []cosmosmodtypes.GenesisAccount,
-	genBalances []banktypes.Balance,
-	genFiles []string,
-	numValidators int,
-	minLevelValidators int,
-	enableEIDCheck bool,
-) error {
-	appGenState := mbm.DefaultGenesis(clientCtx.Codec)
-	chaincfg, err := mcfg.GetChainConfig(chainID)
-	if err != nil {
-		panic(err)
-	}
-
-	addrCodec := mcodec.NewAccBech32Codec(chaincfg.Bech32PrefixAccAddr, mcodec.NewAddressPrefixedFromAcc)
-
-	var cosmosmodGenState cosmosmodtypes.GenesisState
-	clientCtx.Codec.MustUnmarshalJSON(appGenState[cosmosmodtypes.ModuleName], &cosmosmodGenState)
-
-	cosmosmodGenState.Bank.DenomInfo = cosmosmodtypes.DefaultBankDenoms(addrCodec.(mcodec.AccBech32Codec), mcfg.DenomUnit, uint32(mcfg.BaseDenomUnit))
-	cosmosmodGenState.Bank.Balances = genBalances
-	cosmosmodGenState.Staking.Params.BondDenom = mcfg.BondBaseDenom
-	cosmosmodGenState.Staking.BaseDenom = mcfg.BaseDenom
-	p, _ := math.LegacyNewDecFromStr("0.6")
-	cosmosmodGenState.Slashing.Params.MinSignedPerWindow = p
-	cosmosmodGenState.Slashing.Params.DowntimeJailDuration = time.Hour * 2
-	cosmosmodGenState.Slashing.Params.SignedBlocksWindow = 40000
-	cosmosmodGenState.Distribution.BaseDenom = mcfg.BaseDenom
-	cosmosmodGenState.Distribution.RewardsDenom = cosmosmodGenState.Bank.DenomInfo[2].Metadata.Base
-	cosmosmodGenState.Gov.Params.MinDeposit[0].Denom = mcfg.BaseDenom
-	cosmosmodGenState.Gov.Params.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(mcfg.BaseDenom, math.NewInt(50000000)))
-	votingP := time.Minute * 2
-	cosmosmodGenState.Gov.Params.VotingPeriod = votingP.Milliseconds()
-
-	// set the accounts in the genesis state
-	authGenesis, err := cosmosmodtypes.NewAuthGenesisStateFromCosmos(clientCtx.Codec, cosmosmodGenState.Auth.Params, genAccounts)
-	if err != nil {
-		return err
-	}
-	cosmosmodGenState.Auth = *authGenesis
-
-	// set cosmosmod genesis
-	appGenState[cosmosmodtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&cosmosmodGenState)
-
-	var crisisGenState crisistypes.GenesisState
-	clientCtx.Codec.MustUnmarshalJSON(appGenState[crisistypes.ModuleName], &crisisGenState)
-	crisisGenState.ConstantFee.Denom = mcfg.BaseDenom
-	appGenState[crisistypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&crisisGenState)
-
-	var mintGenState minttypes.GenesisState
-	clientCtx.Codec.MustUnmarshalJSON(appGenState[minttypes.ModuleName], &mintGenState)
-	mintGenState.Params.MintDenom = mcfg.BaseDenom
-	appGenState[minttypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&mintGenState)
-
-	feeCollectorBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress(wasmxtypes.FEE_COLLECTOR))
-	if err != nil {
-		panic(err)
-	}
-	mintAddressBech32, err := addrCodec.BytesToString(cosmosmodtypes.NewModuleAddress("mint"))
-	if err != nil {
-		panic(err)
-	}
-
-	bootstrapAccount, err := addrCodec.BytesToString(sdk.AccAddress(rand.Bytes(address.Len)))
-	if err != nil {
-		panic(err)
-	}
-
-	var wasmxGenState wasmxtypes.GenesisState
-	clientCtx.Codec.MustUnmarshalJSON(appGenState[wasmxtypes.ModuleName], &wasmxGenState)
-	wasmxGenState.SystemContracts = wasmxtypes.DefaultOnDemandSingleContracts(addrCodec.(mcodec.AccBech32Codec), feeCollectorBech32, mintAddressBech32, int32(minLevelValidators), enableEIDCheck, "{}", mcfg.BondBaseDenom)
-	wasmxGenState.BootstrapAccountAddress = bootstrapAccount
-	appGenState[wasmxtypes.ModuleName] = clientCtx.Codec.MustMarshalJSON(&wasmxGenState)
-
-	appGenStateJSON, err := json.MarshalIndent(appGenState, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	genDoc := types.GenesisDoc{
-		ChainID:    chainID,
-		AppState:   appGenStateJSON,
-		Validators: nil,
-	}
-
-	// generate empty genesis files for each validator and save
-	for i := 0; i < numValidators; i++ {
-		if err := genDoc.SaveAs(genFiles[i]); err != nil {
-			return err
-		}
 	}
 	return nil
 }

@@ -9,10 +9,6 @@ import (
 	utils "github.com/loredanacirstea/wasmx-env-utils"
 )
 
-//go:wasm-module httpclient
-//export wasmx_httpclient_i64_1
-func wasmx_httpclient_i64_1() {}
-
 //go:wasmimport httpclient Request
 func Request_(reqPtr int64) int64
 

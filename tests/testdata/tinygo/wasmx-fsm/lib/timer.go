@@ -12,7 +12,7 @@ func GetLastIntervalId() int64 {
 	if value == "" {
 		return 0
 	}
-	result, err := parseInt64(value)
+	result, err := ParseInt64(value)
 	if err != nil {
 		return 0
 	}
@@ -46,7 +46,7 @@ func GetLastIntervalIdForState(state, delay string) int64 {
 	if lastIntervalId == "" {
 		return 0
 	}
-	result, err := parseInt64(lastIntervalId)
+	result, err := ParseInt64(lastIntervalId)
 	if err != nil {
 		return 0
 	}

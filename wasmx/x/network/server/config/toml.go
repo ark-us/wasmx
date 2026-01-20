@@ -28,4 +28,8 @@ id = "{{ .Network.Id }}"
 # Comma separated list of types of chains. E.g. "mythos" or "mythos,level0"
 initial-chains = [{{ range .Network.InitialChains }}{{ printf "%q, " . }}{{end}}]
 
+# Start node environment variables passed to consensus hooks.
+# Format: "kayros_user_key:<value>;kayros_base_url:<value>"
+start-env = "{{ .Network.StartEnv }}"
+
 `
