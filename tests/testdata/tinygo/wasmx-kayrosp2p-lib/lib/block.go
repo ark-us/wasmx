@@ -227,7 +227,7 @@ func buildKayrosBlockProposal(txs [][]byte, txHashes []string, optimisticExecuti
 		return fmt.Errorf("failed to get Kayros client: %w", err)
 	}
 
-	kayrosTimestamp, err := kayrosClient.GetBlockTimestamp(wasmx.HexString(tempHashHex))
+	kayrosTimestamp, err := kayrosClient.GetBlockTimestamp(BuildKayrosBlockDataType(), wasmx.HexString(tempHashHex))
 	if err != nil {
 		return fmt.Errorf("failed to get block timestamp from Kayros: %w", err)
 	}

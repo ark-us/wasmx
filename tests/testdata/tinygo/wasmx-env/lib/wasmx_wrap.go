@@ -330,6 +330,11 @@ func Sha256(data []byte) []byte {
 	return out
 }
 
+func Keccak256(data []byte) []byte {
+	out := utils.PackedPtrToBytes(Keccak256_(utils.BytesToPackedPtr(data)))
+	return out
+}
+
 func MerkleHash(slices []string) []byte {
 	payload := struct {
 		Slices []string `json:"slices"`

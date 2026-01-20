@@ -2,6 +2,7 @@ package lib
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -39,9 +40,34 @@ const (
 func GetKayrosClient() (*KayrosClient, error) {
 	config := KayrosConfig{
 		ApiBaseUrl: sGet(CTX_KAYROS_BASE_URL),
+		ApiUserKey: sGet(CTX_KAYROS_USER_KEY),
 	}
 	kayrosClient := NewKayrosClient(config)
 	return kayrosClient, nil
+}
+
+func BuildKayrosDataType() wasmx.HexString {
+	chainId := wasmx.GetChainId()
+	dataType := fmt.Sprintf("wasmx_tx_%s", chainId)
+	dataTypeId := sGet(CTX_DATA_TYPE_ID)
+	if dataTypeId != "" {
+		dataType = fmt.Sprintf("%s_%s", dataType, dataTypeId)
+	}
+	dataTypeBytes := make([]byte, 32)
+	copy(dataTypeBytes, []byte(dataType))
+	return wasmx.HexString(hex.EncodeToString(dataTypeBytes))
+}
+
+func BuildKayrosBlockDataType() wasmx.HexString {
+	chainId := wasmx.GetChainId()
+	dataType := fmt.Sprintf("wasmx_b_%s", chainId)
+	dataTypeId := sGet(CTX_DATA_TYPE_ID)
+	if dataTypeId != "" {
+		dataType = fmt.Sprintf("%s_%s", dataType, dataTypeId)
+	}
+	dataTypeBytes := make([]byte, 32)
+	copy(dataTypeBytes, []byte(dataType))
+	return wasmx.HexString(hex.EncodeToString(dataTypeBytes))
 }
 
 // GetLastKayrosUUID retrieves the last processed Kayros UUID from state
@@ -267,7 +293,7 @@ func RegisterWithKayros(params []fsm.ActionParam, event fsm.EventObject) (*Kayro
 	}
 
 	// Register transaction with Kayros via POST /api/grpc/single-hash
-	resp, err := client.RegisterTransaction(txHash)
+	resp, err := client.RegisterTransaction(BuildKayrosDataType(), wasmx.HexString(txHash))
 	if err != nil {
 		LoggerError("failed to register transaction with Kayros", []string{"txHash", txHash, "error", err.Error()})
 		// Don't fail the transaction if Kayros registration fails
@@ -314,7 +340,7 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 	// Fetch records from Kayros starting from the last UUID
 	// Use configured max or default
 	limit := GetMaxBlockTx()
-	records, err := client.GetRecordsFromPrev(lastUUID, limit)
+	records, err := client.GetRecordsFromPrev(BuildKayrosDataType(), lastUUID, limit)
 	if err != nil {
 		LoggerError("failed to fetch records from Kayros", []string{"error", err.Error(), "lastUUID", lastUUID})
 		return err

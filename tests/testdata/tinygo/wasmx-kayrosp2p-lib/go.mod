@@ -27,12 +27,13 @@ require github.com/loredanacirstea/wasmx-raft-lib v0.0.0
 require github.com/loredanacirstea/wasmx-raftp2p-lib v0.0.0
 
 require (
-	github.com/loredanacirstea/wasmx-env-httpclient v0.0.0
 	github.com/loredanacirstea/wasmx-env-p2p v0.0.0
+	github.com/loredanacirstea/wasmx-kayros-verifier v0.0.0
 )
 
 require (
 	cosmossdk.io/math v1.5.3 // indirect
+	github.com/loredanacirstea/wasmx-env-httpclient v0.0.0 // indirect
 	github.com/loredanacirstea/wasmx-env-utils v0.0.0 // indirect
 	github.com/loredanacirstea/wasmx-utils v0.0.0 // indirect
 )
@@ -66,3 +67,5 @@ replace github.com/loredanacirstea/wasmx-raftp2p-lib v0.0.0 => ../wasmx-raftp2p-
 replace github.com/loredanacirstea/wasmx-env-p2p v0.0.0 => ../wasmx-env-p2p
 
 replace github.com/loredanacirstea/wasmx-env-httpclient v0.0.0 => ../wasmx-env-httpclient
+
+replace github.com/loredanacirstea/wasmx-kayros-verifier v0.0.0 => ../wasmx-kayros-verifier

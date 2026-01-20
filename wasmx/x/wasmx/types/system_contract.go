@@ -2,6 +2,7 @@ package types
 
 import (
 	bytes "bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"slices"
@@ -88,8 +89,12 @@ var ADDR_CONSENSUS_KAYROSP2P = "0x0000000000000000000000000000000000000072"
 
 var ADDR_CONSENSUS_KAYROSP2P_ONDEMAND_LIBRARY = "0x0000000000000000000000000000000000000073"
 var ADDR_CONSENSUS_KAYROSP2P_ONDEMAND = "0x0000000000000000000000000000000000000074"
+var ADDR_KAYROS_VERIFIER = "0x0000000000000000000000000000000000000075"
 
 var ADDR_SYS_PROXY = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+
+//go:embed kayros_verifier_schema.json
+var kayrosVerifierSchema string
 
 func StarterPrecompiles() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
@@ -909,6 +914,27 @@ func ChatPrecompiles() SystemContracts {
 	}
 }
 
+func VerifierPrecompiles() SystemContracts {
+	msg := WasmxExecutionMessage{Data: []byte{}}
+	initMsg, err := json.Marshal(msg)
+	if err != nil {
+		panic("VerifierPrecompiles: cannot marshal init message")
+	}
+	return []SystemContract{
+		{
+			Address:     ADDR_KAYROS_VERIFIER,
+			Label:       KAYROS_VERIFIER_v001,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        &SystemContractRole{Role: ROLE_VERIFIER, Label: KAYROS_VERIFIER_v001, Primary: true},
+			StorageType: ContractStorageType_CoreConsensus,
+			Deps:        []string{},
+			Metadata:    CodeMetadataPB{JsonSchema: kayrosVerifierSchema},
+		},
+	}
+}
+
 func SpecialPrecompiles() SystemContracts {
 	msg := WasmxExecutionMessage{Data: []byte{}}
 	initMsg, err := json.Marshal(msg)
@@ -975,6 +1001,7 @@ func DefaultSystemContracts(accBech32Codec mcodec.AccBech32Codec, feeCollectorBe
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
+	precompiles = append(precompiles, VerifierPrecompiles()...)
 	// precompiles = append(precompiles, SpecialPrecompiles()...)
 
 	precompiles, err := FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
@@ -1076,6 +1103,7 @@ func DefaultTimeChainContracts(accBech32Codec mcodec.AccBech32Codec, feeCollecto
 	precompiles = append(precompiles, consensusPrecompiles...)
 	precompiles = append(precompiles, MultiChainPrecompiles(minValidatorCount, enableEIDCheck, erc20CodeId, derc20CodeId)...)
 	precompiles = append(precompiles, ChatPrecompiles()...)
+	precompiles = append(precompiles, VerifierPrecompiles()...)
 	// precompiles = append(precompiles, SpecialPrecompiles()...)
 
 	precompiles, err = FillRoles(precompiles, accBech32Codec, feeCollectorBech32)
@@ -1238,6 +1266,10 @@ func FillRoles(precompiles []SystemContract, accBech32Codec mcodec.AccBech32Code
 				}
 			}
 		}
+	}
+
+	if entry, exists := roleMap[ROLE_VERIFIER]; exists {
+		entry.Multiple = true
 	}
 
 	// add denom role

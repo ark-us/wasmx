@@ -27,6 +27,7 @@ use (
 	./tests/testdata/tinygo/wasmx-gov
 	./tests/testdata/tinygo/wasmx-gov-continuous
 	./tests/testdata/tinygo/wasmx-multichain-registry
+	./tests/testdata/tinygo/wasmx-kayros-verifier
 	// tests
 	./tests/testdata/tinygo/emailchain
 	./tests/testdata/tinygo/add

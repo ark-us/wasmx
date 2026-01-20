@@ -168,6 +168,9 @@ var (
 	//go:embed 72.kayrosp2p_ondemand_library.wasm
 	kayrosp2p_ondemand_library []byte
 
+	//go:embed 75.kayros_verifier_0.0.1.wasm
+	kayros_verifier_contract []byte
+
 	//go:embed ff.sys_proxy.wasm
 	sys_proxy []byte
 )
@@ -331,6 +334,8 @@ func GetPrecompileByLabel(addrCodec address.Codec, label string) []byte {
 			panic(err)
 		}
 		wasmbin = []byte(KayrosP2POnDemand(libaddrstr))
+	case types.KAYROS_VERIFIER_v001:
+		wasmbin = kayros_verifier_contract
 	case types.MULTICHAIN_REGISTRY_v001:
 		wasmbin = multichain_registry
 	case types.MULTICHAIN_REGISTRY_LOCAL_v001:

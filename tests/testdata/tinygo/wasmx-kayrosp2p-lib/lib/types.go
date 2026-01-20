@@ -1,7 +1,6 @@
 package lib
 
 import (
-	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	raftlib "github.com/loredanacirstea/wasmx-raft-lib/lib"
 )
 
@@ -29,11 +28,6 @@ type StateSyncResponse struct {
 	Entries         []raftlib.LogEntryAggregate `json:"entries"`
 }
 
-// KayrosConfig holds the configuration for Kayros API client
-type KayrosConfig struct {
-	ApiBaseUrl string `json:"api_base_url"`
-}
-
 // InstantiateMsg is the message passed during contract instantiation
 type InstantiateMsg struct {
 	KayrosApiUrl      string `json:"kayros_api_url"`
@@ -41,43 +35,6 @@ type InstantiateMsg struct {
 	ThresholdCommit   int    `json:"threshold_commit"`   // Percentage threshold for commit (e.g., 51) - determines when to rollback
 	ThresholdFinalize int    `json:"threshold_finalize"` // Percentage threshold for finalization (e.g., 75) - determines when block is finalized
 	MaxBlockTx        int    `json:"max_block_tx"`       // Maximum transactions per block (default: 100)
-}
-
-// KayrosRecord represents a record in the Kayros database
-type KayrosRecord struct {
-	DataType    string `json:"data_type"`
-	DataTypeHex string `json:"data_type_hex"`
-	DataItemHex string `json:"data_item_hex"`
-	UuidHex     string `json:"uuid_hex"`
-	HashItemHex string `json:"hash_item_hex"`           // Kayros unique ID
-	PrevHashHex string `json:"prev_hash_hex,omitempty"` // Optional - may not be in all responses
-	HashType    string `json:"hash_type"`
-	Timestamp   string `json:"timestamp"`
-}
-
-// KayrosApiResponse is the common response structure from Kayros API
-type KayrosApiResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
-
-// KayrosRecordResponse is the response for single record queries
-type KayrosRecordResponse struct {
-	KayrosApiResponse
-	Data KayrosRecord `json:"data"`
-}
-
-// KayrosRecordsData is the data structure for multiple record queries
-type KayrosRecordsData struct {
-	Count   int            `json:"count"`
-	Limit   int            `json:"limit"`
-	Records []KayrosRecord `json:"records"`
-}
-
-// KayrosRecordsResponse is the response for multiple record queries
-type KayrosRecordsResponse struct {
-	KayrosApiResponse
-	Data KayrosRecordsData `json:"data"`
 }
 
 // BlockCommit represents a commit from a validator for a specific block
@@ -115,29 +72,6 @@ type MissingTransactionsResponse struct {
 	Transactions [][]byte `json:"transactions"` // Raw transaction bytes
 	TxHashes     []string `json:"tx_hashes"`    // Corresponding hashes
 	Sender       string   `json:"sender"`       // The peer responding
-}
-
-// KayrosRegistrationRequest is the request body for POST /api/grpc/single-hash
-type KayrosRegistrationRequest struct {
-	DataType wasmx.HexString `json:"data_type"`
-	DataItem wasmx.HexString `json:"data_item"` // Transaction hash
-}
-
-// KayrosRegistrationResponse is the response from the registration API
-type KayrosRegistrationResponse struct {
-	Success      bool            `json:"success"`
-	Message      string          `json:"message"`
-	DataType     string          `json:"data_type"`
-	DataItem     string          `json:"data_item"`
-	ComputedHash wasmx.HexString `json:"computed_hash_hex"`
-	TimeUUID     wasmx.HexString `json:"timeuuid_hex"`
-	DataTypeHex  wasmx.HexString `json:"data_type_hex"`
-	DataItemHex  wasmx.HexString `json:"data_item_hex"`
-}
-
-type KayrosRegistrationResponseWrap struct {
-	KayrosApiResponse
-	Data KayrosRegistrationResponse `json:"data"`
 }
 
 // KayrosTxMetadata stores Kayros ordering information for a transaction

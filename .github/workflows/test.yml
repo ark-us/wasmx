@@ -19,6 +19,8 @@ jobs:
     env:
       GOPRIVATE: github.com/loredanacirstea*
       GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+      KAYROS_BASE_URL: ${{ secrets.KAYROS_BASE_URL }}
+      KAYROS_API_KEY: ${{ secrets.KAYROS_API_KEY }}
 
     steps:
       - name: Checkout code
@@ -61,3 +63,9 @@ jobs:
           go test -failfast=false -timeout 2000s -v ./tests/vmhttp -wasm-runtime=wazero
           go test -failfast=false -timeout 2000s -v ./tests/vmemail -wasm-runtime=wazero
           # go test -failfast=false -timeout 2000s -v ./tests/vmpostgresql -wasm-runtime=wazero
+
+          if [ -n "${KAYROS_BASE_URL}" ]; then
+            go test -failfast=false -timeout 3000s -v -run KeeperTestSuite/TestWasmxSimpleStorage ./tests/wasmx -wasm-runtime=wazero -kayros_user_key="${KAYROS_API_KEY}" -kayros_base_url="${KAYROS_BASE_URL}" -consensus-label=consensus_kayrosp2p_ondemand_0.0.1
+          else
+            echo "Skipping Kayros test (KAYROS_BASE_URL not set)"
+          fi
