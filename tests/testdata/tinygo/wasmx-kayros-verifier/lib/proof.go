@@ -10,6 +10,7 @@ import (
 )
 
 type LevelProof struct {
+	DataType string
 	Level    int
 	Position int
 	Hashes   []string
@@ -66,7 +67,7 @@ func VerifyProofHashWithInclusion(dataType wasmx.HexString, dataHash wasmx.HexSt
 
 	var prev *KayrosRecord
 	if strings.TrimSpace(record.PrevHashHex) != "" {
-		prev, err = client.GetRecordByHash(record.PrevHashHex)
+		prev, err = client.GetRecordByHash(record.DataType, record.PrevHashHex)
 		if err != nil || prev == nil {
 			return false, "previous record not found"
 		}
@@ -84,28 +85,25 @@ func VerifyProofHashWithInclusion(dataType wasmx.HexString, dataHash wasmx.HexSt
 		return false, errMsg
 	}
 
-	proof, err := client.GetProofPath(record.HashItemHex)
+	proof, err := client.GetProofPath(record.DataType, record.HashItemHex)
 	if err != nil || proof == nil {
 		return false, "missing proof path"
 	}
-	if !strings.EqualFold(proof.HashItemHex, record.HashItemHex) {
+	if !strings.EqualFold(proof.HashItem, record.HashItemHex) {
 		return false, "hash_item mismatch"
 	}
-	if !strings.EqualFold(proof.DataTypeHex, record.DataTypeHex) {
+	if proof.DataType != "" && record.DataType != "" && !strings.EqualFold(proof.DataType, record.DataType) {
 		return false, "data_type mismatch"
-	}
-	if !strings.EqualFold(proof.DataItemHex, record.DataItemHex) {
-		return false, "data_item mismatch"
 	}
 	if trustedRootHash == "" {
 		return false, "missing trusted root hash"
 	}
-	if !strings.EqualFold(proof.RootHashHex, trustedRootHash) {
+	if !strings.EqualFold(proof.Root, trustedRootHash) {
 		return false, "root hash mismatch"
 	}
 
 	if trustedLevel >= 0 && trustedPosition >= 0 {
-		entry, err := client.GetLevelHash(trustedLevel, trustedPosition)
+		entry, err := client.GetLevelHash(record.DataType, trustedLevel, trustedPosition)
 		if err != nil || entry == nil {
 			return false, "trusted level hash not found"
 		}
@@ -225,6 +223,9 @@ func parseRecordTimestamp(value string) (time.Time, error) {
 
 // VerifyLevelProof checks a single level rollup hash against Kayros.
 func VerifyLevelProof(cfg KayrosConfig, proof LevelProof, hashAlgo string) (bool, string) {
+	if strings.TrimSpace(proof.DataType) == "" {
+		return false, "missing data_type"
+	}
 	if proof.Level < 1 {
 		return false, "invalid level"
 	}
@@ -241,7 +242,7 @@ func VerifyLevelProof(cfg KayrosConfig, proof LevelProof, hashAlgo string) (bool
 	}
 
 	client := NewKayrosClient(cfg)
-	expected, err := client.GetLevelHash(proof.Level, proof.Position)
+	expected, err := client.GetLevelHash(proof.DataType, proof.Level, proof.Position)
 	if err != nil || expected == nil {
 		return false, "no level hash found"
 	}
@@ -260,50 +261,38 @@ func VerifyProofPath(path *ProofPathData, hashAlgo string) (bool, string) {
 		return false, "empty proof path"
 	}
 
-	hashItem := strings.ToLower(strings.TrimSpace(path.HashItemHex))
-	if hashItem == "" {
-		return false, "missing hash_item"
-	}
-	rootHash := strings.ToLower(strings.TrimSpace(path.RootHashHex))
+	rootHash := strings.ToLower(strings.TrimSpace(path.Root))
 	if rootHash == "" {
 		return false, "missing root hash"
 	}
 
-	for _, step := range path.Proof {
-		if step.Position < 0 {
-			return false, "invalid position"
+	levelCounts, errMsg := normalizeLevelCounts(path.LevelCounts, int(path.Levels), len(path.Proof))
+	if errMsg != "" {
+		return false, errMsg
+	}
+
+	offset := 0
+	var lastRollup string
+	for _, count := range levelCounts {
+		if count <= 0 {
+			return false, "invalid level count"
 		}
-		if step.IndexInBlock < 0 || step.IndexInBlock >= 256 {
-			return false, "invalid index_in_block"
+		if offset+count > len(path.Proof) {
+			return false, "proof length mismatch"
 		}
-		stepHash := strings.ToLower(strings.TrimSpace(step.HashHex))
-		if stepHash == "" {
-			return false, "missing hash_hex"
-		}
-		expectedCount := step.SiblingCount
-		if expectedCount == 0 {
-			expectedCount = 256
-		}
-		if len(step.SiblingHashes) != expectedCount {
-			return false, "sibling_count mismatch"
-		}
-		if len(step.SiblingHashes) == 0 {
-			return false, "missing sibling hashes"
-		}
-		rollup, errMsg := hashHexConcat(step.SiblingHashes, hashAlgo)
+		levelHashes := path.Proof[offset : offset+count]
+		rollup, errMsg := hashHexConcat(levelHashes, hashAlgo)
 		if errMsg != "" {
 			return false, errMsg
 		}
-		if !strings.EqualFold(hex.EncodeToString(rollup), stepHash) {
-			return false, "level rollup mismatch"
-		}
+		lastRollup = hex.EncodeToString(rollup)
+		offset += count
 	}
 
-	last := strings.ToLower(strings.TrimSpace(path.Proof[len(path.Proof)-1].HashHex))
-	if last == "" {
+	if lastRollup == "" {
 		return false, "missing final hash"
 	}
-	if !strings.EqualFold(last, rootHash) {
+	if !strings.EqualFold(lastRollup, rootHash) {
 		return false, "root hash mismatch"
 	}
 	return true, ""
@@ -317,14 +306,11 @@ func VerifyKayrosRecordWithProof(record *KayrosRecord, prev *KayrosRecord, proof
 	if proof == nil {
 		return false, "missing proof path"
 	}
-	if !strings.EqualFold(proof.HashItemHex, record.HashItemHex) {
+	if !strings.EqualFold(proof.HashItem, record.HashItemHex) {
 		return false, "hash_item mismatch"
 	}
-	if !strings.EqualFold(proof.DataTypeHex, record.DataTypeHex) {
+	if proof.DataType != "" && record.DataType != "" && !strings.EqualFold(proof.DataType, record.DataType) {
 		return false, "data_type mismatch"
-	}
-	if !strings.EqualFold(proof.DataItemHex, record.DataItemHex) {
-		return false, "data_item mismatch"
 	}
 	if ok, errMsg := VerifyProofPath(proof, hashAlgo); !ok {
 		return false, errMsg
@@ -385,4 +371,42 @@ func decodeHexOrEmpty(value string) ([]byte, error) {
 		return []byte{}, nil
 	}
 	return hex.DecodeString(value)
+}
+
+func normalizeLevelCounts(counts []int32, levels int, proofLen int) ([]int, string) {
+	if proofLen <= 0 {
+		return nil, "empty proof path"
+	}
+	if len(counts) > 0 {
+		out := make([]int, len(counts))
+		total := 0
+		for i, c := range counts {
+			if c <= 0 {
+				return nil, "invalid level count"
+			}
+			out[i] = int(c)
+			total += out[i]
+		}
+		if total != proofLen {
+			return nil, "proof length mismatch"
+		}
+		return out, ""
+	}
+
+	if levels <= 0 {
+		return []int{proofLen}, ""
+	}
+	if levels == 1 {
+		return []int{proofLen}, ""
+	}
+	remaining := proofLen - 256*(levels-1)
+	if remaining <= 0 {
+		return nil, "proof length mismatch"
+	}
+	out := make([]int, levels)
+	for i := 0; i < levels-1; i++ {
+		out[i] = 256
+	}
+	out[levels-1] = remaining
+	return out, ""
 }

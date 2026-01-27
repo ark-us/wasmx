@@ -26,29 +26,20 @@ type KayrosRecord struct {
 	Timestamp   string `json:"timestamp"`
 }
 
-// KayrosApiResponse is the common response structure from Kayros API
-type KayrosApiResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
+type KayrosErrorResponse struct {
+	Error   string `json:"error,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
-// KayrosRecordResponse is the response for single record queries
 type KayrosRecordResponse struct {
-	KayrosApiResponse
-	Data KayrosRecord `json:"data"`
+	Record KayrosRecord `json:"record"`
 }
 
-// KayrosRecordsData is the data structure for multiple record queries
-type KayrosRecordsData struct {
-	Count   int            `json:"count"`
-	Limit   int            `json:"limit"`
-	Records []KayrosRecord `json:"records"`
-}
-
-// KayrosRecordsResponse is the response for multiple record queries
 type KayrosRecordsResponse struct {
-	KayrosApiResponse
-	Data KayrosRecordsData `json:"data"`
+	Records []KayrosRecord `json:"records"`
+	Count   int            `json:"count"`
+	Error   string         `json:"error,omitempty"`
+	Message string         `json:"message,omitempty"`
 }
 
 // KayrosRegistrationRequest is the request body for POST /api/grpc/single-hash
@@ -59,19 +50,12 @@ type KayrosRegistrationRequest struct {
 
 // KayrosRegistrationResponse is the response from the registration API
 type KayrosRegistrationResponse struct {
-	Success      bool            `json:"success"`
-	Message      string          `json:"message"`
-	DataType     string          `json:"data_type"`
-	DataItem     string          `json:"data_item"`
-	ComputedHash wasmx.HexString `json:"computed_hash_hex"`
-	TimeUUID     wasmx.HexString `json:"timeuuid_hex"`
-	DataTypeHex  wasmx.HexString `json:"data_type_hex"`
-	DataItemHex  wasmx.HexString `json:"data_item_hex"`
-}
-
-type KayrosRegistrationResponseWrap struct {
-	KayrosApiResponse
-	Data KayrosRegistrationResponse `json:"data"`
+	Success  bool   `json:"success"`
+	Hash     string `json:"hash,omitempty"`
+	TimeUUID string `json:"timeuuid,omitempty"`
+	Encoding string `json:"encoding,omitempty"`
+	Error    string `json:"error,omitempty"`
+	Message  string `json:"message,omitempty"`
 }
 
 type LevelHashEntry struct {
@@ -80,49 +64,22 @@ type LevelHashEntry struct {
 	UuidHex  string `json:"uuid_hex"`
 }
 
-type LevelHashData struct {
-	Level    int    `json:"level"`
-	Position int    `json:"position"`
-	HashHex  string `json:"hash_hex"`
-}
-
-type LevelHashResponse struct {
-	KayrosApiResponse
-	Data LevelHashData `json:"data"`
-}
-
-type LevelRangeData struct {
-	Level   int              `json:"level"`
-	Count   int              `json:"count"`
-	Entries []LevelHashEntry `json:"entries"`
-}
-
-type LevelRangeResponse struct {
-	KayrosApiResponse
-	Data LevelRangeData `json:"data"`
-}
-
-type ProofPathEntry struct {
-	Level         int      `json:"level"`
-	Position      int      `json:"position"`
-	HashHex       string   `json:"hash_hex"`
-	IndexInBlock  int      `json:"index_in_block"`
-	SiblingHashes []string `json:"sibling_hashes"`
-	SiblingCount  int      `json:"sibling_count"`
-}
-
 type ProofPathData struct {
-	HashItemHex string           `json:"hash_item_hex"`
-	DataTypeHex string           `json:"data_type_hex"`
-	DataItemHex string           `json:"data_item_hex"`
-	RecordIndex int              `json:"record_index"`
-	Proof       []ProofPathEntry `json:"proof"`
-	RootHashHex string           `json:"root_hash_hex"`
+	DataType    string   `json:"data_type"`
+	HashItem    string   `json:"hash_item"`
+	Proof       []string `json:"proof"`
+	Root        string   `json:"root"`
+	Position    int64    `json:"position"`
+	Levels      int32    `json:"levels"`
+	LevelCounts []int32  `json:"level_counts"`
+	LevelStarts []int64  `json:"level_starts"`
 }
 
 type ProofPathResponse struct {
-	KayrosApiResponse
-	Data ProofPathData `json:"data"`
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+	Message string `json:"message,omitempty"`
+	ProofPathData
 }
 
 type VerifyResponse struct {

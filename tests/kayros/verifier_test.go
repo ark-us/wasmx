@@ -22,7 +22,7 @@ func (suite *KeeperTestSuite) TestKayrosVerifier() {
 		apiUserKey = suite.StartNodeEnv["kayros_user_key"]
 	}
 
-	if apiBaseUrl == "" || apiUserKey == "" {
+	if apiBaseUrl == "" {
 		suite.T().Skip("SKIPPING ... set kayros_base_url and kayros_user_key for TestKayrosVerifier")
 	}
 

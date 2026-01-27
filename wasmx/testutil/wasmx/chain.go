@@ -228,7 +228,7 @@ func (suite *KeeperTestSuite) SetupChains() {
 	if suite.MaxBlockGas > 0 {
 		app.DefaultTestingConsensusParams.Block.MaxGas = suite.MaxBlockGas
 	}
-	if suite.StartNodeEnv == nil && (kayrosUserKey != "" || kayrosBaseURL != "") {
+	if suite.StartNodeEnv == nil && (kayrosBaseURL != "") {
 		suite.StartNodeEnv = map[string]string{}
 		if kayrosUserKey != "" {
 			suite.StartNodeEnv["kayros_user_key"] = kayrosUserKey

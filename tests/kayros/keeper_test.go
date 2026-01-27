@@ -13,6 +13,10 @@ import (
 	//nolint
 
 	wt "github.com/loredanacirstea/wasmx/testutil/wasmx"
+	"github.com/loredanacirstea/wasmx/x/vmhttpclient"
+	"github.com/loredanacirstea/wasmx/x/vmhttpserver"
+	"github.com/loredanacirstea/wasmx/x/vmoauth2client"
+	"github.com/loredanacirstea/wasmx/x/vmoauth2server"
 
 	wazero "github.com/loredanacirstea/wasmx-wazero"
 
@@ -23,6 +27,13 @@ var (
 	wasmRuntime   string
 	runKnownFixme bool
 )
+
+func init() {
+	vmhttpclient.Setup()
+	vmhttpserver.Setup()
+	vmoauth2client.Setup()
+	vmoauth2server.Setup()
+}
 
 // TestMain is the main entry point for the tests.
 func TestMain(m *testing.M) {
