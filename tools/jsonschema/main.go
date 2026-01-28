@@ -558,7 +558,7 @@ func goTypeToSchema(goType string, allTypes map[string]*TypeInfo) *Schema {
 		return &Schema{Type: "boolean"}
 	case "byte":
 		return &Schema{Type: "integer"}
-	case "[]byte":
+	case "[]byte", "[]uint8":
 		return &Schema{Type: "string", Format: "base64"}
 	case "interface{}", "any":
 		return &Schema{} // Empty schema accepts anything

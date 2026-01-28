@@ -1,0 +1,296 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-kayrosp2p-lib",
+  "description": "JSON Schema for wasmx-kayrosp2p-lib TinyGo contract",
+  "type": "object",
+  "properties": {
+    "instantiate": {
+      "$ref": "#/definitions/instantiate"
+    }
+  },
+  "definitions": {
+    "BlockCommit": {
+      "type": "object",
+      "properties": {
+        "block_hash": {
+          "type": "string"
+        },
+        "block_number": {
+          "type": "integer"
+        },
+        "sender": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "block_number",
+        "block_hash",
+        "sender",
+        "timestamp",
+        "signature"
+      ]
+    },
+    "BlockCommitMapping": {
+      "type": "object",
+      "properties": {
+        "block_number": {
+          "type": "integer"
+        },
+        "commits": {
+          "type": "object"
+        },
+        "finalized": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "block_number",
+        "commits",
+        "finalized"
+      ]
+    },
+    "ConsensusConfig": {
+      "type": "object",
+      "properties": {
+        "genesis_uuid": {
+          "type": "string"
+        },
+        "threshold_commit": {
+          "type": "integer"
+        },
+        "threshold_finalize": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "threshold_commit",
+        "threshold_finalize",
+        "genesis_uuid"
+      ]
+    },
+    "InstantiateMsg": {
+      "type": "object",
+      "properties": {
+        "genesis_uuid": {
+          "type": "string"
+        },
+        "kayros_api_url": {
+          "type": "string"
+        },
+        "max_block_tx": {
+          "type": "integer"
+        },
+        "threshold_commit": {
+          "type": "integer"
+        },
+        "threshold_finalize": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kayros_api_url",
+        "genesis_uuid",
+        "threshold_commit",
+        "threshold_finalize",
+        "max_block_tx"
+      ]
+    },
+    "KayrosBlockMetadata": {
+      "type": "object",
+      "properties": {
+        "first_uuid": {
+          "type": "string"
+        },
+        "last_uuid": {
+          "type": "string"
+        },
+        "transactions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/KayrosTxMetadata"
+          }
+        }
+      },
+      "required": [
+        "transactions",
+        "first_uuid",
+        "last_uuid"
+      ]
+    },
+    "KayrosTxMetadata": {
+      "type": "object",
+      "properties": {
+        "block_number": {
+          "type": "integer"
+        },
+        "hash_item": {
+          "type": "string"
+        },
+        "prev_hash": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "tx_hash": {
+          "type": "string"
+        },
+        "uuid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tx_hash",
+        "uuid",
+        "hash_item",
+        "timestamp",
+        "prev_hash",
+        "block_number"
+      ]
+    },
+    "MissingTransactionsRequest": {
+      "type": "object",
+      "properties": {
+        "block_number": {
+          "type": "integer"
+        },
+        "sender": {
+          "type": "string"
+        },
+        "tx_hashes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "tx_hashes",
+        "block_number",
+        "sender"
+      ]
+    },
+    "MissingTransactionsResponse": {
+      "type": "object",
+      "properties": {
+        "sender": {
+          "type": "string"
+        },
+        "transactions": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "tx_hashes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "transactions",
+        "tx_hashes",
+        "sender"
+      ]
+    },
+    "StateSyncRequest": {
+      "type": "object",
+      "properties": {
+        "peer_address": {
+          "type": "string"
+        },
+        "start_index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_index",
+        "peer_address"
+      ]
+    },
+    "StateSyncResponse": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-go-type": "raftlib.LogEntryAggregate"
+          }
+        },
+        "last_batch_index": {
+          "type": "integer"
+        },
+        "last_log_index": {
+          "type": "integer"
+        },
+        "peer_address": {
+          "type": "string"
+        },
+        "start_batch_index": {
+          "type": "integer"
+        },
+        "termId": {
+          "type": "integer"
+        },
+        "trusted_log_hash": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "trusted_log_index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_batch_index",
+        "last_batch_index",
+        "last_log_index",
+        "trusted_log_index",
+        "trusted_log_hash",
+        "termId",
+        "peer_address",
+        "entries"
+      ]
+    },
+    "instantiate": {
+      "type": "object",
+      "properties": {
+        "genesis_uuid": {
+          "type": "string"
+        },
+        "kayros_api_url": {
+          "type": "string"
+        },
+        "max_block_tx": {
+          "type": "integer"
+        },
+        "threshold_commit": {
+          "type": "integer"
+        },
+        "threshold_finalize": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kayros_api_url",
+        "genesis_uuid",
+        "threshold_commit",
+        "threshold_finalize",
+        "max_block_tx"
+      ]
+    }
+  }
+}

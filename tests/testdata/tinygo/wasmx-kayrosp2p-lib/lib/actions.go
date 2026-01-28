@@ -46,28 +46,24 @@ func GetKayrosClient() (*KayrosClient, error) {
 	return kayrosClient, nil
 }
 
-func BuildKayrosDataType() wasmx.HexString {
+func BuildKayrosDataType() string {
 	chainId := wasmx.GetChainId()
-	dataType := fmt.Sprintf("wasmx_tx_%s", chainId)
+	dataType := fmt.Sprintf("wasmx_t_%s", chainId)
 	dataTypeId := sGet(CTX_DATA_TYPE_ID)
 	if dataTypeId != "" {
 		dataType = fmt.Sprintf("%s_%s", dataType, dataTypeId)
 	}
-	dataTypeBytes := make([]byte, 32)
-	copy(dataTypeBytes, []byte(dataType))
-	return wasmx.HexString(hex.EncodeToString(dataTypeBytes))
+	return dataType
 }
 
-func BuildKayrosBlockDataType() wasmx.HexString {
+func BuildKayrosBlockDataType() string {
 	chainId := wasmx.GetChainId()
 	dataType := fmt.Sprintf("wasmx_b_%s", chainId)
 	dataTypeId := sGet(CTX_DATA_TYPE_ID)
 	if dataTypeId != "" {
 		dataType = fmt.Sprintf("%s_%s", dataType, dataTypeId)
 	}
-	dataTypeBytes := make([]byte, 32)
-	copy(dataTypeBytes, []byte(dataType))
-	return wasmx.HexString(hex.EncodeToString(dataTypeBytes))
+	return dataType
 }
 
 // GetLastKayrosUUID retrieves the last processed Kayros UUID from state
@@ -280,7 +276,7 @@ func RegisterWithKayros(params []fsm.ActionParam, event fsm.EventObject) (*Kayro
 		return nil, err
 	}
 
-	// Compute transaction hash (hex encoded for Kayros)
+	// Compute transaction hash (raw bytes for Kayros client)
 	txHashBytes := wasmx.Sha256(txBytes)
 	txHash := fmt.Sprintf("%x", txHashBytes)
 
@@ -293,22 +289,24 @@ func RegisterWithKayros(params []fsm.ActionParam, event fsm.EventObject) (*Kayro
 	}
 
 	// Register transaction with Kayros via POST /api/grpc/single-hash
-	resp, err := client.RegisterTransaction(BuildKayrosDataType(), wasmx.HexString(txHash))
+	dataType := BuildKayrosDataType()
+	resp, err := client.RegisterTransaction(dataType, txHashBytes)
 	if err != nil {
-		LoggerError("failed to register transaction with Kayros", []string{"txHash", txHash, "error", err.Error()})
+		LoggerError("failed to register transaction with Kayros", []string{"txHash", txHash, "data_type", dataType, "error", err.Error()})
 		// Don't fail the transaction if Kayros registration fails
 		return nil, nil
 	}
 
 	if !resp.Success {
-		LoggerDebug("Kayros registration returned failure", []string{"txHash", txHash, "message", resp.Message})
+		LoggerDebug("Kayros registration returned failure", []string{"txHash", txHash, "data_type", dataType, "message", resp.Message})
 		return nil, nil
 	}
 
 	LoggerInfo("transaction registered with Kayros", []string{
 		"txHash", txHash,
-		"uuid", string(resp.TimeUUID),
-		"kayros_hash", string(resp.ComputedHash),
+		"uuid", resp.TimeUUID,
+		"kayros_hash", resp.Hash,
+		"data_type", dataType,
 	})
 
 	return resp, nil
@@ -361,7 +359,7 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 	// This handles cases where the same transaction was registered multiple times
 	deduplicatedRecords := make(map[string]KayrosRecord)
 	for _, record := range records {
-		txHash := record.DataItemHex
+		txHash := hex.EncodeToString(record.DataItem)
 		if existing, exists := deduplicatedRecords[txHash]; exists {
 			// Keep the one with smaller UUID (older timestamp)
 			if record.UuidHex < existing.UuidHex {
@@ -403,7 +401,7 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 		// Check if we have already processed this transaction before
 		// and skip it if yes
 		if mp.IsRecentlyProcessed(txHashBase64) {
-			LoggerDebug("transaction already processed", []string{"hash", txHash, "kayrosId", record.HashItemHex})
+			LoggerDebug("transaction already processed", []string{"hash", txHash, "kayrosId", hex.EncodeToString(record.HashItem)})
 			continue
 		}
 
@@ -413,9 +411,9 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 		txMeta := &KayrosTxMetadata{
 			TxHash:    txHash,
 			UUID:      record.UuidHex,
-			HashItem:  record.HashItemHex,
+			HashItem:  hex.EncodeToString(record.HashItem),
 			Timestamp: record.Timestamp,
-			PrevHash:  record.PrevHashHex,
+			PrevHash:  hex.EncodeToString(record.PrevHash),
 		}
 		if err := SetKayrosTxMetadata(txMeta); err != nil {
 			LoggerError("failed to store Kayros tx metadata", []string{"txHash", txHash, "error", err.Error()})
@@ -423,7 +421,7 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 
 		// Check if we have this transaction in our mempool
 		if mp.IsInMempool(txHashBase64) {
-			LoggerDebug("transaction in mempool", []string{"txHash", txHash, "kayrosId", record.HashItemHex})
+			LoggerDebug("transaction in mempool", []string{"txHash", txHash, "kayrosId", hex.EncodeToString(record.HashItem)})
 			continue
 		}
 
@@ -431,7 +429,7 @@ func GetKayrosTxs(params []fsm.ActionParam, event fsm.EventObject) error {
 		missingTxHashes = append(missingTxHashes, txHash)
 		LoggerDebug("transaction not in mempool, will request from peers", []string{
 			"txHash", txHash,
-			"kayrosId", record.HashItemHex,
+			"kayrosId", hex.EncodeToString(record.HashItem),
 			"uuid", record.UuidHex,
 			"timestamp", record.Timestamp,
 		})

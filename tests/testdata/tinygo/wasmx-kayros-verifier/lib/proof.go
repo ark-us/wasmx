@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -17,57 +18,63 @@ type LevelProof struct {
 }
 
 // VerifyProof hashes data and verifies it exists in Kayros.
-func VerifyProof(data []byte, dataType wasmx.HexString, hashAlgo string, cfg KayrosConfig) (bool, string) {
+func VerifyProof(data []byte, dataType string, hashAlgo string, cfg KayrosConfig) (bool, string) {
 	hashAlgo = strings.ToLower(strings.TrimSpace(hashAlgo))
 	if hashAlgo == "" || hashAlgo == "sha256" {
-		return VerifyProofHash(dataType, wasmx.HexString(hex.EncodeToString(wasmx.Sha256(data))), cfg)
+		return VerifyProofHash(dataType, wasmx.Sha256(data), cfg)
 	}
 	if hashAlgo == "keccak256" {
-		return VerifyProofHash(dataType, wasmx.HexString(hex.EncodeToString(wasmx.Keccak256(data))), cfg)
+		return VerifyProofHash(dataType, wasmx.Keccak256(data), cfg)
 	}
 	return false, "unsupported hash algorithm"
 }
 
 // VerifyProofHash checks if a Kayros record exists for the dataType and dataHash.
-func VerifyProofHash(dataType wasmx.HexString, dataHash wasmx.HexString, cfg KayrosConfig) (bool, string) {
+func VerifyProofHash(dataType string, dataHash []byte, cfg KayrosConfig) (bool, string) {
 	client := NewKayrosClient(cfg)
 	record, err := client.GetRecord(dataType, dataHash)
-	if err != nil || record == nil {
+	if err != nil {
+		return false, "get record failed: " + err.Error()
+	}
+	if record == nil {
 		return false, "no record found"
 	}
 
-	if record.DataTypeHex != string(dataType) || record.DataItemHex != string(dataHash) {
+	if !dataTypeMatches(record, dataType) || !bytesEqual(record.DataItem, dataHash) {
 		return false, "record mismatch"
 	}
 	return true, ""
 }
 
 // VerifyProofWithInclusion hashes data and verifies the record + proof path inclusion.
-func VerifyProofWithInclusion(data []byte, dataType wasmx.HexString, hashAlgo string, trustedRootHash string, trustedLevel int, trustedPosition int, cfg KayrosConfig) (bool, string) {
+func VerifyProofWithInclusion(data []byte, dataType string, hashAlgo string, trustedRootHash string, trustedLevel int, trustedPosition int, cfg KayrosConfig) (bool, string) {
 	hashAlgo = strings.ToLower(strings.TrimSpace(hashAlgo))
 	if hashAlgo == "" || hashAlgo == "sha256" {
-		return VerifyProofHashWithInclusion(dataType, wasmx.HexString(hex.EncodeToString(wasmx.Sha256(data))), hashAlgo, trustedRootHash, trustedLevel, trustedPosition, cfg)
+		return VerifyProofHashWithInclusion(dataType, wasmx.Sha256(data), hashAlgo, trustedRootHash, trustedLevel, trustedPosition, cfg)
 	}
 	if hashAlgo == "keccak256" {
-		return VerifyProofHashWithInclusion(dataType, wasmx.HexString(hex.EncodeToString(wasmx.Keccak256(data))), hashAlgo, trustedRootHash, trustedLevel, trustedPosition, cfg)
+		return VerifyProofHashWithInclusion(dataType, wasmx.Keccak256(data), hashAlgo, trustedRootHash, trustedLevel, trustedPosition, cfg)
 	}
 	return false, "unsupported hash algorithm"
 }
 
 // VerifyProofHashWithInclusion verifies record details and proof path against a trusted root hash.
-func VerifyProofHashWithInclusion(dataType wasmx.HexString, dataHash wasmx.HexString, hashAlgo string, trustedRootHash string, trustedLevel int, trustedPosition int, cfg KayrosConfig) (bool, string) {
+func VerifyProofHashWithInclusion(dataType string, dataHash []byte, hashAlgo string, trustedRootHash string, trustedLevel int, trustedPosition int, cfg KayrosConfig) (bool, string) {
 	client := NewKayrosClient(cfg)
 	record, err := client.GetRecord(dataType, dataHash)
-	if err != nil || record == nil {
+	if err != nil {
+		return false, "get record failed: " + err.Error()
+	}
+	if record == nil {
 		return false, "no record found"
 	}
-	if record.DataTypeHex != string(dataType) || record.DataItemHex != string(dataHash) {
+	if !dataTypeMatches(record, dataType) || !bytesEqual(record.DataItem, dataHash) {
 		return false, "record mismatch"
 	}
 
 	var prev *KayrosRecord
-	if strings.TrimSpace(record.PrevHashHex) != "" {
-		prev, err = client.GetRecordByHash(record.DataType, record.PrevHashHex)
+	if len(record.PrevHash) > 0 {
+		prev, err = client.GetRecordByHash(record.DataType, hex.EncodeToString(record.PrevHash))
 		if err != nil || prev == nil {
 			return false, "previous record not found"
 		}
@@ -85,11 +92,11 @@ func VerifyProofHashWithInclusion(dataType wasmx.HexString, dataHash wasmx.HexSt
 		return false, errMsg
 	}
 
-	proof, err := client.GetProofPath(record.DataType, record.HashItemHex)
+	proof, err := client.GetProofPath(record.DataType, hex.EncodeToString(record.HashItem))
 	if err != nil || proof == nil {
 		return false, "missing proof path"
 	}
-	if !strings.EqualFold(proof.HashItem, record.HashItemHex) {
+	if !bytesEqual(record.HashItem, proof.HashItem) {
 		return false, "hash_item mismatch"
 	}
 	if proof.DataType != "" && record.DataType != "" && !strings.EqualFold(proof.DataType, record.DataType) {
@@ -126,18 +133,9 @@ func VerifyRecordHash(record *KayrosRecord, hashAlgo string) (bool, string) {
 	if strings.TrimSpace(hashAlgo) == "" && strings.TrimSpace(record.HashType) != "" {
 		hashAlgo = record.HashType
 	}
-	prevBytes, err := decodeHexOrEmpty(record.PrevHashHex)
-	if err != nil {
-		return false, "invalid prev_hash"
-	}
-	dataTypeBytes, err := decodeHex(record.DataTypeHex)
-	if err != nil {
-		return false, "invalid data_type"
-	}
-	dataItemBytes, err := decodeHex(record.DataItemHex)
-	if err != nil {
-		return false, "invalid data_item"
-	}
+	prevBytes := record.PrevHash
+	dataTypeBytes := []byte(record.DataType)
+	dataItemBytes := record.DataItem
 	uuidBytes, err := decodeHex(record.UuidHex)
 	if err != nil {
 		return false, "invalid uuid"
@@ -152,8 +150,8 @@ func VerifyRecordHash(record *KayrosRecord, hashAlgo string) (bool, string) {
 		return false, errMsg
 	}
 	computedHex := hex.EncodeToString(computed)
-	if !strings.EqualFold(computedHex, record.HashItemHex) {
-		return false, fmt.Sprintf("hash mismatch computed=%s record=%s", computedHex, record.HashItemHex)
+	if !strings.EqualFold(computedHex, hex.EncodeToString(record.HashItem)) {
+		return false, fmt.Sprintf("hash mismatch computed=%s record=%s", computedHex, hex.EncodeToString(record.HashItem))
 	}
 	return true, ""
 }
@@ -163,10 +161,10 @@ func VerifyRecordChainLink(record *KayrosRecord, prev *KayrosRecord) (bool, stri
 	if record == nil || prev == nil {
 		return false, "missing record chain"
 	}
-	if !strings.EqualFold(record.DataTypeHex, prev.DataTypeHex) {
+	if !strings.EqualFold(record.DataType, prev.DataType) {
 		return false, "data_type mismatch"
 	}
-	if !strings.EqualFold(record.PrevHashHex, prev.HashItemHex) {
+	if !bytesEqual(record.PrevHash, prev.HashItem) {
 		return false, "prev_hash mismatch"
 	}
 	return true, ""
@@ -306,7 +304,7 @@ func VerifyKayrosRecordWithProof(record *KayrosRecord, prev *KayrosRecord, proof
 	if proof == nil {
 		return false, "missing proof path"
 	}
-	if !strings.EqualFold(proof.HashItem, record.HashItemHex) {
+	if !bytesEqual(record.HashItem, proof.HashItem) {
 		return false, "hash_item mismatch"
 	}
 	if proof.DataType != "" && record.DataType != "" && !strings.EqualFold(proof.DataType, record.DataType) {
@@ -409,4 +407,18 @@ func normalizeLevelCounts(counts []int32, levels int, proofLen int) ([]int, stri
 	}
 	out[levels-1] = remaining
 	return out, ""
+}
+
+func dataTypeMatches(record *KayrosRecord, dataType string) bool {
+	if record == nil {
+		return false
+	}
+	if record.DataType != "" && strings.EqualFold(record.DataType, dataType) {
+		return true
+	}
+	return record.DataTypeHex != "" && strings.EqualFold(record.DataTypeHex, hex.EncodeToString([]byte(dataType)))
+}
+
+func bytesEqual(left []byte, right []byte) bool {
+	return bytes.Equal(left, right)
 }

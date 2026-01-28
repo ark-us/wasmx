@@ -1,0 +1,945 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "wasmx-kayros-verifier",
+  "description": "JSON Schema for wasmx-kayros-verifier TinyGo contract",
+  "type": "object",
+  "properties": {
+    "main": {
+      "$ref": "#/definitions/main"
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "verify_proof": {
+          "$ref": "#/definitions/VerifyProofRequest"
+        }
+      },
+      "required": [
+        "verify_proof"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_proof_with_inclusion": {
+          "$ref": "#/definitions/VerifyProofWithInclusionRequest"
+        }
+      },
+      "required": [
+        "verify_proof_with_inclusion"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_proof_hash": {
+          "$ref": "#/definitions/VerifyProofHashRequest"
+        }
+      },
+      "required": [
+        "verify_proof_hash"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_proof_hash_with_inclusion": {
+          "$ref": "#/definitions/VerifyProofHashWithInclusionRequest"
+        }
+      },
+      "required": [
+        "verify_proof_hash_with_inclusion"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_record_hash": {
+          "$ref": "#/definitions/VerifyRecordHashRequest"
+        }
+      },
+      "required": [
+        "verify_record_hash"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_record_chain_link": {
+          "$ref": "#/definitions/VerifyRecordChainLinkRequest"
+        }
+      },
+      "required": [
+        "verify_record_chain_link"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_record_timestamp": {
+          "$ref": "#/definitions/VerifyRecordTimestampRequest"
+        }
+      },
+      "required": [
+        "verify_record_timestamp"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_record_uuid": {
+          "$ref": "#/definitions/VerifyRecordUUIDRequest"
+        }
+      },
+      "required": [
+        "verify_record_uuid"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_level_proof": {
+          "$ref": "#/definitions/VerifyLevelProofRequest"
+        }
+      },
+      "required": [
+        "verify_level_proof"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_proof_path": {
+          "$ref": "#/definitions/VerifyProofPathRequest"
+        }
+      },
+      "required": [
+        "verify_proof_path"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_kayros_record": {
+          "$ref": "#/definitions/VerifyKayrosRecordRequest"
+        }
+      },
+      "required": [
+        "verify_kayros_record"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify_kayros_record_with_proof": {
+          "$ref": "#/definitions/VerifyKayrosRecordWithProofRequest"
+        }
+      },
+      "required": [
+        "verify_kayros_record_with_proof"
+      ]
+    }
+  ],
+  "definitions": {
+    "KayrosClient": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/KayrosConfig"
+        }
+      },
+      "required": [
+        "config"
+      ]
+    },
+    "KayrosConfig": {
+      "type": "object",
+      "properties": {
+        "api_base_url": {
+          "type": "string"
+        },
+        "api_user_key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_base_url",
+        "api_user_key"
+      ]
+    },
+    "KayrosErrorResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "KayrosRecord": {
+      "type": "object",
+      "properties": {
+        "data_item": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "data_type_hex": {
+          "type": "string"
+        },
+        "hash_item": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "hash_type": {
+          "type": "string"
+        },
+        "prev_hash": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "uuid_hex": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_type",
+        "data_item",
+        "uuid_hex",
+        "hash_item",
+        "hash_type",
+        "timestamp"
+      ]
+    },
+    "KayrosRecordResponse": {
+      "type": "object",
+      "properties": {
+        "record": {
+          "$ref": "#/definitions/KayrosRecord"
+        }
+      },
+      "required": [
+        "record"
+      ]
+    },
+    "KayrosRecordsResponse": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "error": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/KayrosRecord"
+          }
+        }
+      },
+      "required": [
+        "records",
+        "count"
+      ]
+    },
+    "KayrosRegistrationRequest": {
+      "type": "object",
+      "properties": {
+        "data_item": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "data_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_type",
+        "data_item"
+      ]
+    },
+    "KayrosRegistrationResponse": {
+      "type": "object",
+      "properties": {
+        "encoding": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "timeuuid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "LevelHashEntry": {
+      "type": "object",
+      "properties": {
+        "hash_hex": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer"
+        },
+        "uuid_hex": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "position",
+        "hash_hex",
+        "uuid_hex"
+      ]
+    },
+    "LevelProof": {
+      "type": "object",
+      "properties": {
+        "DataType": {
+          "type": "string"
+        },
+        "Hashes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "Level": {
+          "type": "integer"
+        },
+        "Position": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "DataType",
+        "Level",
+        "Position",
+        "Hashes"
+      ]
+    },
+    "ProofPathData": {
+      "type": "object",
+      "properties": {
+        "data_type": {
+          "type": "string"
+        },
+        "hash_item": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "level_counts": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "level_starts": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "levels": {
+          "type": "integer"
+        },
+        "position": {
+          "type": "integer"
+        },
+        "proof": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "root": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_type",
+        "hash_item",
+        "proof",
+        "root",
+        "position",
+        "levels",
+        "level_counts",
+        "level_starts"
+      ]
+    },
+    "ProofPathResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
+    "VerifyKayrosRecordRequest": {
+      "type": "object",
+      "properties": {
+        "api_base_url": {
+          "type": "string"
+        },
+        "api_user_key": {
+          "type": "string"
+        },
+        "hash_algo": {
+          "type": "string"
+        },
+        "level_proofs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LevelProof"
+          }
+        },
+        "prev": {
+          "$ref": "#/definitions/KayrosRecord"
+        },
+        "record": {
+          "$ref": "#/definitions/KayrosRecord"
+        }
+      },
+      "required": [
+        "record",
+        "prev",
+        "hash_algo",
+        "level_proofs",
+        "api_base_url",
+        "api_user_key"
+      ]
+    },
+    "VerifyKayrosRecordWithProofRequest": {
+      "type": "object",
+      "properties": {
+        "hash_algo": {
+          "type": "string"
+        },
+        "prev": {
+          "$ref": "#/definitions/KayrosRecord"
+        },
+        "proof": {
+          "$ref": "#/definitions/ProofPathData"
+        },
+        "record": {
+          "$ref": "#/definitions/KayrosRecord"
+        }
+      },
+      "required": [
+        "record",
+        "prev",
+        "proof",
+        "hash_algo"
+      ]
+    },
+    "VerifyLevelProofRequest": {
+      "type": "object",
+      "properties": {
+        "api_base_url": {
+          "type": "string"
+        },
+        "api_user_key": {
+          "type": "string"
+        },
+        "hash_algo": {
+          "type": "string"
+        },
+        "proof": {
+          "$ref": "#/definitions/LevelProof"
+        }
+      },
+      "required": [
+        "proof",
+        "hash_algo",
+        "api_base_url",
+        "api_user_key"
+      ]
+    },
+    "VerifyProofHashRequest": {
+      "type": "object",
+      "properties": {
+        "api_base_url": {
+          "type": "string"
+        },
+        "api_user_key": {
+          "type": "string"
+        },
+        "data_hash": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "data_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_type",
+        "data_hash",
+        "api_base_url",
+        "api_user_key"
+      ]
+    },
+    "VerifyProofHashWithInclusionRequest": {
+      "type": "object",
+      "properties": {
+        "api_base_url": {
+          "type": "string"
+        },
+        "api_user_key": {
+          "type": "string"
+        },
+        "data_hash": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "hash_algo": {
+          "type": "string"
+        },
+        "trusted_level": {
+          "type": "integer"
+        },
+        "trusted_position": {
+          "type": "integer"
+        },
+        "trusted_root_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_type",
+        "data_hash",
+        "hash_algo",
+        "trusted_root_hash",
+        "trusted_level",
+        "trusted_position",
+        "api_base_url",
+        "api_user_key"
+      ]
+    },
+    "VerifyProofPathRequest": {
+      "type": "object",
+      "properties": {
+        "hash_algo": {
+          "type": "string"
+        },
+        "proof": {
+          "$ref": "#/definitions/ProofPathData"
+        }
+      },
+      "required": [
+        "proof",
+        "hash_algo"
+      ]
+    },
+    "VerifyProofRequest": {
+      "type": "object",
+      "properties": {
+        "api_base_url": {
+          "type": "string"
+        },
+        "api_user_key": {
+          "type": "string"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "hash_algo": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "data_type",
+        "hash_algo",
+        "api_base_url",
+        "api_user_key"
+      ]
+    },
+    "VerifyProofWithInclusionRequest": {
+      "type": "object",
+      "properties": {
+        "api_base_url": {
+          "type": "string"
+        },
+        "api_user_key": {
+          "type": "string"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "hash_algo": {
+          "type": "string"
+        },
+        "trusted_level": {
+          "type": "integer"
+        },
+        "trusted_position": {
+          "type": "integer"
+        },
+        "trusted_root_hash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "data_type",
+        "hash_algo",
+        "trusted_root_hash",
+        "trusted_level",
+        "trusted_position",
+        "api_base_url",
+        "api_user_key"
+      ]
+    },
+    "VerifyRecordChainLinkRequest": {
+      "type": "object",
+      "properties": {
+        "prev": {
+          "$ref": "#/definitions/KayrosRecord"
+        },
+        "record": {
+          "$ref": "#/definitions/KayrosRecord"
+        }
+      },
+      "required": [
+        "record",
+        "prev"
+      ]
+    },
+    "VerifyRecordHashRequest": {
+      "type": "object",
+      "properties": {
+        "hash_algo": {
+          "type": "string"
+        },
+        "record": {
+          "$ref": "#/definitions/KayrosRecord"
+        }
+      },
+      "required": [
+        "record",
+        "hash_algo"
+      ]
+    },
+    "VerifyRecordTimestampRequest": {
+      "type": "object",
+      "properties": {
+        "record": {
+          "$ref": "#/definitions/KayrosRecord"
+        }
+      },
+      "required": [
+        "record"
+      ]
+    },
+    "VerifyRecordUUIDRequest": {
+      "type": "object",
+      "properties": {
+        "record": {
+          "$ref": "#/definitions/KayrosRecord"
+        }
+      },
+      "required": [
+        "record"
+      ]
+    },
+    "VerifyResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ok"
+      ]
+    },
+    "browseDatabaseResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-go-type": "json.RawMessage"
+          }
+        }
+      },
+      "required": [
+        "rows"
+      ]
+    },
+    "browseLevelsRequest": {
+      "type": "object",
+      "properties": {
+        "data_type": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "position": {
+          "type": "integer"
+        },
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ]
+    },
+    "kayrosHashRecordResponse": {
+      "type": "object",
+      "properties": {
+        "data_item": {
+          "type": "string"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "hash_item": {
+          "type": "string"
+        },
+        "hash_type": {
+          "type": "string"
+        },
+        "prev_hash": {
+          "type": "string"
+        },
+        "ts": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_type",
+        "data_item",
+        "hash_type",
+        "hash_item",
+        "ts",
+        "prev_hash"
+      ]
+    },
+    "kayrosRecordApi": {
+      "type": "object",
+      "properties": {
+        "data_item": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "hash_item": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "hash_type": {
+          "type": "string"
+        },
+        "prev_hash": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "ts": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_type",
+        "data_item",
+        "hash_item",
+        "hash_type",
+        "prev_hash",
+        "ts"
+      ]
+    },
+    "kayrosRecordsResponse": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "error": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/kayrosRecordApi"
+          }
+        }
+      },
+      "required": [
+        "count",
+        "records"
+      ]
+    },
+    "kayrosRegistrationWireRequest": {
+      "type": "object",
+      "properties": {
+        "data_item": {
+          "type": "string"
+        },
+        "data_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_type",
+        "data_item"
+      ]
+    },
+    "levelRow": {
+      "type": "object",
+      "properties": {
+        "data_type": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer"
+        },
+        "position": {
+          "type": "integer"
+        },
+        "ts": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_type",
+        "level",
+        "position",
+        "hash",
+        "ts"
+      ]
+    },
+    "main": {
+      "type": "object",
+      "properties": {
+        "verify_kayros_record": {
+          "$ref": "#/definitions/VerifyKayrosRecordRequest"
+        },
+        "verify_kayros_record_with_proof": {
+          "$ref": "#/definitions/VerifyKayrosRecordWithProofRequest"
+        },
+        "verify_level_proof": {
+          "$ref": "#/definitions/VerifyLevelProofRequest"
+        },
+        "verify_proof": {
+          "$ref": "#/definitions/VerifyProofRequest"
+        },
+        "verify_proof_hash": {
+          "$ref": "#/definitions/VerifyProofHashRequest"
+        },
+        "verify_proof_hash_with_inclusion": {
+          "$ref": "#/definitions/VerifyProofHashWithInclusionRequest"
+        },
+        "verify_proof_path": {
+          "$ref": "#/definitions/VerifyProofPathRequest"
+        },
+        "verify_proof_with_inclusion": {
+          "$ref": "#/definitions/VerifyProofWithInclusionRequest"
+        },
+        "verify_record_chain_link": {
+          "$ref": "#/definitions/VerifyRecordChainLinkRequest"
+        },
+        "verify_record_hash": {
+          "$ref": "#/definitions/VerifyRecordHashRequest"
+        },
+        "verify_record_timestamp": {
+          "$ref": "#/definitions/VerifyRecordTimestampRequest"
+        },
+        "verify_record_uuid": {
+          "$ref": "#/definitions/VerifyRecordUUIDRequest"
+        }
+      }
+    }
+  }
+}

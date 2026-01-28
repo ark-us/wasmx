@@ -1,9 +1,5 @@
 package lib
 
-import (
-	wasmx "github.com/loredanacirstea/wasmx-env/lib"
-)
-
 const (
 	MODULE_NAME = "kayros_verifier"
 )
@@ -17,11 +13,11 @@ type KayrosConfig struct {
 // KayrosRecord represents a record in the Kayros database
 type KayrosRecord struct {
 	DataType    string `json:"data_type"`
-	DataTypeHex string `json:"data_type_hex"`
-	DataItemHex string `json:"data_item_hex"`
+	DataTypeHex string `json:"data_type_hex,omitempty"`
+	DataItem    []byte `json:"data_item"`
 	UuidHex     string `json:"uuid_hex"`
-	HashItemHex string `json:"hash_item_hex"`
-	PrevHashHex string `json:"prev_hash_hex,omitempty"`
+	HashItem    []byte `json:"hash_item"`
+	PrevHash    []byte `json:"prev_hash,omitempty"`
 	HashType    string `json:"hash_type"`
 	Timestamp   string `json:"timestamp"`
 }
@@ -44,8 +40,8 @@ type KayrosRecordsResponse struct {
 
 // KayrosRegistrationRequest is the request body for POST /api/grpc/single-hash
 type KayrosRegistrationRequest struct {
-	DataType wasmx.HexString `json:"data_type"`
-	DataItem wasmx.HexString `json:"data_item"`
+	DataType string `json:"data_type"`
+	DataItem []byte `json:"data_item"`
 }
 
 // KayrosRegistrationResponse is the response from the registration API
@@ -66,7 +62,7 @@ type LevelHashEntry struct {
 
 type ProofPathData struct {
 	DataType    string   `json:"data_type"`
-	HashItem    string   `json:"hash_item"`
+	HashItem    []byte   `json:"hash_item"`
 	Proof       []string `json:"proof"`
 	Root        string   `json:"root"`
 	Position    int64    `json:"position"`
@@ -89,7 +85,7 @@ type VerifyResponse struct {
 
 type VerifyProofRequest struct {
 	Data       []byte `json:"data"`
-	DataType   []byte `json:"data_type"`
+	DataType   string `json:"data_type"`
 	HashAlgo   string `json:"hash_algo"`
 	ApiBaseUrl string `json:"api_base_url"`
 	ApiUserKey string `json:"api_user_key"`
@@ -97,7 +93,7 @@ type VerifyProofRequest struct {
 
 type VerifyProofWithInclusionRequest struct {
 	Data            []byte `json:"data"`
-	DataType        []byte `json:"data_type"`
+	DataType        string `json:"data_type"`
 	HashAlgo        string `json:"hash_algo"`
 	TrustedRootHash string `json:"trusted_root_hash"`
 	TrustedLevel    int    `json:"trusted_level"`
@@ -107,14 +103,14 @@ type VerifyProofWithInclusionRequest struct {
 }
 
 type VerifyProofHashRequest struct {
-	DataType   []byte `json:"data_type"`
+	DataType   string `json:"data_type"`
 	DataHash   []byte `json:"data_hash"`
 	ApiBaseUrl string `json:"api_base_url"`
 	ApiUserKey string `json:"api_user_key"`
 }
 
 type VerifyProofHashWithInclusionRequest struct {
-	DataType        []byte `json:"data_type"`
+	DataType        string `json:"data_type"`
 	DataHash        []byte `json:"data_hash"`
 	HashAlgo        string `json:"hash_algo"`
 	TrustedRootHash string `json:"trusted_root_hash"`

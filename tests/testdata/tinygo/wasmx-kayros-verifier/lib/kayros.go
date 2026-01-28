@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
-	httpclient "github.com/loredanacirstea/wasmx-env-httpclient"
-	wasmx "github.com/loredanacirstea/wasmx-env/lib"
+	httpclient "github.com/loredanacirstea/wasmx-env-httpclient/lib"
 )
 
 // KayrosClient provides methods to interact with Kayros API
@@ -48,7 +48,9 @@ func (kc *KayrosClient) makeRequest(endpoint string) ([]byte, error) {
 		},
 	}
 	LoggerDebug("http request", []string{"url", url})
+	fmt.Println("--makeRequest.url--", url)
 	resp := httpclient.Request(&req)
+	fmt.Println("--makeRequest.resp--", resp.Error, resp.Data.StatusCode, string(resp.Data.Data))
 
 	if resp.Error != "" {
 		return nil, fmt.Errorf("HTTP request failed: %s", resp.Error)
@@ -60,7 +62,7 @@ func (kc *KayrosClient) makeRequest(endpoint string) ([]byte, error) {
 }
 
 // GetRecordByDataItem retrieves a Kayros record by data_type and data_item (transaction hash)
-func (kc *KayrosClient) GetRecordByDataItem(dataType wasmx.HexString, txHash wasmx.HexString) (*KayrosRecord, error) {
+func (kc *KayrosClient) GetRecordByDataItem(dataType string, txHash []byte) (*KayrosRecord, error) {
 	return kc.GetRecord(dataType, txHash)
 }
 
@@ -88,7 +90,7 @@ func (kc *KayrosClient) GetRecordByHash(dataType string, hashItem string) (*Kayr
 }
 
 // GetRecordWithPrev retrieves a Kayros record by previous hash
-func (kc *KayrosClient) GetRecordWithPrev(dataType wasmx.HexString, prevHash string) (*KayrosRecord, error) {
+func (kc *KayrosClient) GetRecordWithPrev(dataType string, prevHash string) (*KayrosRecord, error) {
 	endpoint := fmt.Sprintf("/api/lightnet/database/record-with-prev?data_type=%s&prev_hash=%s",
 		dataType, prevHash)
 
@@ -108,7 +110,7 @@ func (kc *KayrosClient) GetRecordWithPrev(dataType wasmx.HexString, prevHash str
 }
 
 // GetRecordsFromPrev retrieves multiple Kayros records from a previous UUID with a limit
-func (kc *KayrosClient) GetRecordsFromPrev(dataType wasmx.HexString, uuid string, limit int) ([]KayrosRecord, error) {
+func (kc *KayrosClient) GetRecordsFromPrev(dataType string, uuid string, limit int) ([]KayrosRecord, error) {
 	endpoint := fmt.Sprintf("/api/lightnet/database/records-since-prev?data_type=%s&uuid=%s&limit=%d",
 		dataType, uuid, limit)
 
@@ -117,14 +119,22 @@ func (kc *KayrosClient) GetRecordsFromPrev(dataType wasmx.HexString, uuid string
 		return nil, err
 	}
 
-	var kayrosResp KayrosRecordsResponse
+	var kayrosResp kayrosRecordsResponse
 	if err := json.Unmarshal(respData, &kayrosResp); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal Kayros response: %w", err)
 	}
 	if kayrosResp.Error != "" {
 		return nil, fmt.Errorf("Kayros API error: %s", kayrosResp.Error)
 	}
-	return kayrosResp.Records, nil
+	records := make([]KayrosRecord, 0, len(kayrosResp.Records))
+	for _, rec := range kayrosResp.Records {
+		mapped, err := rec.toKayrosRecord()
+		if err != nil {
+			continue
+		}
+		records = append(records, *mapped)
+	}
+	return records, nil
 }
 
 // makePostRequest performs an HTTP POST request to the Kayros API
@@ -164,7 +174,7 @@ func (kc *KayrosClient) makePostRequest(endpoint string, body []byte) ([]byte, e
 }
 
 // GetBlockTimestamp retrieves or registers a block hash with Kayros to get a deterministic timestamp
-func (kc *KayrosClient) GetBlockTimestamp(blockDataType wasmx.HexString, blockHashHex wasmx.HexString) (string, error) {
+func (kc *KayrosClient) GetBlockTimestamp(blockDataType string, blockHashHex []byte) (string, error) {
 	record, err := kc.GetBlockRecord(blockDataType, blockHashHex)
 	if err == nil && record != nil {
 		timestamp, err := TimeuuidHexToTimestamp(record.UuidHex)
@@ -181,9 +191,23 @@ func (kc *KayrosClient) GetBlockTimestamp(blockDataType wasmx.HexString, blockHa
 		return "", fmt.Errorf("failed to register block hash: %w", err)
 	}
 
-	record, err = kc.GetBlockRecord(blockDataType, blockHashHex)
-	if err != nil {
-		return "", fmt.Errorf("failed to retrieve block record after registration: %w", err)
+	var lastErr error
+	for i := 0; i < 10; i++ {
+		time.Sleep(300 * time.Millisecond)
+		record, err = kc.GetBlockRecord(blockDataType, blockHashHex)
+		if err == nil && record != nil {
+			break
+		}
+		if err != nil && !isNotFoundError(err) {
+			return "", fmt.Errorf("failed to retrieve block record after registration: %w", err)
+		}
+		lastErr = err
+	}
+	if record == nil {
+		if lastErr == nil {
+			lastErr = fmt.Errorf("record not found after registration")
+		}
+		return "", fmt.Errorf("failed to retrieve block record after registration: %w", lastErr)
 	}
 
 	timestamp, err := TimeuuidHexToTimestamp(record.UuidHex)
@@ -194,40 +218,48 @@ func (kc *KayrosClient) GetBlockTimestamp(blockDataType wasmx.HexString, blockHa
 	LoggerInfo("block hash registered and queried from Kayros", []string{
 		"uuid", record.UuidHex,
 		"timestamp", timestamp,
+		"data_type", blockDataType,
 	})
 	return timestamp, nil
 }
 
 // GetBlockRecord retrieves a block record from Kayros by block hash
-func (kc *KayrosClient) GetBlockRecord(blockDataType wasmx.HexString, blockHashHex wasmx.HexString) (*KayrosRecord, error) {
+func (kc *KayrosClient) GetBlockRecord(blockDataType string, blockHashHex []byte) (*KayrosRecord, error) {
 	return kc.GetRecord(blockDataType, blockHashHex)
 }
 
 // GetRecord retrieves a record from Kayros by data_type and data_item
-func (kc *KayrosClient) GetRecord(dataType wasmx.HexString, dataItem wasmx.HexString) (*KayrosRecord, error) {
-	endpoint := fmt.Sprintf("/api/lightnet/database/record?data_type=%s&data_item=%s", dataType, dataItem)
+func (kc *KayrosClient) GetRecord(dataType string, dataItem []byte) (*KayrosRecord, error) {
+	dataItemHex := hex.EncodeToString(dataItem)
+	endpoint := fmt.Sprintf("/api/lightnet/database/record?data_type=%s&data_item=%s", dataType, dataItemHex)
 
 	respData, err := kc.makeRequest(endpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	var recordsResp KayrosRecordsResponse
-	if err := json.Unmarshal(respData, &recordsResp); err == nil && len(recordsResp.Records) > 0 {
-		return &recordsResp.Records[0], nil
+	var recordsResp kayrosRecordsResponse
+	if err := json.Unmarshal(respData, &recordsResp); err != nil {
+		var record KayrosRecord
+		if err2 := json.Unmarshal(respData, &record); err2 != nil {
+			return nil, fmt.Errorf("failed to unmarshal Kayros records response: %w; record decode error: %v", err, err2)
+		}
+		if len(record.HashItem) == 0 {
+			return nil, fmt.Errorf("unexpected Kayros record response without hash_item")
+		}
+		return &record, nil
 	}
-
-	var record KayrosRecord
-	if err := json.Unmarshal(respData, &record); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal Kayros response: %w", err)
+	if recordsResp.Error != "" {
+		return nil, fmt.Errorf("Kayros API error: %s", recordsResp.Error)
 	}
-	if errMsg, ok := parseKayrosError(respData); ok {
-		return nil, fmt.Errorf("Kayros API error: %s", errMsg)
-	}
-	if record.HashItemHex == "" {
+	if len(recordsResp.Records) == 0 {
 		return nil, fmt.Errorf("Kayros API record not found")
 	}
-	return &record, nil
+	record, err := recordsResp.Records[0].toKayrosRecord()
+	if err != nil {
+		return nil, err
+	}
+	return record, nil
 }
 
 // GetLevelHash retrieves a rollup hash by data_type, level, and position.
@@ -363,7 +395,7 @@ func (kc *KayrosClient) GetBlockRecordByHashItem(dataType string, hashItem strin
 }
 
 // RegisterBlockHash registers a block hash with Kayros for timestamp synchronization
-func (kc *KayrosClient) RegisterBlockHash(blockDataType wasmx.HexString, blockHashHex wasmx.HexString) (*KayrosRegistrationResponse, error) {
+func (kc *KayrosClient) RegisterBlockHash(blockDataType string, blockHashHex []byte) (*KayrosRegistrationResponse, error) {
 	reqBody := KayrosRegistrationRequest{
 		DataType: blockDataType,
 		DataItem: blockHashHex,
@@ -372,7 +404,7 @@ func (kc *KayrosClient) RegisterBlockHash(blockDataType wasmx.HexString, blockHa
 }
 
 // RegisterTransaction registers a transaction hash with Kayros for ordering
-func (kc *KayrosClient) RegisterTransaction(dataType wasmx.HexString, txHash wasmx.HexString) (*KayrosRegistrationResponse, error) {
+func (kc *KayrosClient) RegisterTransaction(dataType string, txHash []byte) (*KayrosRegistrationResponse, error) {
 	reqBody := KayrosRegistrationRequest{
 		DataType: dataType,
 		DataItem: txHash,
@@ -383,7 +415,11 @@ func (kc *KayrosClient) RegisterTransaction(dataType wasmx.HexString, txHash was
 // RegisterData registers a data item with Kayros
 func (kc *KayrosClient) RegisterData(reqBody KayrosRegistrationRequest) (*KayrosRegistrationResponse, error) {
 	endpoint := "/api/lightnet/grpc/single-hash"
-	reqbz, err := json.Marshal(&reqBody)
+	wireReq := kayrosRegistrationWireRequest{
+		DataType: reqBody.DataType,
+		DataItem: hex.EncodeToString(reqBody.DataItem),
+	}
+	reqbz, err := json.Marshal(&wireReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
@@ -448,30 +484,80 @@ func (resp kayrosHashRecordResponse) toKayrosRecord() (*KayrosRecord, error) {
 	if resp.DataType == "" || resp.HashItem == "" {
 		return nil, fmt.Errorf("Kayros API record not found")
 	}
-	dataItemHex, err := base64ToHex(resp.DataItem)
+	dataItem, err := base64.StdEncoding.DecodeString(resp.DataItem)
 	if err != nil {
 		return nil, fmt.Errorf("invalid data_item encoding: %w", err)
 	}
-	hashItemHex, err := base64ToHex(resp.HashItem)
+	hashItem, err := base64.StdEncoding.DecodeString(resp.HashItem)
 	if err != nil {
 		return nil, fmt.Errorf("invalid hash_item encoding: %w", err)
 	}
+	prevHash, err := decodeBase64Optional(resp.PrevHash)
+	if err != nil {
+		return nil, fmt.Errorf("invalid prev_hash encoding: %w", err)
+	}
 	uuidHex, err := uuidStringToHex(resp.TS)
 	if err != nil {
-		return nil, fmt.Errorf("invalid ts uuid: %w", err)
+		return nil, fmt.Errorf("invalid ts uuid %q: %w", resp.TS, err)
 	}
 	timestamp, err := TimeuuidHexToTimestamp(uuidHex)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse timestamp: %w", err)
+		return nil, fmt.Errorf("failed to parse timestamp from uuid %q: %w", resp.TS, err)
 	}
 
 	return &KayrosRecord{
 		DataType:    resp.DataType,
 		DataTypeHex: hex.EncodeToString([]byte(resp.DataType)),
-		DataItemHex: dataItemHex,
+		DataItem:    dataItem,
 		UuidHex:     uuidHex,
-		HashItemHex: hashItemHex,
-		PrevHashHex: strings.TrimSpace(resp.PrevHash),
+		HashItem:    hashItem,
+		PrevHash:    prevHash,
+		HashType:    resp.HashType,
+		Timestamp:   timestamp,
+	}, nil
+}
+
+type kayrosRecordApi struct {
+	DataType string `json:"data_type"`
+	DataItem []byte `json:"data_item"`
+	HashItem []byte `json:"hash_item"`
+	HashType string `json:"hash_type"`
+	PrevHash []byte `json:"prev_hash"`
+	TS       string `json:"ts"`
+}
+
+type kayrosRecordsResponse struct {
+	Count   int               `json:"count"`
+	Records []kayrosRecordApi `json:"records"`
+	Error   string            `json:"error,omitempty"`
+	Message string            `json:"message,omitempty"`
+}
+
+type kayrosRegistrationWireRequest struct {
+	DataType string `json:"data_type"`
+	DataItem string `json:"data_item"`
+}
+
+func (resp kayrosRecordApi) toKayrosRecord() (*KayrosRecord, error) {
+	if resp.DataType == "" || len(resp.HashItem) == 0 {
+		return nil, fmt.Errorf("Kayros API record not found")
+	}
+	uuidHex, err := uuidStringToHex(resp.TS)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ts uuid %q: %w", resp.TS, err)
+	}
+	timestamp, err := TimeuuidHexToTimestamp(uuidHex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse timestamp from uuid %q: %w", resp.TS, err)
+	}
+
+	return &KayrosRecord{
+		DataType:    resp.DataType,
+		DataTypeHex: hex.EncodeToString([]byte(resp.DataType)),
+		DataItem:    resp.DataItem,
+		UuidHex:     uuidHex,
+		HashItem:    resp.HashItem,
+		PrevHash:    resp.PrevHash,
 		HashType:    resp.HashType,
 		Timestamp:   timestamp,
 	}, nil
@@ -503,6 +589,14 @@ func base64ToHex(value string) (string, error) {
 	return hex.EncodeToString(bz), nil
 }
 
+func decodeBase64Optional(value string) ([]byte, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return []byte{}, nil
+	}
+	return base64.StdEncoding.DecodeString(value)
+}
+
 func uuidStringToHex(value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -514,11 +608,18 @@ func uuidStringToHex(value string) (string, error) {
 	}
 	_, err := hex.DecodeString(value)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("invalid uuid hex %q: %w", value, err)
 	}
 	return strings.ToLower(value), nil
 }
 
 func int64Ptr(value int64) *int64 {
 	return &value
+}
+
+func isNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "status 404") || strings.Contains(err.Error(), "Not Found") || strings.Contains(err.Error(), "record not found")
 }

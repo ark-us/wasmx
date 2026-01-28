@@ -31,7 +31,7 @@ func TimeuuidHexToTimestamp(timeuuidHex string) (string, error) {
 	// Decode hex string to bytes
 	uuidBytes, err := hex.DecodeString(timeuuidHex)
 	if err != nil {
-		return "", fmt.Errorf("invalid hex: %w", err)
+		return "", fmt.Errorf("invalid timeuuid hex %q: %w", timeuuidHex, err)
 	}
 
 	if len(uuidBytes) != 16 {

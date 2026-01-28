@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"encoding/json"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
@@ -65,8 +64,8 @@ func main() {
 			respond(false, "missing data")
 			return
 		}
-		dataTypeHex := wasmx.HexString(hex.EncodeToString(req.DataType))
-		ok, errMsg := verifier.VerifyProof(req.Data, dataTypeHex, req.HashAlgo, configFrom(req.ApiBaseUrl, req.ApiUserKey))
+		dataType := req.DataType
+		ok, errMsg := verifier.VerifyProof(req.Data, dataType, req.HashAlgo, configFrom(req.ApiBaseUrl, req.ApiUserKey))
 		respond(ok, errMsg)
 		return
 	case calld.VerifyProofWithInclusion != nil:
@@ -75,10 +74,10 @@ func main() {
 			respond(false, "missing data")
 			return
 		}
-		dataTypeHex := wasmx.HexString(hex.EncodeToString(req.DataType))
+		dataType := req.DataType
 		ok, errMsg := verifier.VerifyProofWithInclusion(
 			req.Data,
-			dataTypeHex,
+			dataType,
 			req.HashAlgo,
 			req.TrustedRootHash,
 			req.TrustedLevel,
@@ -89,18 +88,16 @@ func main() {
 		return
 	case calld.VerifyProofHash != nil:
 		req := *calld.VerifyProofHash
-		dataTypeHex := wasmx.HexString(hex.EncodeToString(req.DataType))
-		dataHashHex := wasmx.HexString(hex.EncodeToString(req.DataHash))
-		ok, errMsg := verifier.VerifyProofHash(dataTypeHex, dataHashHex, configFrom(req.ApiBaseUrl, req.ApiUserKey))
+		dataType := req.DataType
+		ok, errMsg := verifier.VerifyProofHash(dataType, req.DataHash, configFrom(req.ApiBaseUrl, req.ApiUserKey))
 		respond(ok, errMsg)
 		return
 	case calld.VerifyProofHashWithInclusion != nil:
 		req := *calld.VerifyProofHashWithInclusion
-		dataTypeHex := wasmx.HexString(hex.EncodeToString(req.DataType))
-		dataHashHex := wasmx.HexString(hex.EncodeToString(req.DataHash))
+		dataType := req.DataType
 		ok, errMsg := verifier.VerifyProofHashWithInclusion(
-			dataTypeHex,
-			dataHashHex,
+			dataType,
+			req.DataHash,
 			req.HashAlgo,
 			req.TrustedRootHash,
 			req.TrustedLevel,
