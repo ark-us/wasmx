@@ -378,15 +378,41 @@ func (kc *KayrosClient) GetProofPath(dataType string, hashItem string) (*ProofPa
 		return nil, err
 	}
 
-	var kayrosResp ProofPathResponse
-	if err := json.Unmarshal(respData, &kayrosResp); err != nil {
+	var rawResp struct {
+		Success     bool     `json:"success"`
+		Error       string   `json:"error,omitempty"`
+		Message     string   `json:"message,omitempty"`
+		DataType    string   `json:"data_type"`
+		HashItem    string   `json:"hash_item"`
+		Proof       []string `json:"proof"`
+		Root        string   `json:"root"`
+		Position    int64    `json:"position"`
+		Levels      int32    `json:"levels"`
+		LevelCounts []int32  `json:"level_counts"`
+		LevelStarts []int64  `json:"level_starts"`
+	}
+	if err := json.Unmarshal(respData, &rawResp); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal Kayros response: %w", err)
 	}
-	if !kayrosResp.Success {
-		return nil, fmt.Errorf("Kayros API error: %s", kayrosResp.Message)
+	if !rawResp.Success {
+		return nil, fmt.Errorf("Kayros API error: %s", rawResp.Message)
 	}
 
-	return &kayrosResp.ProofPathData, nil
+	hashItemBytes, err := decodeHex(rawResp.HashItem)
+	if err != nil {
+		return nil, fmt.Errorf("invalid hash_item hex: %w", err)
+	}
+
+	return &ProofPathData{
+		DataType:    rawResp.DataType,
+		HashItem:    hashItemBytes,
+		Proof:       rawResp.Proof,
+		Root:        rawResp.Root,
+		Position:    rawResp.Position,
+		Levels:      rawResp.Levels,
+		LevelCounts: rawResp.LevelCounts,
+		LevelStarts: rawResp.LevelStarts,
+	}, nil
 }
 
 // GetBlockRecordByHashItem retrieves a block record from Kayros by hash_item

@@ -95,4 +95,17 @@ type VerifyProofRequest struct {
 	Data     string `json:"data"`      // base64
 	DataType string `json:"data_type"` // hex
 	HashAlgo string `json:"hash_algo"`
+	Trusted  *ProofTrusted
+}
+
+type VerifyProofHashRequest struct {
+	DataHash string `json:"data_hash"` // hex
+	DataType string `json:"data_type"` // hex
+	Trusted  *ProofTrusted
+}
+
+type ProofTrusted struct {
+	TopLevelHash     string // hex
+	TopLevel         int
+	TopLevelPosition int
 }

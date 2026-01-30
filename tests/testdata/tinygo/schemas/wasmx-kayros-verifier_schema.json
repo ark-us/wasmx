@@ -542,9 +542,6 @@
         "data_type": {
           "type": "string"
         },
-        "hash_algo": {
-          "type": "string"
-        },
         "trusted_level": {
           "type": "integer"
         },
@@ -558,7 +555,6 @@
       "required": [
         "data_type",
         "data_hash",
-        "hash_algo",
         "trusted_root_hash",
         "trusted_level",
         "trusted_position",
@@ -671,16 +667,12 @@
     "VerifyRecordHashRequest": {
       "type": "object",
       "properties": {
-        "hash_algo": {
-          "type": "string"
-        },
         "record": {
           "$ref": "#/definitions/KayrosRecord"
         }
       },
       "required": [
-        "record",
-        "hash_algo"
+        "record"
       ]
     },
     "VerifyRecordTimestampRequest": {

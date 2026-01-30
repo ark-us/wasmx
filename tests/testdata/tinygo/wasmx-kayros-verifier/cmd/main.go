@@ -98,7 +98,6 @@ func main() {
 		ok, errMsg := verifier.VerifyProofHashWithInclusion(
 			dataType,
 			req.DataHash,
-			req.HashAlgo,
 			req.TrustedRootHash,
 			req.TrustedLevel,
 			req.TrustedPosition,
@@ -108,7 +107,7 @@ func main() {
 		return
 	case calld.VerifyRecordHash != nil:
 		req := *calld.VerifyRecordHash
-		ok, errMsg := verifier.VerifyRecordHash(&req.Record, req.HashAlgo)
+		ok, errMsg := verifier.VerifyRecordHash(&req.Record)
 		respond(ok, errMsg)
 		return
 	case calld.VerifyRecordChainLink != nil:

@@ -158,9 +158,6 @@
       "properties": {
         "record": {
           "$ref": "#/definitions/KayrosRecord"
-        },
-        "hash_algo": {
-          "type": "string"
         }
       }
     },

@@ -26,57 +26,6 @@ func (suite *KeeperTestSuite) TestKayrosVerifier() {
 		suite.T().Skip("SKIPPING ... set kayros_base_url and kayros_user_key for TestKayrosVerifier")
 	}
 
-	for _, pair := range KAYROS_TEST_BY_DATA {
-		dataType := pair[0]
-		dataHashHex := pair[1]
-		dataHash, err := hex.DecodeString(dataHashHex)
-		suite.Require().NoError(err)
-
-		verifyProofHashReq := map[string]any{
-			"verify_proof_hash": map[string]any{
-				"data_type":    dataType,
-				"data_hash":    dataHash,
-				"api_base_url": apiBaseUrl,
-				"api_user_key": apiUserKey,
-			},
-		}
-		msg, err := json.Marshal(verifyProofHashReq)
-		suite.Require().NoError(err)
-		res := appA.WasmxQueryRaw(sender, verifierAddr, types.WasmxExecutionMessage{Data: msg}, nil, nil)
-
-		var verifyResp struct {
-			Ok    bool   `json:"ok"`
-			Error string `json:"error"`
-		}
-		suite.Require().NoError(json.Unmarshal(res, &verifyResp))
-		suite.Require().True(verifyResp.Ok, verifyResp.Error)
-
-		if KAYROS_TOPLEVEL_HASH != "" {
-			verifyProofHashReq = map[string]any{
-				"verify_proof_hash_with_inclusion": map[string]any{
-					"data_type":         dataType,
-					"data_hash":         dataHash,
-					"hash_algo":         "sha256",
-					"trusted_root_hash": KAYROS_TOPLEVEL_HASH,
-					"trusted_level":     KAYROS_TOPLEVEL_LEVEL,
-					"trusted_position":  KAYROS_TOPLEVEL_POSITION,
-					"api_base_url":      apiBaseUrl,
-					"api_user_key":      apiUserKey,
-				},
-			}
-			msg, err = json.Marshal(verifyProofHashReq)
-			suite.Require().NoError(err)
-			res = appA.WasmxQueryRaw(sender, verifierAddr, types.WasmxExecutionMessage{Data: msg}, nil, nil)
-
-			verifyResp = struct {
-				Ok    bool   `json:"ok"`
-				Error string `json:"error"`
-			}{}
-			suite.Require().NoError(json.Unmarshal(res, &verifyResp))
-			suite.Require().True(verifyResp.Ok, verifyResp.Error)
-		}
-	}
-
 	for _, proof := range KAYROS_TEST_PROOFS {
 		dataType := proof.DataType
 		data, err := base64.StdEncoding.DecodeString(proof.Data)
@@ -102,20 +51,70 @@ func (suite *KeeperTestSuite) TestKayrosVerifier() {
 		suite.Require().NoError(json.Unmarshal(res, &verifyResp))
 		suite.Require().True(verifyResp.Ok, verifyResp.Error)
 
-		if KAYROS_TOPLEVEL_HASH != "" {
+		if proof.Trusted != nil {
 			verifyProofReq = map[string]any{
 				"verify_proof_with_inclusion": map[string]any{
 					"data":              data,
 					"data_type":         dataType,
 					"hash_algo":         proof.HashAlgo,
-					"trusted_root_hash": KAYROS_TOPLEVEL_HASH,
-					"trusted_level":     KAYROS_TOPLEVEL_LEVEL,
-					"trusted_position":  KAYROS_TOPLEVEL_POSITION,
+					"trusted_root_hash": proof.Trusted.TopLevelHash,
+					"trusted_level":     proof.Trusted.TopLevel,
+					"trusted_position":  proof.Trusted.TopLevelPosition,
 					"api_base_url":      apiBaseUrl,
 					"api_user_key":      apiUserKey,
 				},
 			}
 			msg, err = json.Marshal(verifyProofReq)
+			suite.Require().NoError(err)
+			res = appA.WasmxQueryRaw(sender, verifierAddr, types.WasmxExecutionMessage{Data: msg}, nil, nil)
+
+			verifyResp = struct {
+				Ok    bool   `json:"ok"`
+				Error string `json:"error"`
+			}{}
+			suite.Require().NoError(json.Unmarshal(res, &verifyResp))
+			suite.Require().True(verifyResp.Ok, verifyResp.Error)
+		}
+
+	}
+
+	for _, proof := range KAYROS_TEST_PROOFS_HASH {
+		dataType := proof.DataType
+		dataHash, err := hex.DecodeString(proof.DataHash)
+		suite.Require().NoError(err)
+
+		verifyProofHashReq := map[string]any{
+			"verify_proof_hash": map[string]any{
+				"data_type":    dataType,
+				"data_hash":    dataHash,
+				"api_base_url": apiBaseUrl,
+				"api_user_key": apiUserKey,
+			},
+		}
+		msg, err := json.Marshal(verifyProofHashReq)
+		suite.Require().NoError(err)
+		res := appA.WasmxQueryRaw(sender, verifierAddr, types.WasmxExecutionMessage{Data: msg}, nil, nil)
+
+		var verifyResp struct {
+			Ok    bool   `json:"ok"`
+			Error string `json:"error"`
+		}
+		suite.Require().NoError(json.Unmarshal(res, &verifyResp))
+		suite.Require().True(verifyResp.Ok, verifyResp.Error)
+
+		if proof.Trusted != nil {
+			verifyProofHashReq = map[string]any{
+				"verify_proof_hash_with_inclusion": map[string]any{
+					"data_type":         dataType,
+					"data_hash":         dataHash,
+					"trusted_root_hash": proof.Trusted.TopLevelHash,
+					"trusted_level":     proof.Trusted.TopLevel,
+					"trusted_position":  proof.Trusted.TopLevelPosition,
+					"api_base_url":      apiBaseUrl,
+					"api_user_key":      apiUserKey,
+				},
+			}
+			msg, err = json.Marshal(verifyProofHashReq)
 			suite.Require().NoError(err)
 			res = appA.WasmxQueryRaw(sender, verifierAddr, types.WasmxExecutionMessage{Data: msg}, nil, nil)
 
@@ -166,21 +165,6 @@ var KAYROS_TEST_BY_HASH = []string{
 	"c27b15bd293a31374617f094c8c48283d7821618c9c5e11bd263b07940a2b234",
 }
 
-var KAYROS_TEST_BY_DATA = [][]string{
-	{
-		"benchmark_s32",
-		"aab0c4c694bf8e18000000000000000000000000000000000000000000000000",
-	},
-}
-
-// var KAYROS_TOPLEVEL_HASH = "be475ef98de5dcba176730b044a32239dbe5e8bb4f2172d5d8c555907eb445e0"
-// var KAYROS_TOPLEVEL_LEVEL = 1
-// var KAYROS_TOPLEVEL_POSITION = 10
-
-var KAYROS_TOPLEVEL_HASH = ""
-var KAYROS_TOPLEVEL_LEVEL = -1
-var KAYROS_TOPLEVEL_POSITION = -1
-
 var KAYROS_TEST_PROOFS = []VerifyProofRequest{
 	{
 		Data:     "CsoBCscBCiMvbXl0aG9zLndhc214LnYxLk1zZ0V4ZWN1dGVDb250cmFjdBKfAQotbXl0aG9zMXM2ejZoeDdrdWdwMnZqcnIweW51ZGdwejZlOWVod2FqN2hxcHQ4Ei1teXRob3MxOXY5a2N3dTB2bXpjN2NqY2g2aGFxZXRzNXNxcGdqZjdkMG1hcmoaP3siZGF0YSI6ImV5SnpaWFFpT25zaWEyVjVJam9pYUdWc2JHOGlMQ0oyWVd4MVpTSTZJbk5oYlcxNUluMTkifRJvClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECTBbqvLhqttZhiEZeiyjjPe9s707sc1ZWJfN3dBrmEbMSBAoCCAEYAxIbChMKBGFteXQSCzEwMDAwMDAwMDAwEICU69wDGkDGpjSJ9mwCScxEcFCEmoRq7VUM2jJT5KMp4vWdTyjrMB22c9RRCJNW5X8tw0wW71w3MBNPZwtXcnOIu38LCq1E",
@@ -188,7 +172,26 @@ var KAYROS_TEST_PROOFS = []VerifyProofRequest{
 		HashAlgo: "sha256",
 		// txhash
 		// bb4c35eb7c081e769f1fc7c03f9e8b7b5d05f5bc8dd894ce05f7a10ed9808775
-		// kayros hash
-		// dbbf12ef5fffc82a76abadbf62a0c7e7edebf5b41a514c23f637a2b77041b667
+	},
+}
+
+var KAYROS_TEST_PROOFS_HASH = []VerifyProofHashRequest{
+	{
+		DataHash: "aab0c4c694bf8e18000000000000000000000000000000000000000000000000",
+		DataType: "benchmark_s32",
+		Trusted: &ProofTrusted{
+			TopLevelHash:     "79687b6f0347b689ac82ac79d64eb188a7580c3cdabf04b2433bbc9e135c5f7a",
+			TopLevel:         2,
+			TopLevelPosition: 1,
+		},
+	},
+	{
+		DataHash: "2ce7635e8cbf8e18000000000000000000000000000000000000000000000000",
+		DataType: "benchmark_s32",
+		Trusted: &ProofTrusted{
+			TopLevelHash:     "5825048f9e70b7f3f4d3679073815f0260f890ce1f786aeb48d97dbcd46106b8",
+			TopLevel:         2,
+			TopLevelPosition: 0,
+		},
 	},
 }

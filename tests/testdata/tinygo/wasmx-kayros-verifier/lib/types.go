@@ -112,7 +112,6 @@ type VerifyProofHashRequest struct {
 type VerifyProofHashWithInclusionRequest struct {
 	DataType        string `json:"data_type"`
 	DataHash        []byte `json:"data_hash"`
-	HashAlgo        string `json:"hash_algo"`
 	TrustedRootHash string `json:"trusted_root_hash"`
 	TrustedLevel    int    `json:"trusted_level"`
 	TrustedPosition int    `json:"trusted_position"`
@@ -121,8 +120,7 @@ type VerifyProofHashWithInclusionRequest struct {
 }
 
 type VerifyRecordHashRequest struct {
-	Record   KayrosRecord `json:"record"`
-	HashAlgo string       `json:"hash_algo"`
+	Record KayrosRecord `json:"record"`
 }
 
 type VerifyRecordChainLinkRequest struct {
