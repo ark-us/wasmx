@@ -21,6 +21,7 @@ type EphemeralKeyPair struct {
 	PublicKey     []byte `json:"public_key"`
 	PrivateKey    []byte `json:"private_key"` // Encrypted with derived key
 	UserID        string `json:"user_id"`
+	IdentityUserID string `json:"identity_user_id,omitempty"`
 	ServiceDomain string `json:"service_domain"`
 	CreatedAt     int64  `json:"created_at"`
 	ExpiresAt     int64  `json:"expires_at"`
@@ -33,6 +34,7 @@ type EphemeralKeyPair struct {
 type MsgGenerateEphemeralKey struct {
 	OAuthToken    string `json:"oauth_token"`
 	UserID        string `json:"user_id"`
+	IdentityUserID string `json:"identity_user_id,omitempty"`
 	ServiceDomain string `json:"service_domain"`
 	ExpiresAt     int64  `json:"expires_at"`
 }
@@ -112,6 +114,21 @@ type MsgSignAndBroadcastTxResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+// MsgAddAddressInternalForward forwards an internal add_address call to wasmx-identity
+// using the ephemeral key as the caller.
+type MsgAddAddressInternalForward struct {
+	UserID        string `json:"user_id"`
+	Address       string `json:"address"`
+	PublicKey     []byte `json:"public_key"`
+	ServiceDomain string `json:"service_domain,omitempty"`
+	ExpiresAt     int64  `json:"expires_at,omitempty"`
+}
+
+type MsgAddAddressInternalForwardResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+}
+
 // Query types
 
 // MsgQueryGetPublicKey retrieves public key for an OAuth token
@@ -159,6 +176,7 @@ type CallData struct {
 	DeleteExpiredKeys    *MsgDeleteExpiredKeys    `json:"delete_expired_keys,omitempty"`
 	InitAccount          *MsgInitAccount          `json:"init_account,omitempty"`
 	SignAndBroadcastTx   *MsgSignAndBroadcastTx   `json:"sign_and_broadcast_tx,omitempty"`
+	AddAddressInternalForward *MsgAddAddressInternalForward `json:"add_address_internal_forward,omitempty"`
 
 	QueryGetPublicKey      *MsgQueryGetPublicKey      `json:"query_get_public_key,omitempty"`
 	QueryGetKeyInfo        *MsgQueryGetKeyInfo        `json:"query_get_key_info,omitempty"`

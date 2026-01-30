@@ -1,0 +1,59 @@
+sequenceDiagram
+    autonumber
+    participant User
+    participant AppClient as Client App
+    participant OAuth as OAuth2 Server (wasmX chain)
+    participant AppServer as Resource Server (wasmX chain)
+
+    %% --- Authorization Request (OAuth2 + PKCE) ---
+    User->>AppClient: Start login
+
+    rect rgba(200, 230, 255, 0.4)
+        note over AppClient: PKCE (RFC 7636)
+        AppClient->>AppClient: Generate code_verifier
+        AppClient->>AppClient: Derive code_challenge = BASE64URL(SHA256(code_verifier))
+    end
+
+    AppClient->>AppClient: Generate state
+
+    AppClient->>OAuth: Authorization Request<br/>response_type=code<br/>client_id<br/>redirect_uri<br/>scope<br/>state<br/>code_challenge<br/>code_challenge_method=S256
+
+    %% --- User Authentication ---
+    OAuth->>User: Login & Consent
+    User->>OAuth: Credentials / Consent
+
+    %% --- Authorization Response ---
+    OAuth->>AppClient: Redirect with<br/>authorization_code + state
+    AppClient->>AppClient: Verify state
+
+    %% --- Token Exchange (PKCE verification) ---
+    AppClient->>OAuth: Token Request<br/>grant_type=authorization_code<br/>code<br/>redirect_uri<br/>client_id<br/>client_secret(optional)<br/>code_verifier
+
+    OAuth->>OAuth: Validate code + PKCE (code_verifier ↔ code_challenge)
+
+    rect rgba(103, 182, 248, 0.4)
+        OAuth->>OAuth: Create ephemeral key-pair + link to access_token <br/>+ register in user's identity
+    end
+
+    OAuth->>AppClient: Token Response<br/>access_token<br/>refresh_token<br/>expires_in
+
+    %% --- API Access ---
+    AppClient->>AppServer: API Request<br/>Authorization: Bearer access_token
+    AppServer->>AppClient: Protected Resource
+
+    rect rgba(103, 182, 248, 0.4)
+        AppClient->>OAuth: POST /sign_and_broadcast<br/>Authorization: Bearer access_token
+        OAuth->>OAuth: gets ephemeral key linked to access_token<br/>signs transaction
+        OAuth->>AppServer: Broadcast transaction
+        AppServer->>OAuth: Transaction Hash
+        OAuth->>AppClient: Transaction Hash
+    end
+
+    %% --- Token Refresh ---
+    AppClient->>OAuth: Refresh Request<br/>grant_type=refresh_token<br/>refresh_token
+
+    rect rgba(103, 182, 248, 0.4)
+        OAuth->>OAuth: Remove & deregister previous ephemeral key,<br/>create new ephemeral key-pair + link to new access_token <br/>+ register in user's identity
+    end
+
+    OAuth->>AppClient: New access_token (+ optional new refresh_token)

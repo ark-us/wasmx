@@ -108,6 +108,7 @@ func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
 		PublicKey:     publicKey,
 		PrivateKey:    encryptedPrivateKey,
 		UserID:        msg.UserID,
+		IdentityUserID: msg.IdentityUserID,
 		ServiceDomain: msg.ServiceDomain,
 		CreatedAt:     GetBlockTime(),
 		ExpiresAt:     msg.ExpiresAt,
@@ -139,7 +140,17 @@ func GenerateEphemeralKey(msg *MsgGenerateEphemeralKey) []byte {
 	initAccountResp := InitAccount(&MsgInitAccount{Address: address})
 	fmt.Println("InitAccount response", []string{"response", string(initAccountResp)})
 
-	// Return key info - user must separately trigger identity registration after funding is confirmed
+	// Link the ephemeral address to the existing identity user via internal forward
+	identityUserID := msg.IdentityUserID
+	if identityUserID == "" {
+		identityUserID = msg.UserID
+	}
+	if err := broadcastAddAddressInternalForward(identityUserID, address, publicKey, msg.ServiceDomain, msg.ExpiresAt, privateKey); err != nil {
+		LoggerError("Failed to link ephemeral address to identity", []string{"error", err.Error(), "address", address})
+		fmt.Println("ERROR: Failed to link ephemeral address to identity:", err.Error())
+	}
+
+	// Return key info (identity linking happens via AddAddressInternalForward)
 	return MarshalJSON(MsgGenerateEphemeralKeyResponse{
 		PublicKey:  publicKey,
 		PrivateKey: privateKey, // Return plaintext for browser storage
@@ -414,6 +425,113 @@ func broadcastIdentityRegistration(address string, publicKey []byte, privateKey 
 
 	fmt.Println("broadcastIdentityRegistration: tx broadcasted", []string{"tx_hash", hex.EncodeToString(broadcastResp.TxHash)})
 	return nil
+}
+
+// broadcastAddAddressInternalForward calls this contract's AddAddressInternalForward using the ephemeral key.
+func broadcastAddAddressInternalForward(userID, address string, publicKey []byte, serviceDomain string, expiresAt int64, privateKey []byte) error {
+	keysAddr := wasmx.GetAddressByRole(wasmx.ROLE_OAUTH2_KEYS)
+	if keysAddr == "" {
+		return errors.New("oauth2-keys contract not found")
+	}
+
+	callData := map[string]interface{}{
+		"add_address_internal_forward": map[string]interface{}{
+			"user_id":        userID,
+			"address":        address,
+			"public_key":     publicKey,
+			"service_domain": serviceDomain,
+			"expires_at":     expiresAt,
+		},
+	}
+	msgBz, err := json.Marshal(callData)
+	if err != nil {
+		return errors.New("failed to marshal forward message: " + err.Error())
+	}
+
+	gasPrice := LoadGasPrice()
+	if gasPrice == nil {
+		gasPrice = &wasmx.Coin{Denom: "amyt", Amount: math.NewInt(10)}
+	}
+
+	txBytes, err := wasmxcore.PrepareTx(
+		string(keysAddr),
+		msgBz,
+		nil,
+		nil,
+		5000000,
+		*gasPrice,
+		privateKey,
+	)
+	if err != nil {
+		return errors.New("failed to prepare forward tx: " + err.Error())
+	}
+
+	broadcastResp, err := wasmxcore.BroadcastTxAsync(txBytes)
+	if err != nil {
+		return errors.New("failed to broadcast forward tx: " + err.Error())
+	}
+	if broadcastResp.Error != "" {
+		return errors.New("forward broadcast error: " + broadcastResp.Error)
+	}
+	fmt.Println("broadcastAddAddressInternalForward: tx broadcasted", []string{"tx_hash", hex.EncodeToString(broadcastResp.TxHash)})
+	return nil
+}
+
+// AddAddressInternalForward validates the caller and forwards an internal add_address to wasmx-identity.
+func AddAddressInternalForward(msg *MsgAddAddressInternalForward) []byte {
+	if msg.UserID == "" || msg.Address == "" || len(msg.PublicKey) == 0 {
+		return MarshalJSON(MsgAddAddressInternalForwardResponse{Success: false, Error: "user_id, address, and public_key are required"})
+	}
+
+	derivedAddr, err := DeriveAddressFromPublicKey(msg.PublicKey)
+	if err != nil {
+		return MarshalJSON(MsgAddAddressInternalForwardResponse{Success: false, Error: "failed to derive address"})
+	}
+	if derivedAddr != msg.Address {
+		return MarshalJSON(MsgAddAddressInternalForwardResponse{Success: false, Error: "address does not match public_key"})
+	}
+
+	keyPair, err := LoadKeyPair(msg.PublicKey)
+	if err != nil || keyPair == nil {
+		return MarshalJSON(MsgAddAddressInternalForwardResponse{Success: false, Error: "key pair not found"})
+	}
+	if keyPair.IdentityUserID == "" {
+		return MarshalJSON(MsgAddAddressInternalForwardResponse{Success: false, Error: "user_id missing for key"})
+	}
+	if keyPair.IdentityUserID != msg.UserID {
+		return MarshalJSON(MsgAddAddressInternalForwardResponse{Success: false, Error: "user_id does not match key"})
+	}
+
+	caller := string(wasmx.GetCaller())
+	if caller != msg.Address {
+		return MarshalJSON(MsgAddAddressInternalForwardResponse{Success: false, Error: "caller does not match key address"})
+	}
+
+	identityAddr := wasmx.GetAddressByRole(wasmx.ROLE_ACCOUNT_IDENTITY)
+	if identityAddr == "" {
+		return MarshalJSON(MsgAddAddressInternalForwardResponse{Success: false, Error: "identity contract not found"})
+	}
+
+	forwardMsg := map[string]interface{}{
+		"add_address_internal": map[string]interface{}{
+			"user_id":        msg.UserID,
+			"address":        msg.Address,
+			"public_key":     msg.PublicKey,
+			"service_domain": msg.ServiceDomain,
+			"expires_at":     msg.ExpiresAt,
+			"permissions":    []interface{}{},
+		},
+	}
+	msgBz, err := json.Marshal(forwardMsg)
+	if err != nil {
+		return MarshalJSON(MsgAddAddressInternalForwardResponse{Success: false, Error: "failed to marshal forward msg"})
+	}
+
+	ok, resp := wasmx.CallSimple(identityAddr, msgBz, false, MODULE_NAME)
+	if !ok {
+		return MarshalJSON(MsgAddAddressInternalForwardResponse{Success: false, Error: string(resp)})
+	}
+	return resp
 }
 
 // SignAndBroadcastTx signs and broadcasts a transaction using the ephemeral key

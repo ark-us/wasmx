@@ -37,5 +37,6 @@ func main() {
 	databz := wasmx.GetCallData()
 	fmt.Println("*wasmx.main.identity** ", string(databz))
 	result := lib.Execute(databz)
+	fmt.Println("*wasmx.main.identity resp** ", string(result))
 	wasmx.Finish(result)
 }

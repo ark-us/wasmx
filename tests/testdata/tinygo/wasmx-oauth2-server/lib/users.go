@@ -502,6 +502,7 @@ func generateEphemeralKey(oauthToken, userID, identityUserID string, expiresAt i
 	generateMsg := map[string]interface{}{
 		"generate_ephemeral_key": map[string]interface{}{
 			"user_id":        userID,
+			"identity_user_id": identityUserID,
 			"oauth_token":    oauthToken,
 			"service_domain": "", // Empty for general use
 			"expires_at":     expiresAt,

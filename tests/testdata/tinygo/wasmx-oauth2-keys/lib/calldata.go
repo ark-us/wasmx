@@ -51,6 +51,10 @@ func RouteCallData(data []byte) []byte {
 		return SignAndBroadcastTx(callData.SignAndBroadcastTx)
 	}
 
+	if callData.AddAddressInternalForward != nil {
+		return AddAddressInternalForward(callData.AddAddressInternalForward)
+	}
+
 	// Handle queries
 	if callData.QueryGetPublicKey != nil {
 		return QueryGetPublicKey(callData.QueryGetPublicKey)

@@ -30,6 +30,8 @@ tinygo build -o determ.wasm -no-debug -scheduler=none -gc=leaking -target=wasi .
 
 cd simple_storage && GOWORK=off tinygo build -o ../simple_storage.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 
+cd simple_storage_identity && GOWORK=off tinygo build -o ../simple_storage_identity.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
+
 cd forward && GOWORK=off tinygo build -o ../forward.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..
 
 cd imaptest && GOWORK=off tinygo build -o ../imaptest.wasm -no-debug -scheduler=none -gc=leaking -target=wasi . && cd ..

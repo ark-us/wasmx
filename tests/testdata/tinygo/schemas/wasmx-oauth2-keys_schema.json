@@ -89,6 +89,17 @@
     {
       "type": "object",
       "properties": {
+        "add_address_internal_forward": {
+          "$ref": "#/definitions/MsgAddAddressInternalForward"
+        }
+      },
+      "required": [
+        "add_address_internal_forward"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
         "query_get_public_key": {
           "$ref": "#/definitions/MsgQueryGetPublicKey"
         }
@@ -141,6 +152,9 @@
         "expires_at": {
           "type": "integer"
         },
+        "identity_user_id": {
+          "type": "string"
+        },
         "oauth_token": {
           "type": "string"
         },
@@ -173,6 +187,48 @@
         "oauth_token"
       ]
     },
+    "MsgAddAddressInternalForward": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "expires_at": {
+          "type": "integer"
+        },
+        "public_key": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "service_domain": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "address",
+        "public_key"
+      ]
+    },
+    "MsgAddAddressInternalForwardResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success"
+      ]
+    },
     "MsgDeleteExpiredKeys": {
       "type": "object"
     },
@@ -192,6 +248,9 @@
       "properties": {
         "expires_at": {
           "type": "integer"
+        },
+        "identity_user_id": {
+          "type": "string"
         },
         "oauth_token": {
           "type": "string"
@@ -610,6 +669,9 @@
     "main": {
       "type": "object",
       "properties": {
+        "add_address_internal_forward": {
+          "$ref": "#/definitions/MsgAddAddressInternalForward"
+        },
         "delete_expired_keys": {
           "$ref": "#/definitions/MsgDeleteExpiredKeys"
         },

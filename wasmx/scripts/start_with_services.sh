@@ -53,6 +53,8 @@ EXPLORER_FILES="${EXPLORER_FILES:-$EXPLORER_FILES_DEFAULT}"
 RECREATE_CONFIG="${RECREATE_CONFIG:-false}"
 SIMPLE_STORAGE_WASM_FILE="${SIMPLE_STORAGE_WASM_FILE:-$WASMX_ROOT/tests/testdata/tinygo/simple_storage.wasm}"
 SIMPLE_STORAGE_SCHEMA_FILE="${SIMPLE_STORAGE_SCHEMA_FILE:-$WASMX_ROOT/tests/testdata/tinygo/schemas/simple_storage_schema.json}"
+SIMPLE_STORAGE_IDENTITY_WASM_FILE="${SIMPLE_STORAGE_IDENTITY_WASM_FILE:-$WASMX_ROOT/tests/testdata/tinygo/simple_storage_identity.wasm}"
+SIMPLE_STORAGE_IDENTITY_SCHEMA_FILE="${SIMPLE_STORAGE_IDENTITY_SCHEMA_FILE:-$WASMX_ROOT/tests/testdata/tinygo/schemas/simple_storage_identity_schema.json}"
 
 usage() {
   cat <<EOF
@@ -82,6 +84,7 @@ Environment overrides also respected:
   CHAIN_ID, KEY_NAME, KEYRING_BACKEND, MIN_GAS_PRICES, FEES, GAS, RPC_ADDRESS,
   OAUTH2_ADDR, HTTP_REGISTRY_ADDR, POST_START_WAIT, POST_TX_WAIT, NODE_HOME, LOG_LEVEL,
   SIMPLE_STORAGE_WASM_FILE, SIMPLE_STORAGE_SCHEMA_FILE,
+  SIMPLE_STORAGE_IDENTITY_WASM_FILE, SIMPLE_STORAGE_IDENTITY_SCHEMA_FILE,
   SUPABASE_JWT, STORAGE_SUPABASE_KEY_ENDPOINT, NOMEN_FILES,
   EXPLORER_FILES,
   RECREATE_CONFIG, MYTHOSD_BIN
@@ -108,6 +111,8 @@ while [[ $# -gt 0 ]]; do
     --http-registry-addr) HTTP_REGISTRY_ADDR="$2"; shift 2 ;;
     --simple-storage-wasm-file) SIMPLE_STORAGE_WASM_FILE="$2"; shift 2 ;;
     --simple-storage-schema-file) SIMPLE_STORAGE_SCHEMA_FILE="$2"; shift 2 ;;
+    --simple-storage-identity-wasm-file) SIMPLE_STORAGE_IDENTITY_WASM_FILE="$2"; shift 2 ;;
+    --simple-storage-identity-schema-file) SIMPLE_STORAGE_IDENTITY_SCHEMA_FILE="$2"; shift 2 ;;
     --recreate-config) RECREATE_CONFIG=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
@@ -279,7 +284,8 @@ fi
 if [[ ! -f "$NODE_HOME/config/genesis.json" ]]; then
   log "Initializing new single-validator testnet under $OUTPUT_DIR"
   "$MYTHOSD_BIN" testnet init-files \
-    --network.initial-chains=ondemand_single \
+    --network.initial-chains=mythos \
+    --consensus-label=ondemand_single_0.0.1 \
     --v 1 \
     --output-dir="$OUTPUT_DIR" \
     --minimum-gas-prices="$MIN_GAS_PRICES" \
@@ -401,6 +407,52 @@ if [[ -z "$SIMPLE_STORAGE_ADDR" ]]; then
 fi
 log "Simple storage contract instantiated at $SIMPLE_STORAGE_ADDR"
 
+if [[ ! -f "$SIMPLE_STORAGE_IDENTITY_SCHEMA_FILE" ]]; then
+  echo "Simple storage identity schema file not found at $SIMPLE_STORAGE_IDENTITY_SCHEMA_FILE" >&2
+  exit 1
+fi
+simple_identity_store_out="$("$MYTHOSD_BIN" tx wasmx store "$SIMPLE_STORAGE_IDENTITY_WASM_FILE" --json-schema "$SIMPLE_STORAGE_IDENTITY_SCHEMA_FILE" "${tx_flags[@]}")"
+simple_identity_store_txhash="$(echo "$simple_identity_store_out" | jq -r '.txhash // empty')"
+if [[ -n "$simple_identity_store_txhash" ]]; then
+  log "Simple storage identity store tx hash: $simple_identity_store_txhash"
+  post_tx_wait
+  print_tx_receipt "$simple_identity_store_txhash"
+fi
+SIMPLE_STORAGE_IDENTITY_CODE_ID="$(extract_attr "$simple_identity_store_out" "store_code" "code_id")"
+if [[ -z "$SIMPLE_STORAGE_IDENTITY_CODE_ID" || "$SIMPLE_STORAGE_IDENTITY_CODE_ID" == "null" ]]; then
+  if [[ -n "$simple_identity_store_txhash" ]]; then
+    log "Simple storage identity store response missing code_id; querying tx $simple_identity_store_txhash for code_id"
+    SIMPLE_STORAGE_IDENTITY_CODE_ID="$(query_tx_attr "$simple_identity_store_txhash" "store_code" "code_id" 60 1 || true)"
+  fi
+fi
+if [[ -z "$SIMPLE_STORAGE_IDENTITY_CODE_ID" || "$SIMPLE_STORAGE_IDENTITY_CODE_ID" == "null" ]]; then
+  echo "Could not determine simple storage identity code id" >&2
+  echo "$simple_identity_store_out" >&2
+  exit 1
+fi
+log "Stored simple_storage_identity contract with code id $SIMPLE_STORAGE_IDENTITY_CODE_ID"
+
+log "Instantiating simple_storage_identity contract"
+simple_identity_init_payload="{}"
+simple_identity_instantiate_out="$("$MYTHOSD_BIN" tx wasmx instantiate "$SIMPLE_STORAGE_IDENTITY_CODE_ID" "$simple_identity_init_payload" \
+  --label "simple_storage_identity" "${tx_flags[@]}")"
+simple_identity_instantiate_txhash="$(echo "$simple_identity_instantiate_out" | jq -r '.txhash // empty')"
+if [[ -n "$simple_identity_instantiate_txhash" ]]; then
+  log "Simple storage identity instantiate tx hash: $simple_identity_instantiate_txhash"
+  post_tx_wait
+  print_tx_receipt "$simple_identity_instantiate_txhash"
+fi
+SIMPLE_STORAGE_IDENTITY_ADDR=""
+if [[ -n "$simple_identity_instantiate_txhash" ]]; then
+  SIMPLE_STORAGE_IDENTITY_ADDR="$(extract_contract_created_from_receipt "$simple_identity_instantiate_txhash")"
+fi
+if [[ -z "$SIMPLE_STORAGE_IDENTITY_ADDR" ]]; then
+  echo "Could not determine simple storage identity contract address" >&2
+  echo "$simple_identity_instantiate_out"
+  exit 1
+fi
+log "Simple storage identity contract instantiated at $SIMPLE_STORAGE_IDENTITY_ADDR"
+
 log "Configuring OAuth2 Keys contract with funder private key via $OAUTH2_KEYS_ADDR"
 oauth2keys_init_payload="$(jq -n \
   --arg privkey "$FUNDER_PRIVKEY" \
@@ -447,8 +499,8 @@ log "OAuth2 server initialized"
 log "Registering OAuth client via $OAUTH2_ADDR"
 oauth_payload="$(jq -n '{
   register_oauth_client: {
-    name: "MCP Search Client",
-    description: "OAuth client for MCP search",
+    name: "Nomen OAuth2 Client",
+    description: "OAuth client for Nomen",
     redirect_uris: ["https://chat.openai.com/aip/*", "https://chatgpt.com/connector_platform_oauth_redirect","http://localhost:3000/callback","http://localhost:8080/callback","http://voorwhwgymjpvrgzskwp.supabase.co/functions/v1/wasmx-oauth2-task/callback","https://voorwhwgymjpvrgzskwp.supabase.co/functions/v1/wasmx-oauth2-task/callback","http://voorwhwgymjpvrgzskwp.supabase.co/*","https://voorwhwgymjpvrgzskwp.supabase.co/*"],
     scopes: ["read", "tools"]
   }

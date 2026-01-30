@@ -1645,7 +1645,7 @@ func handleAuthorize(req wasmxhttp.HttpRequestIncoming) []byte {
         <p>This will allow the application to:</p>
         <ul>
             <li>Access your profile information</li>
-            <li>Use MCP tools on your behalf</li>
+            <li>Make changes to your data on your behalf</li>
         </ul>
     </div>
     <form method="POST" action="/oauth/authorize?client_id=%s&redirect_uri=%s&state=%s&code_challenge=%s&code_challenge_method=%s&response_type=code">
@@ -1733,17 +1733,69 @@ func handleToken(req wasmxhttp.HttpRequestIncoming) []byte {
 	if req.Method != "POST" {
 		return methodNotAllowed()
 	}
-	// Try form-encoded first
-	form, _ := url.ParseQuery(string(req.Data))
-	grantType := form.Get("grant_type")
+	// Parse parameters from body (form or JSON), then fall back to query string.
+	params := url.Values{}
+	contentType := strings.ToLower(strings.TrimSpace(req.Header.Get("Content-Type")))
+	if strings.Contains(contentType, "application/json") && len(req.Data) > 0 {
+		var body map[string]interface{}
+		if err := json.Unmarshal(req.Data, &body); err == nil {
+			for k, v := range body {
+				switch vv := v.(type) {
+				case string:
+					params.Set(k, vv)
+				default:
+					b, _ := json.Marshal(vv)
+					params.Set(k, string(b))
+				}
+			}
+		}
+	} else if len(req.Data) > 0 {
+		if form, err := url.ParseQuery(string(req.Data)); err == nil {
+			params = form
+		}
+	}
+	if len(params) == 0 {
+		// Fallback to query params if body is empty (some clients send POST with query string only)
+		if req.Url != "" {
+			if u, err := url.Parse(req.Url); err == nil {
+				params = u.Query()
+			}
+		}
+		if len(params) == 0 && req.RequestURI != "" {
+			if u, err := url.Parse(req.RequestURI); err == nil {
+				params = u.Query()
+			}
+		}
+	}
+
+	// Support client auth via Basic header if present.
+	if params.Get("client_id") == "" || params.Get("client_secret") == "" {
+		authHeader := strings.TrimSpace(req.Header.Get("Authorization"))
+		if strings.HasPrefix(strings.ToLower(authHeader), "basic ") {
+			enc := strings.TrimSpace(authHeader[6:])
+			if dec, err := base64.StdEncoding.DecodeString(enc); err == nil {
+				parts := strings.SplitN(string(dec), ":", 2)
+				if len(parts) == 2 {
+					if params.Get("client_id") == "" {
+						params.Set("client_id", parts[0])
+					}
+					if params.Get("client_secret") == "" {
+						params.Set("client_secret", parts[1])
+					}
+				}
+			}
+		}
+	}
+
+	grantType := params.Get("grant_type")
 	switch grantType {
 	case "authorization_code":
 		r := ExchangeCodeForTokenRequest{
-			Code:         form.Get("code"),
-			ClientID:     form.Get("client_id"),
-			ClientSecret: form.Get("client_secret"),
-			RedirectURI:  form.Get("redirect_uri"),
-			CodeVerifier: form.Get("code_verifier"),
+			Code:         params.Get("code"),
+			ClientID:     params.Get("client_id"),
+			ClientSecret: params.Get("client_secret"),
+			RedirectURI:  params.Get("redirect_uri"),
+			CodeVerifier: params.Get("code_verifier"),
 		}
 		resp := ExchangeCodeForToken(r)
 		return marshalHTTP(wasmxhttp.HttpResponseWrap{
@@ -1757,9 +1809,9 @@ func handleToken(req wasmxhttp.HttpRequestIncoming) []byte {
 		})
 	case "refresh_token":
 		r := RefreshAccessTokenRequest{
-			RefreshToken: form.Get("refresh_token"),
-			ClientID:     form.Get("client_id"),
-			ClientSecret: form.Get("client_secret"),
+			RefreshToken: params.Get("refresh_token"),
+			ClientID:     params.Get("client_id"),
+			ClientSecret: params.Get("client_secret"),
 		}
 		resp := RefreshAccessToken(r)
 		return marshalHTTP(wasmxhttp.HttpResponseWrap{
