@@ -225,6 +225,7 @@ func parseRecordTimestamp(value string) (time.Time, error) {
 
 // VerifyLevelProof checks a single level rollup hash against Kayros.
 func VerifyLevelProof(cfg KayrosConfig, proof LevelProof, hashAlgo string) (bool, string) {
+	_ = hashAlgo
 	if strings.TrimSpace(proof.DataType) == "" {
 		return false, "missing data_type"
 	}
@@ -238,7 +239,7 @@ func VerifyLevelProof(cfg KayrosConfig, proof LevelProof, hashAlgo string) (bool
 		return false, "missing level hashes"
 	}
 
-	rollupBytes, errMsg := hashHexConcat(proof.Hashes, hashAlgo)
+	rollupBytes, errMsg := hashHexConcat(proof.Hashes, "sha256")
 	if errMsg != "" {
 		return false, errMsg
 	}
@@ -256,6 +257,7 @@ func VerifyLevelProof(cfg KayrosConfig, proof LevelProof, hashAlgo string) (bool
 
 // VerifyProofPath verifies the proof path against computed rollup hashes and root hash.
 func VerifyProofPath(path *ProofPathData, hashAlgo string) (bool, string) {
+	_ = hashAlgo
 	if path == nil {
 		return false, "missing proof path"
 	}
@@ -283,7 +285,7 @@ func VerifyProofPath(path *ProofPathData, hashAlgo string) (bool, string) {
 			return false, "proof length mismatch"
 		}
 		levelHashes := path.Proof[offset : offset+count]
-		rollup, errMsg := hashHexConcat(levelHashes, hashAlgo)
+		rollup, errMsg := hashHexConcat(levelHashes, "sha256")
 		if errMsg != "" {
 			return false, errMsg
 		}
