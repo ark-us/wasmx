@@ -115,6 +115,7 @@ type VerifyProofHashWithInclusionRequest struct {
 	TrustedRootHash string `json:"trusted_root_hash"`
 	TrustedLevel    int    `json:"trusted_level"`
 	TrustedPosition int    `json:"trusted_position"`
+	VerifyDbExistence bool `json:"verify_db_existence"`
 	ApiBaseUrl      string `json:"api_base_url"`
 	ApiUserKey      string `json:"api_user_key"`
 }

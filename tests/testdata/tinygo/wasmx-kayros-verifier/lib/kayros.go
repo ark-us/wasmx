@@ -369,6 +369,46 @@ func (kc *KayrosClient) GetLevelRange(dataType string, level int, limit int) ([]
 	return entries, nil
 }
 
+// VerifyHashBatch checks hash existence at a level and start position.
+func (kc *KayrosClient) VerifyHashBatch(dataType string, level int, start int64, hashes []string) (bool, string) {
+	if strings.TrimSpace(dataType) == "" {
+		return false, "missing data_type"
+	}
+	if len(hashes) == 0 {
+		return true, ""
+	}
+	reqBody := verifyHashBatchRequest{
+		DataType: dataType,
+		Level:    level,
+		Start:    start,
+		Hashes:   hashes,
+	}
+	reqbz, err := json.Marshal(&reqBody)
+	if err != nil {
+		return false, "failed to marshal verify-hash-batch request"
+	}
+	respData, err := kc.makePostRequest("/api/lightnet/merkle/verify-hash-batch", reqbz)
+	if err != nil {
+		return false, err.Error()
+	}
+	var resp verifyHashBatchResponse
+	if err := json.Unmarshal(respData, &resp); err != nil {
+		return false, "failed to parse verify-hash-batch response"
+	}
+	if resp.Error != "" {
+		return false, resp.Error
+	}
+	if resp.Mismatches > 0 {
+		return false, fmt.Sprintf("mismatches=%d", resp.Mismatches)
+	}
+	for _, r := range resp.Results {
+		if r != 1 {
+			return false, "missing hash in batch"
+		}
+	}
+	return true, ""
+}
+
 // GetProofPath retrieves the merkle proof for a hash_item.
 func (kc *KayrosClient) GetProofPath(dataType string, hashItem string) (*ProofPathData, error) {
 	endpoint := fmt.Sprintf("/api/lightnet/merkle-proof?hash=%s&data_type=%s", hashItem, dataType)
@@ -562,6 +602,25 @@ type kayrosRecordsResponse struct {
 type kayrosRegistrationWireRequest struct {
 	DataType string `json:"data_type"`
 	DataItem string `json:"data_item"`
+}
+
+type verifyHashBatchRequest struct {
+	DataType string   `json:"data_type"`
+	Level    int      `json:"level"`
+	Start    int64    `json:"start"`
+	Hashes   []string `json:"hashes"`
+}
+
+type verifyHashBatchResponse struct {
+	DataType   string `json:"data_type"`
+	Level      int    `json:"level"`
+	Start      int64  `json:"start"`
+	Count      int    `json:"count"`
+	Results    []int  `json:"results"`
+	Matches    int    `json:"matches"`
+	Mismatches int    `json:"mismatches"`
+	Error      string `json:"error,omitempty"`
+	Message    string `json:"message,omitempty"`
 }
 
 func (resp kayrosRecordApi) toKayrosRecord() (*KayrosRecord, error) {

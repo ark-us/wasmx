@@ -102,6 +102,7 @@ type VerifyProofHashRequest struct {
 	DataHash string `json:"data_hash"` // hex
 	DataType string `json:"data_type"` // hex
 	Trusted  *ProofTrusted
+	VerifyDbExistence bool
 }
 
 type ProofTrusted struct {

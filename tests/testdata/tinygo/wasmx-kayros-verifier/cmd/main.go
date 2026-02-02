@@ -101,6 +101,7 @@ func main() {
 			req.TrustedRootHash,
 			req.TrustedLevel,
 			req.TrustedPosition,
+			req.VerifyDbExistence,
 			configFrom(req.ApiBaseUrl, req.ApiUserKey),
 		)
 		respond(ok, errMsg)

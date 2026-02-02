@@ -550,6 +550,9 @@
         },
         "trusted_root_hash": {
           "type": "string"
+        },
+        "verify_db_existence": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -558,6 +561,7 @@
         "trusted_root_hash",
         "trusted_level",
         "trusted_position",
+        "verify_db_existence",
         "api_base_url",
         "api_user_key"
       ]
@@ -932,6 +936,76 @@
           "$ref": "#/definitions/VerifyRecordUUIDRequest"
         }
       }
+    },
+    "verifyHashBatchRequest": {
+      "type": "object",
+      "properties": {
+        "data_type": {
+          "type": "string"
+        },
+        "hashes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "level": {
+          "type": "integer"
+        },
+        "start": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data_type",
+        "level",
+        "start",
+        "hashes"
+      ]
+    },
+    "verifyHashBatchResponse": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer"
+        },
+        "matches": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "mismatches": {
+          "type": "integer"
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "start": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "data_type",
+        "level",
+        "start",
+        "count",
+        "results",
+        "matches",
+        "mismatches"
+      ]
     }
   }
 }

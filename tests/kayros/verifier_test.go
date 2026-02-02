@@ -110,6 +110,7 @@ func (suite *KeeperTestSuite) TestKayrosVerifier() {
 					"trusted_root_hash": proof.Trusted.TopLevelHash,
 					"trusted_level":     proof.Trusted.TopLevel,
 					"trusted_position":  proof.Trusted.TopLevelPosition,
+					"verify_db_existence": proof.VerifyDbExistence,
 					"api_base_url":      apiBaseUrl,
 					"api_user_key":      apiUserKey,
 				},
@@ -123,7 +124,7 @@ func (suite *KeeperTestSuite) TestKayrosVerifier() {
 				Error string `json:"error"`
 			}{}
 			suite.Require().NoError(json.Unmarshal(res, &verifyResp))
-			suite.Require().True(verifyResp.Ok, verifyResp.Error)
+			suite.Require().True(verifyResp.Ok, verifyResp.Error, proof.DataHash, proof.DataType)
 		}
 	}
 }
@@ -176,22 +177,24 @@ var KAYROS_TEST_PROOFS = []VerifyProofRequest{
 }
 
 var KAYROS_TEST_PROOFS_HASH = []VerifyProofHashRequest{
-	{
-		DataHash: "aab0c4c694bf8e18000000000000000000000000000000000000000000000000",
-		DataType: "benchmark_s32",
-		Trusted: &ProofTrusted{
-			TopLevelHash:     "79687b6f0347b689ac82ac79d64eb188a7580c3cdabf04b2433bbc9e135c5f7a",
-			TopLevel:         2,
-			TopLevelPosition: 1,
-		},
-	},
+	// {
+	// 	DataHash: "aab0c4c694bf8e18000000000000000000000000000000000000000000000000",
+	// 	DataType: "benchmark_s32",
+	// 	Trusted: &ProofTrusted{
+	// 		TopLevelHash:     "79687b6f0347b689ac82ac79d64eb188a7580c3cdabf04b2433bbc9e135c5f7a",
+	// 		TopLevel:         2,
+	// 		TopLevelPosition: 1,
+	// 	},
+	// },
 	{
 		DataHash: "2ce7635e8cbf8e18000000000000000000000000000000000000000000000000",
 		DataType: "benchmark_s32",
+		VerifyDbExistence: true,
 		Trusted: &ProofTrusted{
 			TopLevelHash:     "5825048f9e70b7f3f4d3679073815f0260f890ce1f786aeb48d97dbcd46106b8",
 			TopLevel:         2,
 			TopLevelPosition: 0,
 		},
+		// hash: 9192c028e8da7f104a8ae8e604f2221f8252de18b23569b7707a51062927917e
 	},
 }

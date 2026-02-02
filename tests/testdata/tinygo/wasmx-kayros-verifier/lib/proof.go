@@ -57,11 +57,11 @@ func VerifyProofWithInclusion(data []byte, dataType string, hashAlgo string, tru
 	if errMsg != "" {
 		return false, errMsg
 	}
-	return VerifyProofHashWithInclusion(dataType, hashBytes, trustedRootHash, trustedLevel, trustedPosition, cfg)
+	return VerifyProofHashWithInclusion(dataType, hashBytes, trustedRootHash, trustedLevel, trustedPosition, false, cfg)
 }
 
 // VerifyProofHashWithInclusion verifies record details and proof path against a trusted root hash.
-func VerifyProofHashWithInclusion(dataType string, dataHash []byte, trustedRootHash string, trustedLevel int, trustedPosition int, cfg KayrosConfig) (bool, string) {
+func VerifyProofHashWithInclusion(dataType string, dataHash []byte, trustedRootHash string, trustedLevel int, trustedPosition int, verifyDbExistence bool, cfg KayrosConfig) (bool, string) {
 	client := NewKayrosClient(cfg)
 	record, err := client.GetRecord(dataType, dataHash)
 	if err != nil {
@@ -127,11 +127,54 @@ func VerifyProofHashWithInclusion(dataType string, dataHash []byte, trustedRootH
 		}
 	}
 
+	if verifyDbExistence {
+		if ok, errMsg := VerifyProofHashesExistInDB(cfg, proof); !ok {
+			return false, errMsg
+		}
+	}
+
 	if ok, errMsg := VerifyProofPath(proof, hashAlgo); !ok {
 		return false, errMsg
 	}
 	if ok, errMsg := VerifyProofTargetPosition(proof, hex.EncodeToString(record.HashItem)); !ok {
 		return false, errMsg
+	}
+	return true, ""
+}
+
+// VerifyProofHashesExistInDB checks that all proof hashes exist in the database at their levels.
+func VerifyProofHashesExistInDB(cfg KayrosConfig, path *ProofPathData) (bool, string) {
+	if path == nil {
+		return false, "missing proof path"
+	}
+	if len(path.Proof) == 0 {
+		return false, "empty proof path"
+	}
+	levelCounts, errMsg := normalizeLevelCounts(path.LevelCounts, int(path.Levels), len(path.Proof))
+	if errMsg != "" {
+		return false, errMsg
+	}
+	if len(path.LevelStarts) > 0 && len(path.LevelStarts) != len(levelCounts) {
+		return false, "level starts length mismatch"
+	}
+	client := NewKayrosClient(cfg)
+	offset := 0
+	for levelIdx, count := range levelCounts {
+		if count <= 0 {
+			return false, "invalid level count"
+		}
+		if offset+count > len(path.Proof) {
+			return false, "proof length mismatch"
+		}
+		start := int64(0)
+		if len(path.LevelStarts) > levelIdx {
+			start = path.LevelStarts[levelIdx]
+		}
+		hashes := path.Proof[offset : offset+count]
+		if ok, errMsg := client.VerifyHashBatch(path.DataType, levelIdx, start, hashes); !ok {
+			return false, fmt.Sprintf("db existence check failed level=%d: %s", levelIdx, errMsg)
+		}
+		offset += count
 	}
 	return true, ""
 }
@@ -274,10 +317,15 @@ func VerifyProofPath(path *ProofPathData, hashAlgo string) (bool, string) {
 	if errMsg != "" {
 		return false, errMsg
 	}
+	if len(path.LevelStarts) > 0 && len(path.LevelStarts) != len(levelCounts) {
+		return false, "level starts length mismatch"
+	}
 
 	offset := 0
 	var lastRollup string
-	for _, count := range levelCounts {
+	var prevRollup string
+	currentPos := path.Position
+	for levelIdx, count := range levelCounts {
 		if count <= 0 {
 			return false, "invalid level count"
 		}
@@ -285,12 +333,37 @@ func VerifyProofPath(path *ProofPathData, hashAlgo string) (bool, string) {
 			return false, "proof length mismatch"
 		}
 		levelHashes := path.Proof[offset : offset+count]
-		rollup, errMsg := hashHexConcat(levelHashes, "sha256")
-		if errMsg != "" {
-			return false, errMsg
+		if prevRollup != "" {
+			index, errMsg := levelIndexForPosition(levelIdx, currentPos, count, path.LevelStarts)
+			if errMsg != "" {
+				return false, errMsg
+			}
+			if !strings.EqualFold(levelHashes[index], prevRollup) {
+				return false, fmt.Sprintf(
+					"level hash mismatch level=%d index=%d expected=%s got=%s",
+					levelIdx,
+					index,
+					prevRollup,
+					levelHashes[index],
+				)
+			}
 		}
-		lastRollup = hex.EncodeToString(rollup)
+
+		isLast := levelIdx == len(levelCounts)-1
+		if isLast && count == 1 {
+			lastRollup = strings.ToLower(strings.TrimSpace(levelHashes[0]))
+		} else {
+			rollup, errMsg := hashHexConcat(levelHashes, "sha256")
+			if errMsg != "" {
+				return false, errMsg
+			}
+			prevRollup = hex.EncodeToString(rollup)
+			if isLast {
+				lastRollup = prevRollup
+			}
+		}
 		offset += count
+		currentPos = currentPos / 256
 	}
 
 	if lastRollup == "" {
@@ -372,9 +445,12 @@ func VerifyProofTargetPosition(path *ProofPathData, targetHashHex string) (bool,
 		return false, "invalid position"
 	}
 	count0 := levelCounts[0]
-	index := int(path.Position % int64(count0))
-	if index < 0 || index >= len(path.Proof) {
-		return false, "proof index out of range"
+	if len(path.LevelStarts) > 0 && len(path.LevelStarts) != len(levelCounts) {
+		return false, "level starts length mismatch"
+	}
+	index, errMsg := levelIndexForPosition(0, path.Position, count0, path.LevelStarts)
+	if errMsg != "" {
+		return false, errMsg
 	}
 	if !strings.EqualFold(path.Proof[index], targetHashHex) {
 		return false, fmt.Sprintf(
@@ -385,6 +461,23 @@ func VerifyProofTargetPosition(path *ProofPathData, targetHashHex string) (bool,
 		)
 	}
 	return true, ""
+}
+
+func levelIndexForPosition(levelIdx int, currentPos int64, count int, levelStarts []int64) (int, string) {
+	if count <= 0 {
+		return 0, "invalid level count"
+	}
+	var start int64
+	if len(levelStarts) > levelIdx {
+		start = levelStarts[levelIdx]
+	} else {
+		start = (currentPos / int64(count)) * int64(count)
+	}
+	idx := currentPos - start
+	if idx < 0 || idx >= int64(count) {
+		return 0, "proof index out of range"
+	}
+	return int(idx), ""
 }
 
 // VerifyKayrosRecordWithProof verifies the record and its proof path.
