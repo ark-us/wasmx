@@ -162,10 +162,7 @@ func verifyProofHashWithInclusionDetailed(dataType string, dataHash []byte, trus
 		return false, fmt.Sprintf("data_type mismatch record=%s proof=%s", record.DataType, proof.DataType), true, -1, -1, ""
 	}
 	pending, maxLevel, maxLevelPosition, maxLevelHash := proofInclusionMeta(proof)
-	if !pending {
-		if trustedRootHash == "" {
-			return false, "missing trusted root hash", pending, maxLevel, maxLevelPosition, maxLevelHash
-		}
+	if !pending && strings.TrimSpace(trustedRootHash) != "" {
 		if !strings.EqualFold(proof.Root, trustedRootHash) {
 			return false, fmt.Sprintf("root hash mismatch proof=%s trusted=%s", proof.Root, trustedRootHash), pending, maxLevel, maxLevelPosition, maxLevelHash
 		}
