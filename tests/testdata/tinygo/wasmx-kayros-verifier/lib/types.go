@@ -83,6 +83,15 @@ type VerifyResponse struct {
 	Error string `json:"error,omitempty"`
 }
 
+type VerifyProofWithInclusionResponse struct {
+	Ok               bool   `json:"ok"`
+	Error            string `json:"error,omitempty"`
+	Pending          bool   `json:"pending"`
+	MaxLevel         int    `json:"max_level"`
+	MaxLevelPosition int64  `json:"max_level_position"`
+	MaxLevelHash     string `json:"max_level_hash"`
+}
+
 type VerifyProofRequest struct {
 	Data       []byte `json:"data"`
 	DataType   string `json:"data_type"`

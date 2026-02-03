@@ -60,15 +60,66 @@ func VerifyProofWithInclusion(data []byte, dataType string, hashAlgo string, tru
 	return VerifyProofHashWithInclusion(dataType, hashBytes, trustedRootHash, trustedLevel, trustedPosition, false, cfg)
 }
 
+// VerifyProofWithInclusionDetailed hashes data and verifies the record + proof path inclusion with proof metadata.
+func VerifyProofWithInclusionDetailed(data []byte, dataType string, hashAlgo string, trustedRootHash string, trustedLevel int, trustedPosition int, cfg KayrosConfig) VerifyProofWithInclusionResponse {
+	hashBytes, errMsg := hashBytes(data, hashAlgo)
+	if errMsg != "" {
+		return VerifyProofWithInclusionResponse{Ok: false, Error: errMsg, Pending: true, MaxLevel: -1, MaxLevelPosition: -1, MaxLevelHash: ""}
+	}
+	ok, errMsg, pending, maxLevel, maxLevelPosition, maxLevelHash := verifyProofHashWithInclusionDetailed(
+		dataType,
+		hashBytes,
+		trustedRootHash,
+		trustedLevel,
+		trustedPosition,
+		false,
+		cfg,
+	)
+	return VerifyProofWithInclusionResponse{
+		Ok:               ok,
+		Error:            errMsg,
+		Pending:          pending,
+		MaxLevel:         maxLevel,
+		MaxLevelPosition: maxLevelPosition,
+		MaxLevelHash:     maxLevelHash,
+	}
+}
+
 // VerifyProofHashWithInclusion verifies record details and proof path against a trusted root hash.
 func VerifyProofHashWithInclusion(dataType string, dataHash []byte, trustedRootHash string, trustedLevel int, trustedPosition int, verifyDbExistence bool, cfg KayrosConfig) (bool, string) {
+	ok, errMsg, _, _, _, _ := verifyProofHashWithInclusionDetailed(dataType, dataHash, trustedRootHash, trustedLevel, trustedPosition, verifyDbExistence, cfg)
+	return ok, errMsg
+}
+
+// VerifyProofHashWithInclusionDetailed verifies record + proof inclusion and returns proof metadata.
+func VerifyProofHashWithInclusionDetailed(dataType string, dataHash []byte, trustedRootHash string, trustedLevel int, trustedPosition int, verifyDbExistence bool, cfg KayrosConfig) VerifyProofWithInclusionResponse {
+	ok, errMsg, pending, maxLevel, maxLevelPosition, maxLevelHash := verifyProofHashWithInclusionDetailed(
+		dataType,
+		dataHash,
+		trustedRootHash,
+		trustedLevel,
+		trustedPosition,
+		verifyDbExistence,
+		cfg,
+	)
+	return VerifyProofWithInclusionResponse{
+		Ok:               ok,
+		Error:            errMsg,
+		Pending:          pending,
+		MaxLevel:         maxLevel,
+		MaxLevelPosition: maxLevelPosition,
+		MaxLevelHash:     maxLevelHash,
+	}
+}
+
+func verifyProofHashWithInclusionDetailed(dataType string, dataHash []byte, trustedRootHash string, trustedLevel int, trustedPosition int, verifyDbExistence bool, cfg KayrosConfig) (bool, string, bool, int, int64, string) {
 	client := NewKayrosClient(cfg)
 	record, err := client.GetRecord(dataType, dataHash)
 	if err != nil {
-		return false, "get record failed: " + err.Error()
+		return false, "get record failed: " + err.Error(), true, -1, -1, ""
 	}
 	if record == nil {
-		return false, "no record found"
+		return false, "no record found", true, -1, -1, ""
 	}
 	if !dataTypeMatches(record, dataType) || !bytesEqual(record.DataItem, dataHash) {
 		return false, fmt.Sprintf(
@@ -77,69 +128,74 @@ func VerifyProofHashWithInclusion(dataType string, dataHash []byte, trustedRootH
 			record.DataType,
 			hex.EncodeToString(dataHash),
 			hex.EncodeToString(record.DataItem),
-		)
+		), true, -1, -1, ""
 	}
 
 	var prev *KayrosRecord
 	if len(record.PrevHash) > 0 {
 		prev, err = client.GetRecordByHash(record.DataType, hex.EncodeToString(record.PrevHash))
 		if err != nil || prev == nil {
-			return false, "previous record not found"
+			return false, "previous record not found", true, -1, -1, ""
 		}
 	}
 
 	hashAlgo := strings.ToLower(strings.TrimSpace(record.HashType))
 	if hashAlgo == "" {
-		return false, "missing record hash type"
+		return false, "missing record hash type", true, -1, -1, ""
 	}
 	if ok, errMsg := VerifyRecordBasics(record, prev); !ok {
-		return false, errMsg
+		return false, errMsg, true, -1, -1, ""
 	}
 
 	proof, err := client.GetProofPath(record.DataType, hex.EncodeToString(record.HashItem))
 	if err != nil || proof == nil {
-		return false, "missing proof path"
+		return false, "missing proof path", true, -1, -1, ""
 	}
 	if !bytesEqual(record.HashItem, proof.HashItem) {
 		return false, fmt.Sprintf(
 			"hash_item mismatch record=%s proof=%s",
 			hex.EncodeToString(record.HashItem),
 			hex.EncodeToString(proof.HashItem),
-		)
+		), true, -1, -1, ""
 	}
 	if proof.DataType != "" && record.DataType != "" && !strings.EqualFold(proof.DataType, record.DataType) {
-		return false, fmt.Sprintf("data_type mismatch record=%s proof=%s", record.DataType, proof.DataType)
+		return false, fmt.Sprintf("data_type mismatch record=%s proof=%s", record.DataType, proof.DataType), true, -1, -1, ""
 	}
-	if trustedRootHash == "" {
-		return false, "missing trusted root hash"
-	}
-	if !strings.EqualFold(proof.Root, trustedRootHash) {
-		return false, fmt.Sprintf("root hash mismatch proof=%s trusted=%s", proof.Root, trustedRootHash)
-	}
-
-	if trustedLevel >= 0 && trustedPosition >= 0 {
-		entry, err := client.GetLevelHash(record.DataType, trustedLevel, trustedPosition)
-		if err != nil || entry == nil {
-			return false, "trusted level hash not found"
+	pending, maxLevel, maxLevelPosition, maxLevelHash := proofInclusionMeta(proof)
+	if !pending {
+		if trustedRootHash == "" {
+			return false, "missing trusted root hash", pending, maxLevel, maxLevelPosition, maxLevelHash
 		}
-		if !strings.EqualFold(entry.HashHex, trustedRootHash) {
-			return false, fmt.Sprintf("trusted level hash mismatch expected=%s got=%s", trustedRootHash, entry.HashHex)
+		if !strings.EqualFold(proof.Root, trustedRootHash) {
+			return false, fmt.Sprintf("root hash mismatch proof=%s trusted=%s", proof.Root, trustedRootHash), pending, maxLevel, maxLevelPosition, maxLevelHash
+		}
+
+		if trustedLevel >= 0 && trustedPosition >= 0 {
+			entry, err := client.GetLevelHash(record.DataType, trustedLevel, trustedPosition)
+			if err != nil || entry == nil {
+				return false, "trusted level hash not found", pending, maxLevel, maxLevelPosition, maxLevelHash
+			}
+			if !strings.EqualFold(entry.HashHex, trustedRootHash) {
+				return false, fmt.Sprintf("trusted level hash mismatch expected=%s got=%s", trustedRootHash, entry.HashHex), pending, maxLevel, maxLevelPosition, maxLevelHash
+			}
 		}
 	}
 
 	if verifyDbExistence {
 		if ok, errMsg := VerifyProofHashesExistInDB(cfg, proof); !ok {
-			return false, errMsg
+			return false, errMsg, pending, maxLevel, maxLevelPosition, maxLevelHash
 		}
 	}
 
-	if ok, errMsg := VerifyProofPath(proof, hashAlgo); !ok {
-		return false, errMsg
+	if !pending {
+		if ok, errMsg := VerifyProofPath(proof, hashAlgo); !ok {
+			return false, errMsg, pending, maxLevel, maxLevelPosition, maxLevelHash
+		}
 	}
 	if ok, errMsg := VerifyProofTargetPosition(proof, hex.EncodeToString(record.HashItem)); !ok {
-		return false, errMsg
+		return false, errMsg, pending, maxLevel, maxLevelPosition, maxLevelHash
 	}
-	return true, ""
+	return true, "", pending, maxLevel, maxLevelPosition, maxLevelHash
 }
 
 // VerifyProofHashesExistInDB checks that all proof hashes exist in the database at their levels.
@@ -339,6 +395,23 @@ func VerifyProofPath(path *ProofPathData, hashAlgo string) (bool, string) {
 				return false, errMsg
 			}
 			if !strings.EqualFold(levelHashes[index], prevRollup) {
+				foundAt := -1
+				for i, h := range levelHashes {
+					if strings.EqualFold(h, prevRollup) {
+						foundAt = i
+						break
+					}
+				}
+				if foundAt >= 0 {
+					return false, fmt.Sprintf(
+						"level hash mismatch level=%d index=%d expected=%s got=%s found_at=%d",
+						levelIdx,
+						index,
+						prevRollup,
+						levelHashes[index],
+						foundAt,
+					)
+				}
 				return false, fmt.Sprintf(
 					"level hash mismatch level=%d index=%d expected=%s got=%s",
 					levelIdx,
@@ -593,6 +666,70 @@ func normalizeLevelCounts(counts []int32, levels int, proofLen int) ([]int, stri
 	}
 	out[levels-1] = remaining
 	return out, ""
+}
+
+func proofInclusionMeta(path *ProofPathData) (bool, int, int64, string) {
+	if path == nil || len(path.LevelCounts) == 0 {
+		return true, -1, -1, ""
+	}
+	levelCounts, errMsg := normalizeLevelCounts(path.LevelCounts, int(path.Levels), len(path.Proof))
+	if errMsg != "" || len(levelCounts) == 0 {
+		return true, -1, -1, ""
+	}
+	positionPath := make([]int64, 0, len(levelCounts))
+	currentPos := path.Position
+	positionPath = append(positionPath, currentPos)
+	for i := 0; i < len(levelCounts)-1; i++ {
+		currentPos = currentPos / 256
+		positionPath = append(positionPath, currentPos)
+	}
+	maxLevel := len(levelCounts) - 1
+	maxLevelPosition := positionPath[maxLevel]
+	maxLevelHash := ""
+	if strings.TrimSpace(path.Root) != "" {
+		maxLevelHash = strings.ToLower(strings.TrimSpace(path.Root))
+	} else {
+		levelHashes := proofLevelHashes(path.Proof, levelCounts, maxLevel)
+		levelStart := int64(0)
+		if len(path.LevelStarts) > maxLevel {
+			levelStart = path.LevelStarts[maxLevel]
+		}
+		index := int(maxLevelPosition - levelStart)
+		if index >= 0 && index < len(levelHashes) {
+			maxLevelHash = strings.ToLower(strings.TrimSpace(levelHashes[index]))
+		}
+	}
+
+	pending := false
+	if len(levelCounts) < 2 {
+		pending = true
+	} else {
+		level1Start := int64(0)
+		if len(path.LevelStarts) > 1 {
+			level1Start = path.LevelStarts[1]
+		}
+		level1Index := int(positionPath[1] - level1Start)
+		if level1Index < 0 || level1Index >= levelCounts[1] {
+			pending = true
+		}
+	}
+
+	return pending, maxLevel, maxLevelPosition, maxLevelHash
+}
+
+func proofLevelHashes(all []string, levelCounts []int, level int) []string {
+	if level < 0 || level >= len(levelCounts) {
+		return nil
+	}
+	offset := 0
+	for i := 0; i < level; i++ {
+		offset += levelCounts[i]
+	}
+	count := levelCounts[level]
+	if offset+count > len(all) || count <= 0 {
+		return nil
+	}
+	return all[offset : offset+count]
 }
 
 func dataTypeMatches(record *KayrosRecord, dataType string) bool {

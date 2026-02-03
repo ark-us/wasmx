@@ -28,6 +28,14 @@ func respond(ok bool, errMsg string) {
 	wasmx.Finish(bz)
 }
 
+func respondProofWithInclusion(resp verifier.VerifyProofWithInclusionResponse) {
+	bz, err := json.Marshal(resp)
+	if err != nil {
+		wasmx.Revert([]byte("failed to marshal response: " + err.Error()))
+	}
+	wasmx.Finish(bz)
+}
+
 func configFrom(baseUrl string, userKey string) verifier.KayrosConfig {
 	return verifier.KayrosConfig{
 		ApiBaseUrl: baseUrl,
@@ -75,7 +83,7 @@ func main() {
 			return
 		}
 		dataType := req.DataType
-		ok, errMsg := verifier.VerifyProofWithInclusion(
+		resp := verifier.VerifyProofWithInclusionDetailed(
 			req.Data,
 			dataType,
 			req.HashAlgo,
@@ -84,7 +92,7 @@ func main() {
 			req.TrustedPosition,
 			configFrom(req.ApiBaseUrl, req.ApiUserKey),
 		)
-		respond(ok, errMsg)
+		respondProofWithInclusion(resp)
 		return
 	case calld.VerifyProofHash != nil:
 		req := *calld.VerifyProofHash
@@ -95,7 +103,7 @@ func main() {
 	case calld.VerifyProofHashWithInclusion != nil:
 		req := *calld.VerifyProofHashWithInclusion
 		dataType := req.DataType
-		ok, errMsg := verifier.VerifyProofHashWithInclusion(
+		resp := verifier.VerifyProofHashWithInclusionDetailed(
 			dataType,
 			req.DataHash,
 			req.TrustedRootHash,
@@ -104,7 +112,7 @@ func main() {
 			req.VerifyDbExistence,
 			configFrom(req.ApiBaseUrl, req.ApiUserKey),
 		)
-		respond(ok, errMsg)
+		respondProofWithInclusion(resp)
 		return
 	case calld.VerifyRecordHash != nil:
 		req := *calld.VerifyRecordHash

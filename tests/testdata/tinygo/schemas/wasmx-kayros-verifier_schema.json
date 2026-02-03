@@ -653,6 +653,36 @@
         "api_user_key"
       ]
     },
+    "VerifyProofWithInclusionResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "max_level": {
+          "type": "integer"
+        },
+        "max_level_hash": {
+          "type": "string"
+        },
+        "max_level_position": {
+          "type": "integer"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "pending": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ok",
+        "pending",
+        "max_level",
+        "max_level_position",
+        "max_level_hash"
+      ]
+    },
     "VerifyRecordChainLinkRequest": {
       "type": "object",
       "properties": {

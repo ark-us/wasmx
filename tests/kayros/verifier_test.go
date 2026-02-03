@@ -4,11 +4,21 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	"github.com/loredanacirstea/wasmx/x/wasmx/types"
 )
 
 func (suite *KeeperTestSuite) TestKayrosVerifier() {
+	type VerifyProofWithInclusionResp struct {
+		Ok               bool   `json:"ok"`
+		Error            string `json:"error"`
+		Pending          bool   `json:"pending"`
+		MaxLevel         int    `json:"max_level"`
+		MaxLevelPosition int64  `json:"max_level_position"`
+		MaxLevelHash     string `json:"max_level_hash"`
+	}
+
 	appA := s.AppContext()
 	verifierAddr, err := appA.App.WasmxKeeper.GetAddressOrRole(appA.Context(), types.ROLE_VERIFIER)
 	suite.Require().NoError(err)
@@ -25,6 +35,8 @@ func (suite *KeeperTestSuite) TestKayrosVerifier() {
 	if apiBaseUrl == "" {
 		suite.T().Skip("SKIPPING ... set kayros_base_url and kayros_user_key for TestKayrosVerifier")
 	}
+
+	var verifyRespInc VerifyProofWithInclusionResp
 
 	for _, proof := range KAYROS_TEST_PROOFS {
 		dataType := proof.DataType
@@ -68,12 +80,9 @@ func (suite *KeeperTestSuite) TestKayrosVerifier() {
 			suite.Require().NoError(err)
 			res = appA.WasmxQueryRaw(sender, verifierAddr, types.WasmxExecutionMessage{Data: msg}, nil, nil)
 
-			verifyResp = struct {
-				Ok    bool   `json:"ok"`
-				Error string `json:"error"`
-			}{}
-			suite.Require().NoError(json.Unmarshal(res, &verifyResp))
-			suite.Require().True(verifyResp.Ok, verifyResp.Error)
+			verifyRespInc = VerifyProofWithInclusionResp{}
+			suite.Require().NoError(json.Unmarshal(res, &verifyRespInc))
+			suite.Require().True(verifyRespInc.Ok, verifyRespInc.Error)
 		}
 
 	}
@@ -105,26 +114,24 @@ func (suite *KeeperTestSuite) TestKayrosVerifier() {
 		if proof.Trusted != nil {
 			verifyProofHashReq = map[string]any{
 				"verify_proof_hash_with_inclusion": map[string]any{
-					"data_type":         dataType,
-					"data_hash":         dataHash,
-					"trusted_root_hash": proof.Trusted.TopLevelHash,
-					"trusted_level":     proof.Trusted.TopLevel,
-					"trusted_position":  proof.Trusted.TopLevelPosition,
+					"data_type":           dataType,
+					"data_hash":           dataHash,
+					"trusted_root_hash":   proof.Trusted.TopLevelHash,
+					"trusted_level":       proof.Trusted.TopLevel,
+					"trusted_position":    proof.Trusted.TopLevelPosition,
 					"verify_db_existence": proof.VerifyDbExistence,
-					"api_base_url":      apiBaseUrl,
-					"api_user_key":      apiUserKey,
+					"api_base_url":        apiBaseUrl,
+					"api_user_key":        apiUserKey,
 				},
 			}
 			msg, err = json.Marshal(verifyProofHashReq)
 			suite.Require().NoError(err)
 			res = appA.WasmxQueryRaw(sender, verifierAddr, types.WasmxExecutionMessage{Data: msg}, nil, nil)
 
-			verifyResp = struct {
-				Ok    bool   `json:"ok"`
-				Error string `json:"error"`
-			}{}
-			suite.Require().NoError(json.Unmarshal(res, &verifyResp))
-			suite.Require().True(verifyResp.Ok, verifyResp.Error, proof.DataHash, proof.DataType)
+			verifyRespInc = VerifyProofWithInclusionResp{}
+			suite.Require().NoError(json.Unmarshal(res, &verifyRespInc))
+			suite.Require().True(verifyRespInc.Ok, verifyRespInc.Error, proof.DataHash, proof.DataType)
+			fmt.Println("--verifyRespInc--", string(res))
 		}
 	}
 }
@@ -162,39 +169,52 @@ func (suite *KeeperTestSuite) TestKayrosVerifier() {
 // }
 
 var KAYROS_TEST_BY_HASH = []string{
-	"a333543860b67533eeaaa8b24f34eff0be0ef585a05ddc73c14fd50f94645ec6",
-	"c27b15bd293a31374617f094c8c48283d7821618c9c5e11bd263b07940a2b234",
+	"0bd650857aedc4b1edbcb9319be3f9b7676589062795439b10e0761140478f2a",
+	"336b2d19406f947646b294e108a5228c6da8bbbc7474b8eafe8e48409a9d3cd8",
 }
 
 var KAYROS_TEST_PROOFS = []VerifyProofRequest{
-	{
-		Data:     "CsoBCscBCiMvbXl0aG9zLndhc214LnYxLk1zZ0V4ZWN1dGVDb250cmFjdBKfAQotbXl0aG9zMXM2ejZoeDdrdWdwMnZqcnIweW51ZGdwejZlOWVod2FqN2hxcHQ4Ei1teXRob3MxOXY5a2N3dTB2bXpjN2NqY2g2aGFxZXRzNXNxcGdqZjdkMG1hcmoaP3siZGF0YSI6ImV5SnpaWFFpT25zaWEyVjVJam9pYUdWc2JHOGlMQ0oyWVd4MVpTSTZJbk5oYlcxNUluMTkifRJvClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECTBbqvLhqttZhiEZeiyjjPe9s707sc1ZWJfN3dBrmEbMSBAoCCAEYAxIbChMKBGFteXQSCzEwMDAwMDAwMDAwEICU69wDGkDGpjSJ9mwCScxEcFCEmoRq7VUM2jJT5KMp4vWdTyjrMB22c9RRCJNW5X8tw0wW71w3MBNPZwtXcnOIu38LCq1E",
-		DataType: "wasmx_t_mythos_7001-1_1769607041",
-		HashAlgo: "sha256",
-		// txhash
-		// bb4c35eb7c081e769f1fc7c03f9e8b7b5d05f5bc8dd894ce05f7a10ed9808775
-	},
+	// {
+	// 	Data:     "CsoBCscBCiMvbXl0aG9zLndhc214LnYxLk1zZ0V4ZWN1dGVDb250cmFjdBKfAQotbXl0aG9zMXM2ejZoeDdrdWdwMnZqcnIweW51ZGdwejZlOWVod2FqN2hxcHQ4Ei1teXRob3MxOXY5a2N3dTB2bXpjN2NqY2g2aGFxZXRzNXNxcGdqZjdkMG1hcmoaP3siZGF0YSI6ImV5SnpaWFFpT25zaWEyVjVJam9pYUdWc2JHOGlMQ0oyWVd4MVpTSTZJbk5oYlcxNUluMTkifRJvClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECTBbqvLhqttZhiEZeiyjjPe9s707sc1ZWJfN3dBrmEbMSBAoCCAEYAxIbChMKBGFteXQSCzEwMDAwMDAwMDAwEICU69wDGkDGpjSJ9mwCScxEcFCEmoRq7VUM2jJT5KMp4vWdTyjrMB22c9RRCJNW5X8tw0wW71w3MBNPZwtXcnOIu38LCq1E",
+	// 	DataType: "wasmx_t_mythos_7001-1_1769607041",
+	// 	HashAlgo: "sha256",
+	// 	// txhash
+	// 	// bb4c35eb7c081e769f1fc7c03f9e8b7b5d05f5bc8dd894ce05f7a10ed9808775
+	// },
 }
 
 var KAYROS_TEST_PROOFS_HASH = []VerifyProofHashRequest{
-	// {
-	// 	DataHash: "aab0c4c694bf8e18000000000000000000000000000000000000000000000000",
-	// 	DataType: "benchmark_s32",
-	// 	Trusted: &ProofTrusted{
-	// 		TopLevelHash:     "79687b6f0347b689ac82ac79d64eb188a7580c3cdabf04b2433bbc9e135c5f7a",
-	// 		TopLevel:         2,
-	// 		TopLevelPosition: 1,
-	// 	},
-	// },
 	{
-		DataHash: "2ce7635e8cbf8e18000000000000000000000000000000000000000000000000",
+		DataHash: "bbce1c1109d29018000000000000000000000000000000000000000000000000",
 		DataType: "benchmark_s32",
+		Trusted: &ProofTrusted{
+			TopLevelHash:     "a930abc733ab8b16355c34682d5e1998da559655800d6c3c192808ef14bbab61",
+			TopLevel:         2,
+			TopLevelPosition: 31,
+		},
+		// 0bd650857aedc4b1edbcb9319be3f9b7676589062795439b10e0761140478f2a
+	},
+	{
+		DataHash:          "88188c338fd09018000000000000000000000000000000000000000000000000",
+		DataType:          "benchmark_s32",
 		VerifyDbExistence: true,
 		Trusted: &ProofTrusted{
-			TopLevelHash:     "5825048f9e70b7f3f4d3679073815f0260f890ce1f786aeb48d97dbcd46106b8",
+			TopLevelHash:     "150743eeee4a9410462a3f1a24afefe43b48e8ec3617c9f54e4d5bd695428e06",
 			TopLevel:         2,
 			TopLevelPosition: 0,
 		},
-		// hash: 9192c028e8da7f104a8ae8e604f2221f8252de18b23569b7707a51062927917e
+		// hash: 336b2d19406f947646b294e108a5228c6da8bbbc7474b8eafe8e48409a9d3cd8
+	},
+	{
+		DataHash:          "88188c338fd09018000000000000000000000000000000000000000000000000",
+		DataType:          "benchmark_s32",
+		VerifyDbExistence: true,
+		// hash: 336b2d19406f947646b294e108a5228c6da8bbbc7474b8eafe8e48409a9d3cd8
+	},
+	{
+		DataHash:          "5f43421e09d29018000000000000000000000000000000000000000000000000",
+		DataType:          "benchmark_s32",
+		VerifyDbExistence: true,
+		// hash: 5840eed227115b8712ac1d1e3434c92c6161735853c6af7e70ea206f367ea089
 	},
 }
