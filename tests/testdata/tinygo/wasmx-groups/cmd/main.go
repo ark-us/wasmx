@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 	lib "github.com/loredanacirstea/wasmx/tests/testdata/tinygo/wasmx-groups/lib"
@@ -21,7 +20,6 @@ func Wasmx_env_i64_2() {}
 func Instantiate() {
 	// Initialize the contract on instantiation
 	databz := wasmx.GetCallData()
-	fmt.Println("*wasmx.instantiate.groups** ", string(databz))
 	var callData *lib.MsgInitGenesis
 	if len(databz) > 0 {
 		callData = &lib.MsgInitGenesis{}
@@ -30,13 +28,11 @@ func Instantiate() {
 		}
 	}
 	result := lib.InitGenesis(callData)
-	fmt.Println("*wasmx.instantiate.groups** InitGenesis completed")
 	wasmx.Finish(result)
 }
 
 func main() {
 	databz := wasmx.GetCallData()
-	fmt.Println("*wasmx.main.groups** ", string(databz))
 	result := lib.Execute(databz)
 	wasmx.Finish(result)
 }
