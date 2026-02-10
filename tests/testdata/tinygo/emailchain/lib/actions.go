@@ -53,6 +53,7 @@ func StartServer(req *StartServerRequest) {
 		wasmx.Revert([]byte("server password cannot be empty"))
 	}
 	StoreServerPassword(req.Password)
+	StoreKayrosApiUserKey(req.KayrosApiUserKey)
 
 	// Store the Kayros bot no-store setting
 	StoreKayrosBotNoStore(req.KayrosBotNoStore)

@@ -247,9 +247,12 @@ type CreateAccountRequest struct {
 }
 
 type StartServerRequest struct {
-	SignOptions SignOptions         `json:"options"`
-	Smtp        vmsmtp.ServerConfig `json:"smtp"`
-	Imap        vmimap.ServerConfig `json:"imap"`
+	SignOptions      SignOptions         `json:"options"`
+	Smtp             vmsmtp.ServerConfig `json:"smtp"`
+	Imap             vmimap.ServerConfig `json:"imap"`
+	Password         string              `json:"password"`
+	KayrosApiUserKey string              `json:"kayros_api_user_key"`
+	KayrosBotNoStore bool                `json:"kayrosbot_no_store"`
 }
 
 type ConnectionSimpleRequest struct {

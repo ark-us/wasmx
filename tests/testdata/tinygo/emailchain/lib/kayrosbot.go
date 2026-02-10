@@ -18,7 +18,6 @@ import (
 const (
 	BotEmail      = "kayros1@dmail.provable.dev"
 	KayrosAPIURL  = "https://kayros.provable.dev"
-	KayrosAPIGET  = KayrosAPIURL + "/api/database/record-by-hash?hash_item="
 	DataTypeEmail = "70726f7661626c655f656d61696c000000000000000000000000000000000000"
 )
 
@@ -61,16 +60,27 @@ func QueryKayros(emailHash string) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode email hash: %w", err)
 	}
+	dataTypeBz, err := hex.DecodeString(DataTypeEmail)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode email data type: %w", err)
+	}
+	registerReq := verifier.KayrosRegistrationRequest{
+		DataType: string(dataTypeBz),
+		DataItem: dataItem,
+	}
+	registerReqJSON := map[string]string{
+		"data_type": registerReq.DataType,
+		"data_item": hex.EncodeToString(registerReq.DataItem),
+	}
+	reqbz, _ := json.Marshal(registerReqJSON)
+
 	client := verifier.NewKayrosClient(verifier.KayrosConfig{
 		ApiBaseUrl: KayrosAPIURL,
-		ApiUserKey: "",
+		ApiUserKey: LoadKayrosApiUserKey(),
 	})
-	regResp, err := client.RegisterData(verifier.KayrosRegistrationRequest{
-		DataType: DataTypeEmail,
-		DataItem: dataItem,
-	})
+	regResp, err := client.RegisterData(registerReq)
 	if err != nil {
-		return nil, fmt.Errorf("Kayros registration failed: %w", err)
+		return nil, fmt.Errorf("Kayros registration failed: request=%s error=%v", string(reqbz), err)
 	}
 	// Keep backward-compatible shape expected by the bot reply flow.
 	return map[string]interface{}{
@@ -234,8 +244,8 @@ func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte,
 	if computedHash != "" {
 		bodyText = fmt.Sprintf(`Indexed by Kayros. See attached %s
 
-View stored record on Kayros: %s%s
-`, filename, KayrosAPIGET, computedHash)
+Stored record hash: %s
+`, filename, computedHash)
 	} else {
 		bodyText = fmt.Sprintf(`Failure to create proof. See attached %s for details.
 `, filename)

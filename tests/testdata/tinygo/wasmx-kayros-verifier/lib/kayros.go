@@ -56,7 +56,25 @@ func (kc *KayrosClient) makeRequest(endpoint string) ([]byte, error) {
 		return nil, fmt.Errorf("HTTP request failed: %s", resp.Error)
 	}
 	if resp.Data.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP request returned status %d: %s", resp.Data.StatusCode, resp.Data.Status)
+		errMsg := ""
+		if parsedErr, ok := parseKayrosError(resp.Data.Data); ok {
+			errMsg = parsedErr
+		}
+		if errMsg != "" {
+			return nil, fmt.Errorf(
+				"HTTP request returned status %d: %s; kayros_error=%s; body=%s",
+				resp.Data.StatusCode,
+				resp.Data.Status,
+				errMsg,
+				string(resp.Data.Data),
+			)
+		}
+		return nil, fmt.Errorf(
+			"HTTP request returned status %d: %s; body=%s",
+			resp.Data.StatusCode,
+			resp.Data.Status,
+			string(resp.Data.Data),
+		)
 	}
 	return resp.Data.Data, nil
 }
@@ -158,15 +176,34 @@ func (kc *KayrosClient) makePostRequest(endpoint string, body []byte) ([]byte, e
 			FilePath: "",
 		},
 	}
-	reqbz, _ := json.Marshal(&req)
-	LoggerDebug("http request", []string{"url", url, "method", "POST", "data", string(body), "req", string(reqbz)})
+	LoggerDebug("http request", []string{"url", url, "method", "POST", "data", string(body)})
 	resp := httpclient.Request(&req)
 
 	if resp.Error != "" {
-		return nil, fmt.Errorf("HTTP POST request failed: %s", resp.Error)
+		return nil, fmt.Errorf("HTTP POST request failed: %s; request=%s", resp.Error, string(body))
 	}
 	if resp.Data.StatusCode != 200 && resp.Data.StatusCode != 201 {
-		return nil, fmt.Errorf("HTTP POST request returned status %d: %s", resp.Data.StatusCode, resp.Data.Status)
+		errMsg := ""
+		if parsedErr, ok := parseKayrosError(resp.Data.Data); ok {
+			errMsg = parsedErr
+		}
+		if errMsg != "" {
+			return nil, fmt.Errorf(
+				"HTTP POST request returned status %d: %s; kayros_error=%s; body=%s; request=%s",
+				resp.Data.StatusCode,
+				resp.Data.Status,
+				errMsg,
+				string(resp.Data.Data),
+				string(body),
+			)
+		}
+		return nil, fmt.Errorf(
+			"HTTP POST request returned status %d: %s; body=%s; request=%s",
+			resp.Data.StatusCode,
+			resp.Data.Status,
+			string(resp.Data.Data),
+			string(body),
+		)
 	}
 	LoggerDebug("http request", []string{"url", url, "method", "POST", "response", string(resp.Data.Data)})
 

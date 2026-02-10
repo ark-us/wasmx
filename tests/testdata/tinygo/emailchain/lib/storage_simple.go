@@ -49,3 +49,12 @@ func LoadKayrosBotNoStore() bool {
 	}
 	return bz[0] == 1
 }
+
+func StoreKayrosApiUserKey(userKey string) {
+	wasmx.StorageStore([]byte(`kayros_api_user_key`), []byte(userKey))
+}
+
+func LoadKayrosApiUserKey() string {
+	bz := wasmx.StorageLoad([]byte(`kayros_api_user_key`))
+	return string(bz)
+}

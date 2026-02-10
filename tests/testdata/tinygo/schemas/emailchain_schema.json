@@ -1240,6 +1240,9 @@
           "type": "string",
           "x-go-type": "vmimap.ServerConfig"
         },
+        "kayros_api_user_key": {
+          "type": "string"
+        },
         "kayrosbot_no_store": {
           "type": "boolean"
         },
@@ -1259,6 +1262,7 @@
         "smtp",
         "imap",
         "password",
+        "kayros_api_user_key",
         "kayrosbot_no_store"
       ]
     },
