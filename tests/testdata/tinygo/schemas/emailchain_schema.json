@@ -716,20 +716,41 @@
         "authenticated_user"
       ]
     },
+    "KayrosPayload": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "hashAlgorithm": {
+          "type": "string"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/KayrosTimestamp"
+        }
+      },
+      "required": [
+        "hash",
+        "hashAlgorithm",
+        "timestamp"
+      ]
+    },
     "KayrosProof": {
       "type": "object",
       "properties": {
         "data": {
           "type": "string"
         },
-        "kayros": {}
+        "kayros": {
+          "$ref": "#/definitions/KayrosPayload"
+        }
       },
       "required": [
         "data",
         "kayros"
       ]
     },
-    "KayrosRequest": {
+    "KayrosRecordResult": {
       "type": "object",
       "properties": {
         "data_item": {
@@ -737,18 +758,89 @@
         },
         "data_type": {
           "type": "string"
+        },
+        "hash_item": {
+          "type": "string"
+        },
+        "hash_type": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer"
+        },
+        "prev_hash": {
+          "type": "string"
+        },
+        "ts": {
+          "type": "string"
         }
       },
       "required": [
         "data_item",
-        "data_type"
+        "data_type",
+        "hash_item",
+        "hash_type",
+        "position",
+        "prev_hash",
+        "ts"
       ]
     },
-    "KayrosResponse": {
+    "KayrosRegistrationResult": {
       "type": "object",
       "properties": {
-        "data": {}
-      }
+        "encoding": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "timeuuid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "encoding",
+        "hash",
+        "success",
+        "timeuuid"
+      ]
+    },
+    "KayrosTimestamp": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/KayrosTimestampResponse"
+        },
+        "service": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "service",
+        "response"
+      ]
+    },
+    "KayrosTimestampResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/KayrosRecordResult"
+        },
+        "response": {
+          "$ref": "#/definitions/KayrosRegistrationResult"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success",
+        "response",
+        "data"
+      ]
     },
     "ListRequest": {
       "type": "object",

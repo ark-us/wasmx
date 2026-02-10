@@ -21,21 +21,44 @@ const (
 	DataTypeEmail = "70726f7661626c655f656d61696c000000000000000000000000000000000000"
 )
 
-// KayrosRequest represents the request to Kayros API
-type KayrosRequest struct {
-	DataItem string `json:"data_item"`
-	DataType string `json:"data_type"`
-}
-
-// KayrosResponse represents the response from Kayros API
-type KayrosResponse struct {
-	Data interface{} `json:"data,omitempty"`
-}
-
 // KayrosProof represents the JSON file structure attached to emails
 type KayrosProof struct {
-	Data   string      `json:"data"`
-	Kayros interface{} `json:"kayros"`
+	Data   string        `json:"data"`
+	Kayros KayrosPayload `json:"kayros"`
+}
+
+type KayrosPayload struct {
+	Hash          string          `json:"hash"`
+	HashAlgorithm string          `json:"hashAlgorithm"`
+	Timestamp     KayrosTimestamp `json:"timestamp"`
+}
+
+type KayrosTimestamp struct {
+	Service  string                  `json:"service"`
+	Response KayrosTimestampResponse `json:"response"`
+}
+
+type KayrosTimestampResponse struct {
+	Success  bool                     `json:"success"`
+	Response KayrosRegistrationResult `json:"response"`
+	Data     KayrosRecordResult       `json:"data"`
+}
+
+type KayrosRegistrationResult struct {
+	Encoding string `json:"encoding"`
+	Hash     string `json:"hash"`
+	Success  bool   `json:"success"`
+	TimeUUID string `json:"timeuuid"`
+}
+
+type KayrosRecordResult struct {
+	DataItem string `json:"data_item"`
+	DataType string `json:"data_type"`
+	HashItem string `json:"hash_item"`
+	HashType string `json:"hash_type"`
+	Position int64  `json:"position"`
+	PrevHash string `json:"prev_hash"`
+	TS       string `json:"ts"`
 }
 
 // IsBotEmail checks if the email is addressed to the bot
@@ -54,8 +77,8 @@ func HashEmail(emailRaw []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// QueryKayros makes a POST request to Kayros API with email hash
-func QueryKayros(emailHash string) (interface{}, error) {
+// QueryKayros registers and then fetches the record from Kayros via the verifier client.
+func QueryKayros(emailHash string) (*KayrosPayload, error) {
 	dataItem, err := hex.DecodeString(emailHash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode email hash: %w", err)
@@ -64,8 +87,9 @@ func QueryKayros(emailHash string) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode email data type: %w", err)
 	}
+	dataType := string(dataTypeBz)
 	registerReq := verifier.KayrosRegistrationRequest{
-		DataType: string(dataTypeBz),
+		DataType: dataType,
 		DataItem: dataItem,
 	}
 	registerReqJSON := map[string]string{
@@ -82,22 +106,48 @@ func QueryKayros(emailHash string) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Kayros registration failed: request=%s error=%v", string(reqbz), err)
 	}
-	// Keep backward-compatible shape expected by the bot reply flow.
-	return map[string]interface{}{
-		"success": regResp.Success,
-		"data": map[string]interface{}{
-			"computed_hash_hex": regResp.Hash,
+
+	record, err := client.GetRecordByHash(dataType, regResp.Hash)
+	if err != nil {
+		return nil, fmt.Errorf("Kayros record fetch failed: hash=%s data_type=%s error=%v", regResp.Hash, dataType, err)
+	}
+	recordTS, err := uuidHexToDashed(record.UuidHex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to format record uuid: %w", err)
+	}
+
+	return &KayrosPayload{
+		Hash:          emailHash,
+		HashAlgorithm: "SHA-256",
+		Timestamp: KayrosTimestamp{
+			Service: "kayrosbot@0.0.2:prove_single_hash",
+			Response: KayrosTimestampResponse{
+				Success: regResp.Success,
+				Response: KayrosRegistrationResult{
+					Encoding: regResp.Encoding,
+					Hash:     regResp.Hash,
+					Success:  regResp.Success,
+					TimeUUID: regResp.TimeUUID,
+				},
+				Data: KayrosRecordResult{
+					DataItem: base64.StdEncoding.EncodeToString(record.DataItem),
+					DataType: record.DataType,
+					HashItem: base64.StdEncoding.EncodeToString(record.HashItem),
+					HashType: record.HashType,
+					Position: record.Position,
+					PrevHash: base64.StdEncoding.EncodeToString(record.PrevHash),
+					TS:       recordTS,
+				},
+			},
 		},
-		"timeuuid": regResp.TimeUUID,
-		"encoding": regResp.Encoding,
 	}, nil
 }
 
 // CreateKayrosProof creates a proof structure combining email data and Kayros response
-func CreateKayrosProof(emailRaw []byte, kayrosResp interface{}) *KayrosProof {
+func CreateKayrosProof(emailRaw []byte, kayrosResp *KayrosPayload) *KayrosProof {
 	return &KayrosProof{
 		Data:   base64.StdEncoding.EncodeToString(emailRaw),
-		Kayros: kayrosResp,
+		Kayros: *kayrosResp,
 	}
 }
 
@@ -121,6 +171,17 @@ func unfoldHeader(value string) string {
 	value = strings.ReplaceAll(value, "\n", " ")
 	value = strings.ReplaceAll(value, "\r", " ")
 	return strings.TrimSpace(value)
+}
+
+func uuidHexToDashed(uuidHex string) (string, error) {
+	clean := strings.ToLower(strings.TrimSpace(strings.ReplaceAll(uuidHex, "-", "")))
+	if len(clean) != 32 {
+		return "", fmt.Errorf("invalid uuid length: %d", len(clean))
+	}
+	if _, err := hex.DecodeString(clean); err != nil {
+		return "", fmt.Errorf("invalid uuid: %w", err)
+	}
+	return fmt.Sprintf("%s-%s-%s-%s-%s", clean[0:8], clean[8:12], clean[12:16], clean[16:20], clean[20:32]), nil
 }
 
 // HandleKayrosBot processes incoming emails to the bot and sends a reply with Kayros proof
@@ -160,15 +221,9 @@ func HandleKayrosBot(req *IncomingEmailRequest) (err error) {
 		return fmt.Errorf("kayros API query failed: %w", err)
 	}
 
-	// Extract computed_hash_hex from Kayros response
-	computedHash := ""
-	if kayrosData, ok := kayrosResp.(map[string]interface{}); ok {
-		if data, ok := kayrosData["data"].(map[string]interface{}); ok {
-			if hash, ok := data["computed_hash_hex"].(string); ok {
-				computedHash = hash
-			}
-		}
-	}
+	computedHash := kayrosResp.Timestamp.Response.Response.Hash
+	recordPath := verifier.BuildRecordByHashPath(kayrosResp.Timestamp.Response.Data.DataType, computedHash)
+	recordURL := strings.TrimRight(KayrosAPIURL, "/") + recordPath
 
 	// Create proof structure
 	proof := CreateKayrosProof(req.EmailRaw, kayrosResp)
@@ -183,7 +238,7 @@ func HandleKayrosBot(req *IncomingEmailRequest) (err error) {
 	filename := GenerateProofFilename(req.Timestamp)
 
 	// Build reply email with attachment
-	err = SendKayrosBotReply(req.From, filename, proofJSON, req.Timestamp, subject, messageID, references, computedHash)
+	err = SendKayrosBotReply(req.From, filename, proofJSON, req.Timestamp, subject, messageID, references, recordURL)
 	if err != nil {
 		return fmt.Errorf("failed to send reply: %w", err)
 	}
@@ -192,7 +247,7 @@ func HandleKayrosBot(req *IncomingEmailRequest) (err error) {
 }
 
 // SendKayrosBotReply sends an email reply with the Kayros proof JSON attached
-func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte, timestamp int64, subject string, messageID string, references string, computedHash string) error {
+func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte, timestamp int64, subject string, messageID string, references string, recordURL string) error {
 	// Load DKIM signing options
 	opts := LoadDkimKey()
 	if opts == nil {
@@ -241,11 +296,11 @@ func SendKayrosBotReply(toAddresses []string, filename string, proofJSON []byte,
 
 	// Email body text
 	var bodyText string
-	if computedHash != "" {
+	if recordURL != "" {
 		bodyText = fmt.Sprintf(`Indexed by Kayros. See attached %s
 
-Stored record hash: %s
-`, filename, computedHash)
+View record on Kayros: %s
+`, filename, recordURL)
 	} else {
 		bodyText = fmt.Sprintf(`Failure to create proof. See attached %s for details.
 `, filename)

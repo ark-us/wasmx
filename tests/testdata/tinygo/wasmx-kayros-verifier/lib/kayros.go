@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -22,6 +23,14 @@ func NewKayrosClient(config KayrosConfig) *KayrosClient {
 	return &KayrosClient{
 		config: config,
 	}
+}
+
+// BuildRecordByHashPath returns the encoded Kayros API path for record lookup by hash.
+func BuildRecordByHashPath(dataType string, hashItem string) string {
+	params := url.Values{}
+	params.Set("hash", hashItem)
+	params.Set("data_type", dataType)
+	return "/api/lightnet/database/record-by-hash?" + params.Encode()
 }
 
 // makeRequest performs an HTTP GET request to the Kayros API
@@ -86,7 +95,7 @@ func (kc *KayrosClient) GetRecordByDataItem(dataType string, txHash []byte) (*Ka
 
 // GetRecordByHash retrieves a Kayros record by hash_item and data_type
 func (kc *KayrosClient) GetRecordByHash(dataType string, hashItem string) (*KayrosRecord, error) {
-	endpoint := fmt.Sprintf("/api/lightnet/database/record-by-hash?hash=%s&data_type=%s", hashItem, dataType)
+	endpoint := BuildRecordByHashPath(dataType, hashItem)
 
 	respData, err := kc.makeRequest(endpoint)
 	if err != nil {
@@ -579,6 +588,7 @@ type kayrosHashRecordResponse struct {
 	DataItem string `json:"data_item"`
 	HashType string `json:"hash_type"`
 	HashItem string `json:"hash_item"`
+	Position int64  `json:"position"`
 	TS       string `json:"ts"`
 	PrevHash string `json:"prev_hash"`
 }
@@ -616,6 +626,7 @@ func (resp kayrosHashRecordResponse) toKayrosRecord() (*KayrosRecord, error) {
 		HashItem:    hashItem,
 		PrevHash:    prevHash,
 		HashType:    resp.HashType,
+		Position:    resp.Position,
 		Timestamp:   timestamp,
 	}, nil
 }
@@ -625,6 +636,7 @@ type kayrosRecordApi struct {
 	DataItem []byte `json:"data_item"`
 	HashItem []byte `json:"hash_item"`
 	HashType string `json:"hash_type"`
+	Position int64  `json:"position"`
 	PrevHash []byte `json:"prev_hash"`
 	TS       string `json:"ts"`
 }
@@ -681,6 +693,7 @@ func (resp kayrosRecordApi) toKayrosRecord() (*KayrosRecord, error) {
 		HashItem:    resp.HashItem,
 		PrevHash:    resp.PrevHash,
 		HashType:    resp.HashType,
+		Position:    resp.Position,
 		Timestamp:   timestamp,
 	}, nil
 }

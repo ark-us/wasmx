@@ -19,6 +19,7 @@ type KayrosRecord struct {
 	HashItem    []byte `json:"hash_item"`
 	PrevHash    []byte `json:"prev_hash,omitempty"`
 	HashType    string `json:"hash_type"`
+	Position    int64  `json:"position,omitempty"`
 	Timestamp   string `json:"timestamp"`
 }
 
