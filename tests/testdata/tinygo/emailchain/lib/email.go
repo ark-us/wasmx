@@ -27,9 +27,13 @@ func BuildRawEmail(e vmimap.Email) (string, error) {
 
 	// Build the top-level headers
 	hdr := mail.Header{}
+	hasContentType := false
 	// Copy any extra header fields
 	for _, h := range e.Headers {
 		hdr.Add(h.Key, h.Value)
+		if strings.EqualFold(h.Key, vmimap.HEADER_CONTENT_TYPE) {
+			hasContentType = true
+		}
 	}
 
 	// Create the mail writer
@@ -41,7 +45,7 @@ func BuildRawEmail(e vmimap.Email) (string, error) {
 	// Write body and attachments
 	// Always write something (even if empty) so the SMTP server sees a body part.
 	header := mail.InlineHeader{}
-	if len(e.Attachments) == 0 && !hdr.Has(vmimap.HEADER_CONTENT_TYPE) {
+	if len(e.Attachments) == 0 && !hasContentType {
 		header.SetContentType("text/plain", map[string]string{"charset": "UTF-8"})
 	}
 	bodyWriter, err := mw.CreateSingleInline(header)
@@ -144,7 +148,7 @@ func BuildRawEmail2(e vmimap.Email) (string, error) {
 		// fmt.Println("--BuildRawEmail2 h.Value--", h.Raw)
 		// fmt.Fprintf(&b, "%s: %s%s", h.Key, h.Value, crlf)
 		if len(h.Raw) > 0 {
-			fmt.Fprintf(&b, string(h.Raw))
+			b.Write(h.Raw)
 		} else {
 			fmt.Fprintf(&b, "%s: %s\r\n", h.Key, h.Value)
 		}
@@ -207,6 +211,9 @@ func prepareEmailSend(
 	generateMessageId bool,
 ) (string, error) {
 	parts := strings.Split(from, "@")
+	if len(parts) < 2 || parts[0] == "" {
+		return "", fmt.Errorf("invalid from address: %s", from)
+	}
 	fromUsername := parts[0]
 	prepped := emailstr
 	if generateMessageId {

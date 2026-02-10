@@ -96,13 +96,20 @@ func GetAttrs(folder string) []imap.MailboxAttr {
 func PtrUint32(v uint32) *uint32 { return &v }
 func PtrInt64(v int64) *int64    { return &v }
 
-func extractHeaders(raw []byte, headers []string) ([]string, error) {
+func extractHeaders(raw []byte, headers []string) (values []string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			values = nil
+			err = fmt.Errorf("extractHeaders panic: %v", r)
+		}
+	}()
+
 	msg := strings.NewReader(string(raw))
 	hdrs, _, err := utils.ParseHeaders(bufio.NewReader(&utils.AtReader{R: msg}))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", dkim.ErrHeaderMalformed, err)
 	}
-	values := make([]string, len(headers))
+	values = make([]string, len(headers))
 	for _, h := range hdrs {
 		ndx := slices.Index(headers, h.Key)
 		if ndx > -1 {

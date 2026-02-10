@@ -263,7 +263,14 @@ func paramsMarshal(params []sql.SqlQueryParam) ([][]byte, error) {
 	return res, nil
 }
 
-func extractEmail(raw []byte) (*Email, error) {
+func extractEmail(raw []byte) (email *Email, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			email = nil
+			err = fmt.Errorf("extractEmail panic: %v", r)
+		}
+	}()
+
 	envelope := imap.Envelope{}
 	msg := strings.NewReader(string(raw))
 	hdrs, bodyOffset, err := utils.ParseHeaders(bufio.NewReader(&utils.AtReader{R: msg}))
@@ -298,7 +305,7 @@ func extractEmail(raw []byte) (*Email, error) {
 		case imap.HEADER_LOW_DKIM_SIGNATURE:
 			parts := strings.Split(string(h.GetValueTrimmed()), "; ")
 			for _, p := range parts {
-				if p[0:3] == "bh=" {
+				if strings.HasPrefix(p, "bh=") {
 					bh = p[3:]
 				}
 			}

@@ -274,7 +274,7 @@ func IncomingEmail(req *IncomingEmailRequest) {
 			folder = FolderDraft
 		} else {
 			errs := SendRawEmail(req.From[0], req.To, req.EmailRaw, *opts)
-			if err != nil {
+			if len(errs) > 0 {
 				fmt.Println(errs)
 				folder = FolderDraft
 			}
@@ -295,7 +295,7 @@ func SendRawEmail(from string, tos []string, emailRaw []byte, opts SignOptions) 
 			errs = append(errs, err)
 			continue
 		}
-		generateMessageId := len(vals) == 0
+		generateMessageId := len(vals) == 0 || strings.TrimSpace(vals[0]) == ""
 		prepped, err := prepareEmailSend(opts, string(emailRaw), from, time.Now(), generateMessageId)
 		if err != nil {
 			errs = append(errs, err)

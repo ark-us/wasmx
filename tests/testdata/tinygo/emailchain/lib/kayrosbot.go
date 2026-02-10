@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/emersion/go-message/mail"
-	verifier "github.com/loredanacirstea/wasmx-kayros-verifier/lib"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
+	verifier "github.com/loredanacirstea/wasmx-kayros-verifier/lib"
 )
 
 const (
@@ -114,7 +114,13 @@ func unfoldHeader(value string) string {
 }
 
 // HandleKayrosBot processes incoming emails to the bot and sends a reply with Kayros proof
-func HandleKayrosBot(req *IncomingEmailRequest) error {
+func HandleKayrosBot(req *IncomingEmailRequest) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("HandleKayrosBot panic: %v", r)
+		}
+	}()
+
 	wasmx.LoggerInfo(MODULE_NAME, "kayrosbot handler", []string{})
 	// Extract subject, Message-ID, and References from email
 	subject := "Indexed by Kayros"
