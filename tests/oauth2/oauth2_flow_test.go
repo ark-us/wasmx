@@ -1082,7 +1082,6 @@ func (suite *KeeperTestSuite) TestMCPOAuth2Flow() {
 	var getColorResp map[string]interface{}
 	err = json.Unmarshal(getBody, &getColorResp)
 	suite.Require().NoError(err)
-	fmt.Println("--getColorResp--", getColorResp)
 	// Verify we got the color back
 	color, ok := getColorResp["color"].(string)
 	suite.Require().True(ok, "Response should contain color field")

@@ -98,7 +98,6 @@ func HandleRename(req *RenameRequest) ([]byte, error) {
 }
 
 func HandleSelect(req *SelectRequest) ([]byte, error) {
-	fmt.Println("--HandleSelect--")
 	val, err := GetNumMessages(req.Username, req.Mailbox)
 	if err != nil {
 		return nil, err

@@ -18,12 +18,12 @@ import (
 )
 
 // -- Table: owners (users/accounts)
-const DefTableOwners = `CREATE TABLE owners (
+const DefTableOwners = `CREATE TABLE IF NOT EXISTS owners (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     address TEXT UNIQUE NOT NULL
 );`
 
-const DefTableFolders = `CREATE TABLE folder_state (
+const DefTableFolders = `CREATE TABLE IF NOT EXISTS folder_state (
 	uid_validity INTEGER PRIMARY KEY AUTOINCREMENT,
     owner TEXT NOT NULL,
     folder TEXT NOT NULL,
@@ -32,7 +32,7 @@ const DefTableFolders = `CREATE TABLE folder_state (
 );`
 
 // -- Table: emails (each email is one row, per folder/owner)
-const DefTableEmails = `CREATE TABLE emails (
+const DefTableEmails = `CREATE TABLE IF NOT EXISTS emails (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     owner TEXT NOT NULL,
     folder TEXT NOT NULL,
@@ -55,10 +55,10 @@ const DefTableEmails = `CREATE TABLE emails (
 );`
 
 // -- Indexes for fast search and UID operations
-const DefIndexes1 = `CREATE UNIQUE INDEX idx_emails_owner_folder_uid ON emails(owner, folder, uid);`
-const DefIndexes2 = `CREATE INDEX idx_emails_owner_folder_seq_num ON emails(owner, folder, seq_num);`
-const DefIndexes4 = `CREATE INDEX idx_emails_subject ON emails(owner,subject);`
-const DefIndexes5 = `CREATE INDEX idx_emails_internal_date ON emails(internal_date);`
+const DefIndexes1 = `CREATE UNIQUE INDEX IF NOT EXISTS idx_emails_owner_folder_uid ON emails(owner, folder, uid);`
+const DefIndexes2 = `CREATE INDEX IF NOT EXISTS idx_emails_owner_folder_seq_num ON emails(owner, folder, seq_num);`
+const DefIndexes4 = `CREATE INDEX IF NOT EXISTS idx_emails_subject ON emails(owner,subject);`
+const DefIndexes5 = `CREATE INDEX IF NOT EXISTS idx_emails_internal_date ON emails(internal_date);`
 
 const ExecUpdateUid = `INSERT INTO folder_state (owner, folder, last_uid)
 VALUES (?, ?, 1)

@@ -34,12 +34,10 @@ func (k QuerierAuth) Account(goCtx context.Context, req *authtypes.QueryAccountR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
-	fmt.Println("--QuerierAuth.Account--", addr.String())
 	account, err := k.Keeper.GetAccountPrefixed(goCtx, addr)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
-	fmt.Println("--QuerierAuth.Account.resp--", addr.String(), account)
 	any, err := codectypes.NewAnyWithValue(account)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())

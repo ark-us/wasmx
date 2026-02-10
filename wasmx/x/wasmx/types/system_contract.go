@@ -1017,16 +1017,16 @@ func SpecialPrecompiles() SystemContracts {
 		// 	Deps:        []string{},
 		// },
 		// TODO dtype nondeterministic version
-		// {
-		// 	Address:     ADDR_EMAIL_HANDLER,
-		// 	Label:       EMAIL_v001,
-		// 	InitMessage: initMsg,
-		// 	Pinned:      true,
-		// 	MeteringOff: true,
-		// 	Role:        &SystemContractRole{Role: ROLE_EMAIL_HANDLER, Label: ROLE_EMAIL_HANDLER, Primary: true},
-		// 	StorageType: ContractStorageType_SingleConsensus,
-		// 	Deps:        []string{},
-		// },
+		{
+			Address:     ADDR_EMAIL_HANDLER,
+			Label:       EMAIL_v001,
+			InitMessage: initMsg,
+			Pinned:      true,
+			MeteringOff: true,
+			Role:        &SystemContractRole{Role: ROLE_EMAIL_HANDLER, Label: ROLE_EMAIL_HANDLER, Primary: true},
+			StorageType: ContractStorageType_SingleConsensus,
+			Deps:        []string{},
+		},
 		{
 			Address:     ADDR_HTTPSERVER_REGISTRY,
 			Label:       HTTPSERVER_REGISTRY_v002,

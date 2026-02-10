@@ -11,6 +11,7 @@ require (
 	github.com/loredanacirstea/wasmx-env-imap v0.0.0
 	github.com/loredanacirstea/wasmx-env-smtp v0.0.0
 	github.com/loredanacirstea/wasmx-env-sql v0.0.0
+	github.com/loredanacirstea/wasmx-kayros-verifier v0.0.0
 	golang.org/x/crypto v0.40.0
 )
 
@@ -18,6 +19,7 @@ require (
 	cosmossdk.io/math v1.5.3 // indirect
 	github.com/loredanacirstea/wasmx-env-utils v0.0.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 )
 
@@ -34,6 +36,8 @@ replace github.com/loredanacirstea/wasmx-env-smtp => ../wasmx-env-smtp
 replace github.com/loredanacirstea/wasmx-utils => ../wasmx-utils
 
 replace github.com/loredanacirstea/wasmx-env-httpclient => ../wasmx-env-httpclient
+
+replace github.com/loredanacirstea/wasmx-kayros-verifier => ../wasmx-kayros-verifier
 
 // replace github.com/emersion/go-msgauth => ../../../../../go-msgauth
 

@@ -6,12 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/emersion/go-message/mail"
-	httpclient "github.com/loredanacirstea/wasmx-env-httpclient/lib"
+	verifier "github.com/loredanacirstea/wasmx-kayros-verifier/lib"
 	vmimap "github.com/loredanacirstea/wasmx-env-imap/lib"
 	wasmx "github.com/loredanacirstea/wasmx-env/lib"
 )
@@ -19,7 +18,6 @@ import (
 const (
 	BotEmail      = "kayros1@dmail.provable.dev"
 	KayrosAPIURL  = "https://kayros.provable.dev"
-	KayrosAPIPOST = KayrosAPIURL + "/api/grpc/single-hash"
 	KayrosAPIGET  = KayrosAPIURL + "/api/database/record-by-hash?hash_item="
 	DataTypeEmail = "70726f7661626c655f656d61696c000000000000000000000000000000000000"
 )
@@ -59,53 +57,30 @@ func HashEmail(emailRaw []byte) string {
 
 // QueryKayros makes a POST request to Kayros API with email hash
 func QueryKayros(emailHash string) (interface{}, error) {
-	// Create request body
-	reqBody := KayrosRequest{
-		DataItem: emailHash,
+	dataItem, err := hex.DecodeString(emailHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode email hash: %w", err)
+	}
+	client := verifier.NewKayrosClient(verifier.KayrosConfig{
+		ApiBaseUrl: KayrosAPIURL,
+		ApiUserKey: "",
+	})
+	regResp, err := client.RegisterData(verifier.KayrosRegistrationRequest{
 		DataType: DataTypeEmail,
-	}
-
-	reqBodyBytes, err := json.Marshal(reqBody)
+		DataItem: dataItem,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return nil, fmt.Errorf("Kayros registration failed: %w", err)
 	}
-
-	// Create HTTP request
-	headers := http.Header{}
-	headers.Set("Content-Type", "application/json")
-	headers.Set("Accept", "application/json")
-
-	httpReq := httpclient.HttpRequestWrap{
-		Request: httpclient.HttpRequest{
-			Method: "POST",
-			Url:    KayrosAPIPOST,
-			Header: headers,
-			Data:   reqBodyBytes,
+	// Keep backward-compatible shape expected by the bot reply flow.
+	return map[string]interface{}{
+		"success": regResp.Success,
+		"data": map[string]interface{}{
+			"computed_hash_hex": regResp.Hash,
 		},
-		ResponseHandler: httpclient.ResponseHandler{
-			MaxSize: 10 * 1024 * 1024, // 10MB max response
-		},
-	}
-
-	// Make the HTTP request
-	resp := httpclient.Request(&httpReq)
-	if resp.Error != "" {
-		return nil, fmt.Errorf("HTTP request failed: %s", resp.Error)
-	}
-
-	// Check status code
-	if resp.Data.StatusCode != 200 {
-		return nil, fmt.Errorf("Kayros API returned status %d: %s", resp.Data.StatusCode, string(resp.Data.Data))
-	}
-
-	// Parse response as generic interface
-	var kayrosResp interface{}
-	err = json.Unmarshal(resp.Data.Data, &kayrosResp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse Kayros response: %w", err)
-	}
-
-	return kayrosResp, nil
+		"timeuuid": regResp.TimeUUID,
+		"encoding": regResp.Encoding,
+	}, nil
 }
 
 // CreateKayrosProof creates a proof structure combining email data and Kayros response

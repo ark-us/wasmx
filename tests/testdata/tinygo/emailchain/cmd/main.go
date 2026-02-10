@@ -35,10 +35,6 @@ func Wasmx_smtp_i64_1() {}
 //export wasmx_imap_i64_1
 func Wasmx_imap_i64_1() {}
 
-//go:wasm-module httpclient
-//export wasmx_httpclient_i64_1
-func Wasmx_httpclient_i64_1() {}
-
 //go:wasm-module sql
 //export wasmx_sql_i64_1
 func Wasmx_sql_i64_1() {}

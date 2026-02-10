@@ -483,7 +483,6 @@ func VerifyARC(req *VerifyDKIMRequest) VerifyARCResponse {
 		return req.Timestamp
 	}
 	res, err := arc.Verify(logger, resolver, false, []byte(req.EmailRaw), false, true, now, req.PublicKey)
-	fmt.Println("--VerifyArc err, res--", err, res)
 	if err != nil {
 		resp.Error = err.Error()
 		return resp
