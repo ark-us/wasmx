@@ -204,6 +204,9 @@
         "hash_type": {
           "type": "string"
         },
+        "position": {
+          "type": "integer"
+        },
         "prev_hash": {
           "type": "array",
           "items": {
@@ -804,6 +807,9 @@
         "hash_type": {
           "type": "string"
         },
+        "position": {
+          "type": "integer"
+        },
         "prev_hash": {
           "type": "string"
         },
@@ -816,6 +822,7 @@
         "data_item",
         "hash_type",
         "hash_item",
+        "position",
         "ts",
         "prev_hash"
       ]
@@ -841,6 +848,9 @@
         "hash_type": {
           "type": "string"
         },
+        "position": {
+          "type": "integer"
+        },
         "prev_hash": {
           "type": "array",
           "items": {
@@ -856,6 +866,7 @@
         "data_item",
         "hash_item",
         "hash_type",
+        "position",
         "prev_hash",
         "ts"
       ]
