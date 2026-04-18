@@ -18,7 +18,7 @@ import (
 const (
 	BotEmail      = "kayros1@dmail.provable.dev"
 	KayrosAPIURL  = "https://kayros.provable.dev"
-	DataTypeEmail = "70726f7661626c655f656d61696c000000000000000000000000000000000000"
+	DataTypeEmail = "provable_email"
 )
 
 // KayrosProof represents the JSON file structure attached to emails
@@ -83,11 +83,7 @@ func QueryKayros(emailHash string) (*KayrosPayload, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode email hash: %w", err)
 	}
-	dataTypeBz, err := hex.DecodeString(DataTypeEmail)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode email data type: %w", err)
-	}
-	dataType := string(dataTypeBz)
+	dataType := DataTypeEmail
 	registerReq := verifier.KayrosRegistrationRequest{
 		DataType: dataType,
 		DataItem: dataItem,
