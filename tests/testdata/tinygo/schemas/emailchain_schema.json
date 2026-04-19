@@ -741,12 +741,16 @@
         "data": {
           "type": "string"
         },
+        "data_format": {
+          "type": "string"
+        },
         "kayros": {
           "$ref": "#/definitions/KayrosPayload"
         }
       },
       "required": [
         "data",
+        "data_format",
         "kayros"
       ]
     },

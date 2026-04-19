@@ -23,8 +23,9 @@ const (
 
 // KayrosProof represents the JSON file structure attached to emails
 type KayrosProof struct {
-	Data   string        `json:"data"`
-	Kayros KayrosPayload `json:"kayros"`
+	Data       string        `json:"data"`
+	DataFormat string        `json:"data_format"`
+	Kayros     KayrosPayload `json:"kayros"`
 }
 
 type KayrosPayload struct {
@@ -142,8 +143,9 @@ func QueryKayros(emailHash string) (*KayrosPayload, error) {
 // CreateKayrosProof creates a proof structure combining email data and Kayros response
 func CreateKayrosProof(emailRaw []byte, kayrosResp *KayrosPayload) *KayrosProof {
 	return &KayrosProof{
-		Data:   base64.StdEncoding.EncodeToString(emailRaw),
-		Kayros: *kayrosResp,
+		Data:       base64.StdEncoding.EncodeToString(emailRaw),
+		DataFormat: "email",
+		Kayros:     *kayrosResp,
 	}
 }
 
