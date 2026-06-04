@@ -60,7 +60,9 @@ func ParseEmailDate(value string) (time.Time, error) {
 	formats := []string{
 		time.RFC1123Z, // "Mon, 02 Jan 2006 15:04:05 -0700"
 		time.RFC1123,  // "Mon, 02 Jan 2006 15:04:05 MST"
-		time.RFC822Z,  // "02 Jan 06 15:04 -0700"
+		"Mon, 2 Jan 2006 15:04:05 -0700",
+		"Mon, 2 Jan 2006 15:04:05 MST",
+		time.RFC822Z, // "02 Jan 06 15:04 -0700"
 		"02 Jan 2006 15:04:05 -0700",
 	}
 
