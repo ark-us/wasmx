@@ -16,9 +16,11 @@ import (
 )
 
 const (
-	BotEmail      = "kayros1@dmail.provable.dev"
-	KayrosAPIURL  = "https://kayros.provable.dev"
-	DataTypeEmail = "provable_email"
+	BotEmail                 = "kayros1@dmail.provable.dev"
+	KayrosAPIURL             = "https://kayros.provable.dev"
+	DataTypeEmail            = "provable_email"
+	kayrosRecordFetchRetries = 3
+	kayrosRecordFetchDelay   = 500 * time.Millisecond
 )
 
 // KayrosProof represents the JSON file structure attached to emails
@@ -104,7 +106,7 @@ func QueryKayros(emailHash string) (*KayrosPayload, error) {
 		return nil, fmt.Errorf("Kayros registration failed: request=%s error=%v", string(reqbz), err)
 	}
 
-	record, err := client.GetRecordByHash(dataType, regResp.Hash)
+	record, err := getKayrosRecordByHashWithRetry(client, dataType, regResp.Hash)
 	if err != nil {
 		return nil, fmt.Errorf("Kayros record fetch failed: hash=%s data_type=%s error=%v", regResp.Hash, dataType, err)
 	}
@@ -138,6 +140,36 @@ func QueryKayros(emailHash string) (*KayrosPayload, error) {
 			},
 		},
 	}, nil
+}
+
+func getKayrosRecordByHashWithRetry(client *verifier.KayrosClient, dataType string, hash string) (*verifier.KayrosRecord, error) {
+	var record *verifier.KayrosRecord
+	var err error
+
+	for attempt := 0; attempt <= kayrosRecordFetchRetries; attempt++ {
+		if attempt > 0 {
+			time.Sleep(kayrosRecordFetchDelay)
+		}
+		record, err = client.GetRecordByHash(dataType, hash)
+		if err == nil {
+			return record, nil
+		}
+		if !isKayrosRecordNotFound(err) {
+			return nil, err
+		}
+	}
+
+	return nil, err
+}
+
+func isKayrosRecordNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	errText := err.Error()
+	return strings.Contains(errText, "status 404") ||
+		strings.Contains(errText, "Not Found") ||
+		strings.Contains(errText, "record not found")
 }
 
 // CreateKayrosProof creates a proof structure combining email data and Kayros response
