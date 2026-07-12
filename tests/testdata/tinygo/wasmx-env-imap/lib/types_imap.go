@@ -134,6 +134,7 @@ func AddressesFromString(accounts []string) []Address {
 }
 
 func ParseEmailAddresses(input string) ([]Address, error) {
+	input = unfoldHeaderValue(input)
 	addrList, err := mail.ParseAddressList(input)
 	if err != nil {
 		return nil, err
@@ -148,6 +149,34 @@ func ParseEmailAddresses(input string) ([]Address, error) {
 		})
 	}
 	return result, nil
+}
+
+func unfoldHeaderValue(value string) string {
+	if !strings.ContainsAny(value, "\r\n") {
+		return strings.TrimSpace(value)
+	}
+
+	var b strings.Builder
+	b.Grow(len(value))
+	for i := 0; i < len(value); i++ {
+		c := value[i]
+		if c == '\r' || c == '\n' {
+			j := i
+			if c == '\r' && j+1 < len(value) && value[j+1] == '\n' {
+				j++
+			}
+			if j+1 < len(value) && (value[j+1] == ' ' || value[j+1] == '\t') {
+				b.WriteByte(' ')
+				i = j + 1
+				for i+1 < len(value) && (value[i+1] == ' ' || value[i+1] == '\t') {
+					i++
+				}
+				continue
+			}
+		}
+		b.WriteByte(c)
+	}
+	return strings.TrimSpace(b.String())
 }
 
 func SplitAddress(full string) (local, domain string) {
