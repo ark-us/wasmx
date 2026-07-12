@@ -88,6 +88,7 @@ func (k *Keeper) ExecuteAtomicTxInternal(goCtx context.Context, msg *types.MsgEx
 	if err != nil {
 		return nil, err
 	}
+	// no 2 atomic transactions are executed at the same time
 	if len(mcctx.CurrentAtomicTxHash) == 0 {
 		mcctx.CurrentAtomicTxHash = txhash
 	} else {
@@ -127,7 +128,7 @@ func (k *Keeper) ExecuteAtomicTxInternal(goCtx context.Context, msg *types.MsgEx
 	if err == nil {
 		newResultsChannel = *existent
 	} else {
-		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
+		// these channels need to be buffered to prevent the goroutine below from hanging; capacity 1
 		newResultsChannel = make(chan types.MsgExecuteAtomicTxResponse, 1)
 		mcctx.SetResultChannel(ctx.ChainID(), &newResultsChannel)
 	}
@@ -136,7 +137,7 @@ func (k *Keeper) ExecuteAtomicTxInternal(goCtx context.Context, msg *types.MsgEx
 	if err == nil {
 		newInternalCallChannel = *existent2
 	} else {
-		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
+		// these channels need to be buffered to prevent the goroutine below from hanging; capacity 1
 		newInternalCallChannel = make(chan types.MsgExecuteCrossChainCallRequestIndexed, 1)
 		mcctx.SetInternalCallChannel(ctx.ChainID(), &newInternalCallChannel)
 	}
@@ -145,7 +146,7 @@ func (k *Keeper) ExecuteAtomicTxInternal(goCtx context.Context, msg *types.MsgEx
 	if err == nil {
 		newInternalCallResponseChannel = *existent3
 	} else {
-		// these channels need to be buffered to prevent the goroutine below from hanging indefinitely
+		// these channels need to be buffered to prevent the goroutine below from hanging; capacity 1
 		newInternalCallResponseChannel = make(chan types.MsgExecuteCrossChainCallResponseIndexed, 1)
 		mcctx.SetInternalCallResultChannel(ctx.ChainID(), &newInternalCallResponseChannel)
 	}
